@@ -1,0 +1,19 @@
+{
+  "name": "rllm",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "format": "turbo format",
+    "lint": "turbo lint",
+    "test": "turbo test"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "packageManager": "bun@1.2.5",
+  "devDependencies": {
+    "turbo": "^2.6.1"
+  }
+}

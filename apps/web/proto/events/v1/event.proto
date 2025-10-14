@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package events.v1;
+
+message Event {
+  string version = 1;
+  string timestamp = 2;
+  EventData data = 3;
+}
+
+message EventData {
+  oneof event_type {
+    CreateProviderEvent create_provider = 1;
+    UpdateProviderEvent update_provider = 2;
+    CreateMCPEvent create_mcp = 3;
+    UpdateMCPEvent update_mcp = 4;
+    CreateChatEvent create_chat = 5;
+    UpdateChatEvent update_chat = 6;
+    DeleteProviderEvent delete_provider = 7;
+    DeleteMCPEvent delete_mcp = 8;
+    DeleteChatEvent delete_chat = 9;
+    SetUserMetadataEvent set_user_metadata = 10;
+  }
+}
+
+message CreateProviderEvent {
+  string id = 1;
+  string name = 2;
+  string type = 3;
+  string base_url = 4;
+  string token = 5;
+  repeated string default_model_ids = 6;
+}
+
+message UpdateProviderEvent {
+  string id = 1;
+  optional string name = 2;
+  optional string type = 3;
+  optional string base_url = 4;
+  optional string token = 5;
+  repeated string default_model_ids = 6;
+}
+
+message CreateMCPEvent {
+  string id = 1;
+  string name = 2;
+  string url = 3;
+}
+
+message UpdateMCPEvent {
+  string id = 1;
+  optional string name = 2;
+  optional string url = 3;
+}
+
+message CreateChatEvent {
+  string id = 1;
+  string title = 2;
+  repeated string tags = 3;
+  bool finished = 4;
+  string messages = 5;
+  string settings = 6;
+}
+
+message UpdateChatEvent {
+  string id = 1;
+  optional string title = 2;
+  repeated string tags = 3;
+  optional bool finished = 4;
+  optional string messages = 5;
+  optional string settings = 6;
+}
+
+message DeleteProviderEvent {
+  string id = 1;
+}
+message DeleteMCPEvent {
+  string id = 1;
+}
+message DeleteChatEvent {
+  string id = 1;
+}
+
+message SetUserMetadataEvent {
+  string id = 1;
+  string value = 2;
+}
