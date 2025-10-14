@@ -1,0 +1,83 @@
+import { attachDevtoolsOverlay } from '@solid-devtools/overlay';
+import { createRouter, RouterProvider } from '@tanstack/solid-router';
+import { render } from 'solid-js/web';
+import 'katex/dist/katex.css';
+
+import './styles.css';
+import { toast } from 'solid-sonner';
+
+import { routeTree } from './routeTree.gen';
+import { listenForWaitingServiceWorker } from './utils/service-worker';
+
+const router = createRouter({
+	routeTree,
+	scrollRestoration: true,
+	defaultPendingComponent:
+		false && import.meta.env.DEV ?
+			() => <div class="bg-red-600 inset-0 w-full h-full z-50">Loading...</div>
+		:	() => (
+				<div class="grid place-content-center inset-0 fixed p-8 text-5xl w-full h-full z-50">
+					<span class="icon-[svg-spinners--180-ring-with-bg]" />
+				</div>
+			)
+});
+
+declare module '@tanstack/solid-router' {
+	interface Register {
+		router: typeof router;
+	}
+}
+
+function promptUserToRefresh(registration: ServiceWorkerRegistration) {
+	toast.info('New version available!', {
+		action: {
+			label: 'Update',
+			onClick: () => registration.waiting?.postMessage({ type: 'SKIP_WAITING' })
+		},
+		duration: Number.POSITIVE_INFINITY
+	});
+}
+
+async function setupApp() {
+	function App() {
+		return (
+			<>
+				<RouterProvider router={router} />
+			</>
+		);
+	}
+	const rootElement = document.getElementById('app');
+	if (rootElement) {
+		render(() => <App />, rootElement);
+	}
+	await setupServiceWorker();
+}
+
+async function setupServiceWorker() {
+	if ('serviceWorker' in navigator && import.meta.env.PROD) {
+		try {
+			const registration = await navigator.serviceWorker.register('/sw.js', {
+				scope: '/'
+			});
+			console.log('SW registered: ', registration);
+			await listenForWaitingServiceWorker(registration).then(
+				() => {
+					promptUserToRefresh(registration);
+
+					let refreshing: boolean;
+					navigator.serviceWorker.addEventListener('controllerchange', function () {
+						if (refreshing) return;
+						refreshing = true;
+						window.location.reload();
+					});
+				},
+				() => console.log('Service Worker first install')
+			);
+		} catch (error) {
+			console.log('SW registration failed: ', error);
+		}
+	}
+}
+
+setupApp();
+attachDevtoolsOverlay();

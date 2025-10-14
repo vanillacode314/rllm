@@ -1,0 +1,34 @@
+{
+	admin off
+	auto_https off
+	persist_config off
+	log {
+		format json
+	}
+}
+
+:8080 {
+	# handle /api/* {
+	# 	reverse_proxy {$PRIVATE_API_URL}
+	# }
+
+	handle {
+		header {
+			Cross-Origin-Embedder-Policy "require-corp"
+			Cross-Origin-Opener-Policy "same-origin"
+			Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		}
+
+		header /assets* Cache-Control "max-age=31536000, immutable"
+		header /sw.js Cache-Control "no-cache"
+		header / Cache-Control "max-age:300, private"
+
+		root * /var/www
+
+		try_files {path} index.html
+
+		file_server {
+			precompressed zstd br gzip
+		}
+	}
+}
