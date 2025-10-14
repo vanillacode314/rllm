@@ -1,0 +1,25 @@
+{
+	admin off
+	auto_https off
+	persist_config off
+	log {
+		format json
+	}
+}
+
+:8080 {
+	header /sw.js Cache-Control "no-cache"
+	header /assets* Cache-Control "max-age=31536000, immutable"
+	header {
+		Cross-Origin-Embedder-Policy "require-corp"
+		Cross-Origin-Opener-Policy "same-origin"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		?Cache-Control "max-age=300, private"
+	}
+
+	root * /var/www
+	try_files {path} index.html
+	file_server {
+		precompressed br zstd gzip
+	}
+}

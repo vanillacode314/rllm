@@ -1,0 +1,191 @@
+import JSZip from 'jszip';
+import rehypeParse from 'rehype-parse';
+import rehypeRemark from 'rehype-remark';
+import rehypeSanitize from 'rehype-sanitize';
+import remarkGfm from 'remark-gfm';
+import remarkStringify from 'remark-stringify';
+import { AsyncResult, Option, Result } from 'ts-result-option';
+import { tryBlock } from 'ts-result-option/utils';
+import { unified } from 'unified';
+
+import { once } from '~/utils/functions';
+
+import { makeRagAdapter } from './utils';
+
+const xmlParser = new DOMParser();
+const textTags = [
+	'p',
+	'h1',
+	'h2',
+	'h3',
+	'h4',
+	'h5',
+	'h6',
+	'ol',
+	'ul',
+	'li',
+	'table',
+	'td',
+	'th',
+	'tbody',
+	'thead'
+];
+const sanitize = unified()
+	.use(rehypeParse, { fragment: true })
+	.use(rehypeSanitize, { tagNames: textTags })
+	.use(rehypeRemark)
+	.use(remarkGfm)
+	.use(remarkStringify);
+
+class Epub {
+	private opfPath: string;
+	private ready: Promise<void>;
+	private zip: JSZip;
+
+	constructor(buffer: ArrayBuffer) {
+		const { promise, resolve, reject } = Promise.withResolvers<void>();
+		this.ready = promise;
+		this.zip = new JSZip();
+		this.opfPath = '';
+		this.zip.loadAsync(buffer).then(() =>
+			this.initialize().match(
+				() => resolve(),
+				(e) => reject(e)
+			)
+		);
+	}
+	getChapterText(id: string): AsyncResult<string, Error> {
+		return tryBlock(
+			this,
+			async function* () {
+				const spine = yield* this.getSpine();
+				const item = spine.find((item) => item.id === id);
+				if (!item) return Result.Err(new Error(`No item found with id ${id}`));
+				const path = item.href;
+				const xml = yield* this.readFile(path);
+				const doc = xmlParser.parseFromString(xml, 'text/html');
+				const body = doc.body;
+				const content = body.innerHTML;
+				const cleanContent = String(await sanitize.process(content))
+					.replace(/\s+/g, (match) => {
+						const numberOfNewLines = (match.match(/\n/g) || []).length;
+						if (numberOfNewLines > 1) {
+							return '\n\n';
+						} else if (numberOfNewLines === 1) {
+							return '\n';
+						} else {
+							return ' ';
+						}
+					})
+					.trim();
+				return Result.Ok(cleanContent);
+			},
+			(e) => new Error(`Failed to get chapter text`, { cause: e })
+		);
+	}
+	getMetadata(): AsyncResult<{ creator: string; title: string }, Error> {
+		return tryBlock(
+			this,
+			once(async function* () {
+				await this.ready;
+				const opf = yield* this.readFile(this.opfPath);
+				const opfXml = xmlParser.parseFromString(opf, 'text/xml');
+				const metadata = opfXml.querySelector('metadata');
+				if (!metadata) return Result.Err(new Error('No metadata found in opf file'));
+				const creator = Option.from(metadata.getElementsByTagName('dc:creator')[0]).mapOr(
+					'Unknown Book Title',
+					(tag) => tag.textContent?.trim() ?? 'Unknown Book Title'
+				);
+				const title = Option.from(metadata.getElementsByTagName('dc:title')[0]).mapOr(
+					'Unknown Book Title',
+					(tag) => tag.textContent?.trim() ?? 'Unknown Book Title'
+				);
+				return Result.Ok({ creator, title });
+			}),
+			(e) => new Error(`Failed to get metadata`, { cause: e })
+		);
+	}
+	getSpine(): AsyncResult<Array<{ href: string; id: string }>, Error> {
+		return tryBlock(
+			this,
+			once(async function* () {
+				await this.ready;
+				const data = yield* this.readFile('META-INF/container.xml');
+				const xml = xmlParser.parseFromString(data, 'text/xml');
+				const opfPath = xml.querySelector('rootfile')?.getAttribute('full-path');
+				if (!opfPath) return Result.Err(new Error('No rootfile found in container.xml'));
+				this.opfPath = opfPath;
+				const opf = yield* this.readFile(opfPath);
+				const opfXml = xmlParser.parseFromString(opf, 'text/xml');
+				const spine = opfXml.querySelector('spine');
+				if (!spine) return Result.Err(new Error('No spine found in opf file'));
+				const itemrefs = Array.from(spine.querySelectorAll('itemref'));
+				const spineItems = itemrefs.map((itemref) => {
+					const idref = itemref.getAttribute('idref');
+					if (!idref) throw new Error('No idref found in itemref');
+					const item = opfXml.querySelector(`manifest > item[id="${idref}"]`);
+					if (!item) throw new Error(`No item found with id ${idref}`);
+					const href = item.getAttribute('href');
+					if (!href) throw new Error(`No href found in item with id ${idref}`);
+					return { href, id: idref };
+				});
+				return Result.Ok(spineItems);
+			}),
+			(e) => new Error(`Failed to get spine`, { cause: e })
+		);
+	}
+	private initialize() {
+		return AsyncResult.from(
+			async () => {
+				const file = this.zip.file('META-INF/container.xml');
+				if (!file) return Result.Err(new Error('No container.xml found in epub'));
+				const data = await file.async('text');
+				const xml = xmlParser.parseFromString(data, 'text/xml');
+				const opfPath = xml.querySelector('rootfile')?.getAttribute('full-path');
+				if (!opfPath) return Result.Err(new Error('No rootfile found in container.xml'));
+				this.opfPath = opfPath;
+				return Result.Ok();
+			},
+			(e) => new Error(`Failed to initialize`, { cause: e })
+		);
+	}
+	private readFile(path: string): AsyncResult<string, Error> {
+		return AsyncResult.from(
+			async () => {
+				await this.ready;
+				const file = this.zip.file(path);
+				if (!file) return Result.Err(new Error(`File not found: ${path}`));
+				return Result.Ok(await file.async('text'));
+			},
+			(e) => new Error(`Failed to read file ${path}`, { cause: e })
+		);
+	}
+}
+
+const epubRAGAdapter = makeRagAdapter({
+	id: 'epub',
+	getText: (file) =>
+		tryBlock(
+			async function* () {
+				const buffer = await file.arrayBuffer();
+				const epub = new Epub(buffer);
+				const spine = yield* epub.getSpine();
+				const chapters = await Promise.all(spine.map((item) => epub.getChapterText(item.id)));
+				const text = chapters.map((chapter) => chapter.unwrap()).join('\n\n');
+				return Result.Ok(text);
+			},
+			(e) => new Error(`Failed to get text`, { cause: e })
+		),
+	getDescription: (file) =>
+		tryBlock(
+			async function* () {
+				const buffer = await file.arrayBuffer();
+				const epub = new Epub(buffer);
+				const { creator, title } = yield* epub.getMetadata();
+				return Result.Ok(`${title} by ${creator}`);
+			},
+			(e) => new Error(`Failed to get description`, { cause: e })
+		)
+});
+
+export { epubRAGAdapter };
