@@ -1,0 +1,6 @@
+.git
+data
+node_modules
+local.db*
+.aider*
+.turbo

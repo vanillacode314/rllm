@@ -1,0 +1,1 @@
+ALTER TABLE `chats` ADD `finished` integer DEFAULT 1 NOT NULL;

@@ -1,0 +1,1 @@
+export { codeToHtml } from 'shiki';

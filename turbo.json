@@ -1,0 +1,68 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "build": {
+      "outputs": [
+        "dist/**"
+      ],
+      "dependsOn": [
+        "^build"
+      ]
+    },
+    "app#build": {
+      "outputs": [
+        "dist/**"
+      ],
+      "dependsOn": [
+        "^build"
+      ],
+      "env": [
+        "DATABASE_CONNECTION_URL",
+        "DATABASE_AUTH_TOKEN"
+      ]
+    },
+    "app#dev": {
+      "cache": false,
+      "persistent": true,
+      "interactive": false,
+      "passThroughEnv": [
+        "SYNC_SERVER_PORT"
+      ],
+      "env": [
+        "DATABASE_CONNECTION_URL",
+        "DATABASE_AUTH_TOKEN"
+      ]
+    },
+    "web#build": {
+      "outputs": [
+        "dist/**"
+      ],
+      "dependsOn": [
+        "^build"
+      ],
+      "env": [
+        "VITE_SYNC_SERVER_BASE_URL"
+      ]
+    },
+    "web#dev": {
+      "cache": false,
+      "persistent": true,
+      "interactive": false,
+      "env": [
+        "VITE_SYNC_SERVER_BASE_URL"
+      ]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "interactive": false
+    },
+    "format": {},
+    "lint": {},
+    "test": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}
