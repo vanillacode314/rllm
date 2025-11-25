@@ -24,8 +24,8 @@ function SettingsProviderComponent() {
 		const yes = confirm('Are you sure you want to delete this provider?');
 		if (!yes) return;
 		await logger.dispatch({
-			user_intent: 'delete_provider',
-			meta: { id }
+			type: 'delete_provider',
+			data: id
 		});
 	}
 

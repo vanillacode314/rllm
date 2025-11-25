@@ -1,8 +1,10 @@
 import { queryOptions } from '@tanstack/solid-query';
 import { count, desc, eq, sql } from 'drizzle-orm';
 
+import type { TProvider } from '~/db/app-schema';
+
 import { db } from '~/db/client';
-import * as schema from '~/db/schema';
+import { tables } from '~/db/schema';
 import { MCPClient } from '~/lib/mcp/client';
 import { runCustomQuery } from '~/utils/db';
 
@@ -10,9 +12,9 @@ const userMetadata = {
 	fetchers: {
 		byId: (id: string): Promise<null | string> =>
 			db
-				.select({ value: schema.userMetadata.value })
-				.from(schema.userMetadata)
-				.where(eq(schema.userMetadata.id, id))
+				.select({ value: tables.userMetadata.value })
+				.from(tables.userMetadata)
+				.where(eq(tables.userMetadata.id, id))
 				.then((rows) => rows[0]?.value ?? null),
 		staleTime: Infinity
 	},
@@ -28,17 +30,17 @@ const userMetadata = {
 
 const providers = {
 	fetchers: {
-		getAllProviders: () => db.select().from(schema.providers),
+		getAllProviders: () => db.select().from(tables.providers),
 		countProviders: () =>
 			db
 				.select({ count: count() })
-				.from(schema.providers)
+				.from(tables.providers)
 				.then((rows) => rows[0]?.count ?? 0),
-		byId: (id: string): Promise<null | schema.TProvider> =>
+		byId: (id: string): Promise<null | TProvider> =>
 			db
 				.select()
-				.from(schema.providers)
-				.where(eq(schema.providers.id, id))
+				.from(tables.providers)
+				.where(eq(tables.providers.id, id))
 				.then((rows) => rows[0] ?? null)
 	},
 	queries: {
@@ -47,7 +49,7 @@ const providers = {
 			return Object.assign(
 				queryOptions({
 					queryKey: [...providers.queries.base(), 'all'],
-					queryFn: () => providers.fetchers.getAllProviders().orderBy(schema.providers.name),
+					queryFn: () => providers.fetchers.getAllProviders().orderBy(tables.providers.name),
 					staleTime: Infinity
 				}),
 				{
@@ -68,8 +70,8 @@ const providers = {
 					if (!id) throw new Error(`Invalid id ${id}`);
 					return db
 						.select()
-						.from(schema.providers)
-						.where(eq(schema.providers.id, id))
+						.from(tables.providers)
+						.where(eq(tables.providers.id, id))
 						.then((rows) => rows[0] ?? null);
 				},
 				staleTime: Infinity
@@ -91,7 +93,7 @@ const chats = {
 			Object.assign(
 				queryOptions({
 					queryKey: [...chats.queries.base(), 'all'],
-					queryFn: () => db.select().from(schema.chats).orderBy(desc(schema.chats.createdAt)),
+					queryFn: () => db.select().from(tables.chats).orderBy(desc(tables.chats.createdAt)),
 					staleTime: Infinity
 				}),
 				{
@@ -100,9 +102,22 @@ const chats = {
 							queryKey: [...chats.queries.base(), 'all', 'tags'],
 							queryFn: () =>
 								runCustomQuery<{ value: string }>(
-									sql`SELECT DISTINCT e.value FROM ${schema.chats} CROSS JOIN json_each(${schema.chats.tags}) AS e`
+									sql`SELECT DISTINCT e.value FROM ${tables.chats} CROSS JOIN json_each(${tables.chats.tags}) AS e`
 								).then((rows) => rows.map((row) => row.value)),
 							staleTime: Infinity
+						}),
+						minimal: queryOptions({
+							queryKey: [...chats.queries.base(), 'all', 'minimal'],
+							queryFn: () =>
+								db
+									.select({
+										finished: tables.chats.finished,
+										id: tables.chats.id,
+										title: tables.chats.title,
+										tags: tables.chats.tags
+									})
+									.from(tables.chats)
+									.orderBy(desc(tables.chats.createdAt))
 						})
 					}
 				}
@@ -113,8 +128,8 @@ const chats = {
 				queryFn: () =>
 					db
 						.select()
-						.from(schema.chats)
-						.where(eq(schema.chats.id, id))
+						.from(tables.chats)
+						.where(eq(tables.chats.id, id))
 						.then((rows) => rows[0] ?? null),
 				staleTime: Infinity
 			})
@@ -123,7 +138,7 @@ const chats = {
 
 const mcps = {
 	fetchers: {
-		getAllMcps: () => db.select().from(schema.mcps)
+		getAllMcps: () => db.select().from(tables.mcps)
 	},
 	queries: {
 		base: () => ['db', 'mcps'],
@@ -131,7 +146,7 @@ const mcps = {
 			Object.assign(
 				queryOptions({
 					queryKey: [...mcps.queries.base(), 'all'],
-					queryFn: () => mcps.fetchers.getAllMcps().orderBy(desc(schema.mcps.createdAt)),
+					queryFn: () => mcps.fetchers.getAllMcps().orderBy(desc(tables.mcps.createdAt)),
 					staleTime: Infinity
 				}),
 				{
@@ -140,7 +155,7 @@ const mcps = {
 							queryOptions({
 								queryKey: [...mcps.queries.base(), 'all', 'clients', { proxy }],
 								queryFn: async () => {
-									const $mcps = await mcps.fetchers.getAllMcps().orderBy(schema.mcps.name);
+									const $mcps = await mcps.fetchers.getAllMcps().orderBy(tables.mcps.name);
 									return $mcps.map(
 										(mcp) => new MCPClient(mcp.name, proxy ? proxy.replace('%s', mcp.url) : mcp.url)
 									);
@@ -156,8 +171,8 @@ const mcps = {
 				queryFn: () =>
 					db
 						.select()
-						.from(schema.mcps)
-						.where(eq(schema.mcps.id, id))
+						.from(tables.mcps)
+						.where(eq(tables.mcps.id, id))
 						.then((rows) => rows[0] ?? null),
 				staleTime: Infinity
 			})

@@ -12,7 +12,7 @@ import { safeParseJson, tryBlock } from 'ts-result-option/utils';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { db, getDatabaseInfo, logger } from '~/db/client';
-import * as schema from '~/db/schema';
+import { tables } from '~/db/schema';
 import { account } from '~/signals/account';
 import { env } from '~/utils/env';
 import { round } from '~/utils/math';
@@ -32,7 +32,7 @@ export const Route = createFileRoute('/settings/storage')({
 			queryFn: () =>
 				db
 					.select({ count: count() })
-					.from(schema.events)
+					.from(tables.events)
 					.then((res) => res[0].count)
 		});
 		return { size: info.databaseSizeBytes ?? null };
@@ -84,7 +84,7 @@ function SettingsStorageComponent() {
 		queryFn: () =>
 			db
 				.select({ count: count() })
-				.from(schema.events)
+				.from(tables.events)
 				.then((res) => res[0].count)
 	}));
 
@@ -155,7 +155,7 @@ function SettingsStorageComponent() {
 						['encrypt', 'decrypt']
 					);
 
-					const [{ count: total }] = await db.select({ count: count() }).from(schema.events);
+					const [{ count: total }] = await db.select({ count: count() }).from(tables.events);
 					setServerOptimizationStatus({
 						type: 'sending',
 						processed: 0,
@@ -173,9 +173,9 @@ function SettingsStorageComponent() {
 					const getMessages = (after?: string) =>
 						db
 							.select()
-							.from(schema.events)
-							.where(gt(schema.events.timestamp, after!).if(after))
-							.orderBy(schema.events.timestamp)
+							.from(tables.events)
+							.where(gt(tables.events.timestamp, after!).if(after))
+							.orderBy(tables.events.timestamp)
 							.limit(pageSize + 1);
 
 					let hasMore = true;

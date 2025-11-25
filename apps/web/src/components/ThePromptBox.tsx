@@ -149,10 +149,8 @@ function Toolbar(props: { chatId?: string; isPending: boolean; onAbort: () => vo
 							if (!yes) return;
 							await navigate({ to: '/' });
 							await logger.dispatch({
-								user_intent: 'delete_chat',
-								meta: {
-									id: props.chatId!
-								}
+								type: 'delete_chat',
+								data: props.chatId!
 							});
 						}}
 						size="icon"

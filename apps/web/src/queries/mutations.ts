@@ -2,73 +2,119 @@ import type { TUpdate } from 'event-logger';
 
 import { type } from 'arktype';
 import { getTableName } from 'drizzle-orm';
+import { safeParseJson } from 'ts-result-option/utils';
 import { Type } from 'typebox';
 
-import * as schema from '~/db/schema';
+import {
+	chatsSchema,
+	mcpsSchema,
+	providersSchema,
+	tables,
+	userMetadataSchema
+} from '~/db/app-schema';
+import { maybeJson } from '~/utils/arktype';
 
 export const ValidMessage = Type.Script(`{
-    user_intent: "add_mcp" | "update_mcp" | "add_provider" | "update_provider" | "create_chat" | "update_chat" | "delete_mcp" | "delete_chat" | "delete_provider" | "set_user_metadata",
-    meta: Record<string, unknown>
+    type: "add_mcp" | "update_mcp" | "add_provider" | "update_provider" | "create_chat" | "update_chat" | "delete_mcp" | "delete_chat" | "delete_provider" | "set_user_metadata",
+    data: Record<string, unknown>
   }`);
 const validMessage = type({
-	user_intent: '"add_provider" | "update_provider"',
-	meta: schema.providersSchema.omit('createdAt', 'updatedAt')
+	type: '"add_provider"',
+	data: maybeJson(providersSchema.omit('createdAt', 'updatedAt'))
 })
 	.or({
-		user_intent: '"add_mcp" | "update_mcp"',
-		meta: schema.mcpsSchema.omit('createdAt', 'updatedAt')
+		type: '"update_provider"',
+		data: maybeJson(
+			providersSchema
+				.omit('createdAt', 'updatedAt')
+				.partial()
+				.merge({ id: providersSchema.get('id') })
+		)
 	})
 	.or({
-		user_intent: '"create_chat" | "update_chat"',
-		meta: schema.chatsSchema.omit('createdAt', 'updatedAt').merge({
-			finished: 'boolean = true',
-			tags: type('string[]').default(() => [])
-		})
+		type: '"add_mcp"',
+		data: maybeJson(mcpsSchema.omit('createdAt', 'updatedAt'))
 	})
 	.or({
-		user_intent: '"delete_mcp" | "delete_chat" | "delete_provider"',
-		meta: {
-			id: 'string'
-		}
+		type: '"update_mcp"',
+		data: maybeJson(
+			mcpsSchema
+				.omit('createdAt', 'updatedAt')
+				.partial()
+				.merge({ id: mcpsSchema.get('id') })
+		)
 	})
 	.or({
-		user_intent: '"set_user_metadata"',
-		meta: schema.userMetadataSchema.omit('createdAt', 'updatedAt')
+		type: '"create_chat"',
+		data: maybeJson(
+			chatsSchema.omit('createdAt', 'updatedAt').merge({
+				finished: 'boolean = true',
+				tags: type('string[]').default(() => [])
+			})
+		)
+	})
+	.or({
+		type: '"update_chat"',
+		data: maybeJson(
+			chatsSchema
+				.omit('createdAt', 'updatedAt')
+				.merge({
+					finished: 'boolean = true',
+					tags: type('string[]').default(() => [])
+				})
+				.partial()
+				.merge({ id: chatsSchema.get('id') })
+		)
+	})
+	.or({
+		type: '"delete_mcp" | "delete_chat" | "delete_provider"',
+		data: type({ id: 'string' }).or(
+			type('string').pipe((value) => {
+				return safeParseJson(value, { validate: type({ id: 'string' }).assert }).mapOr(
+					value,
+					(value) => value.id
+				);
+			})
+		)
+	})
+	.or({
+		type: '"set_user_metadata"',
+		data: maybeJson(userMetadataSchema.omit('createdAt', 'updatedAt'))
 	});
 
 type TValidMessage = typeof validMessage.infer;
 
 const userIntentToTable = new Map(
 	Object.entries({
-		add_mcp: schema.mcps,
-		add_provider: schema.providers,
-		create_chat: schema.chats,
-		delete_chat: schema.chats,
-		delete_mcp: schema.mcps,
-		delete_provider: schema.providers,
-		set_user_metadata: schema.userMetadata,
-		update_chat: schema.chats,
-		update_mcp: schema.mcps,
-		update_provider: schema.providers
+		add_mcp: tables.mcps,
+		add_provider: tables.providers,
+		create_chat: tables.chats,
+		delete_chat: tables.chats,
+		delete_mcp: tables.mcps,
+		delete_provider: tables.providers,
+		set_user_metadata: tables.userMetadata,
+		update_chat: tables.chats,
+		update_mcp: tables.mcps,
+		update_provider: tables.providers
 	})
 );
 
 const processMessage = async (value: TValidMessage): Promise<TUpdate[]> => {
-	switch (value.user_intent) {
+	const table = userIntentToTable.get(value.type)!;
+	const tableName = getTableName(table);
+	switch (value.type) {
 		case 'add_mcp':
 		case 'add_provider':
 		case 'create_chat': {
-			const table = userIntentToTable.get(value.user_intent)!;
-			const tableName = getTableName(table);
 			return [
 				{
 					operation: 'insert',
 					table: tableName,
-					id: value.meta.id,
-					data: value.meta,
+					id: value.data.id,
+					data: value.data,
 					invalidate: [
 						['db', tableName, 'all'],
-						['db', tableName, 'byId', value.meta.id]
+						['db', tableName, 'byId', value.data.id]
 					]
 				}
 			];
@@ -76,16 +122,15 @@ const processMessage = async (value: TValidMessage): Promise<TUpdate[]> => {
 		case 'delete_chat':
 		case 'delete_mcp':
 		case 'delete_provider': {
-			const table = userIntentToTable.get(value.user_intent)!;
-			const tableName = getTableName(table);
+			const id = value.data;
 			return [
 				{
 					operation: 'delete',
 					table: tableName,
-					id: value.meta.id,
+					id,
 					invalidate: [
 						['db', tableName, 'all'],
-						['db', tableName, 'byId', value.meta.id]
+						['db', tableName, 'byId', id]
 					]
 				}
 			];
@@ -94,12 +139,12 @@ const processMessage = async (value: TValidMessage): Promise<TUpdate[]> => {
 			return [
 				{
 					operation: 'upsert',
-					table: getTableName(schema.userMetadata),
-					id: value.meta.id,
-					data: value.meta,
+					table: tableName,
+					id: value.data.id,
+					data: value.data,
 					invalidate: [
 						['db', 'userMetadata', 'all'],
-						['db', 'userMetadata', 'byId', value.meta.id]
+						['db', 'userMetadata', 'byId', value.data.id]
 					]
 				}
 			];
@@ -107,17 +152,15 @@ const processMessage = async (value: TValidMessage): Promise<TUpdate[]> => {
 		case 'update_chat':
 		case 'update_mcp':
 		case 'update_provider': {
-			const table = userIntentToTable.get(value.user_intent)!;
-			const tableName = getTableName(table);
 			return [
 				{
 					operation: 'update',
 					table: tableName,
-					id: value.meta.id,
-					data: value.meta,
+					id: value.data.id,
+					data: value.data,
 					invalidate: [
 						['db', tableName, 'all'],
-						['db', tableName, 'byId', value.meta.id]
+						['db', tableName, 'byId', value.data.id]
 					]
 				}
 			];

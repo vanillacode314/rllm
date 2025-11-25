@@ -70,8 +70,8 @@ export function EditMCPModal() {
 							return;
 						}
 						await logger.dispatch({
-							user_intent: 'update_mcp',
-							meta: parsedFormData
+							type: 'update_mcp',
+							data: parsedFormData
 						});
 						setMcpIdToEdit(false);
 					}}

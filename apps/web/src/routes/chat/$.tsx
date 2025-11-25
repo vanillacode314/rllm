@@ -85,15 +85,15 @@ export const Route = createFileRoute('/chat/$')({
 		if (!selectedProvider) {
 			await logger.dispatch(
 				{
-					user_intent: 'set_user_metadata',
-					meta: {
+					type: 'set_user_metadata',
+					data: {
 						id: 'selected-provider-id',
 						value: providers[0].id
 					}
 				},
 				{
-					user_intent: 'set_user_metadata',
-					meta: {
+					type: 'set_user_metadata',
+					data: {
 						id: 'selected-model-id',
 						value: providers[0].defaultModelIds[0]
 					}
@@ -124,8 +124,8 @@ export const Route = createFileRoute('/chat/$')({
 				model: newProvider.defaultModelIds[0]
 			});
 			await logger.dispatch({
-				user_intent: 'update_chat',
-				meta: { id: chat.id, settings: chat.settings }
+				type: 'update_chat',
+				data: { id: chat.id, settings: chat.settings }
 			});
 		}
 
@@ -235,8 +235,8 @@ function ChatPageComponent() {
 			const notificationId = createNotification('Generating Response');
 			await batch(async () => {
 				await logger.dispatch({
-					user_intent: 'update_chat',
-					meta: {
+					type: 'update_chat',
+					data: {
 						id: chat.id,
 						finished: false,
 						messages: chat.messages.toJSON()
@@ -400,8 +400,8 @@ function ChatPageComponent() {
 		async onSettled(_, __, { chat }, context) {
 			if (!context) return;
 			await logger.dispatch({
-				user_intent: 'update_chat',
-				meta: {
+				type: 'update_chat',
+				data: {
 					id: chat.id,
 					finished: true,
 					messages: chat.messages.toJSON()
@@ -447,24 +447,21 @@ function ChatPageComponent() {
 				}
 			}
 
-			const meta: Partial<Omit<TChat, 'id' | 'messages'>> & { id: string; messages: object } = {
+			const data: Partial<Omit<TChat, 'id' | 'messages'>> & { id: string; messages: object } = {
 				id: chat.id,
 				messages: chat.messages.toJSON()
 			};
-			if (updates.title) meta.title = updates.title;
-			if (updates.tags) meta.tags = updates.tags;
+			if (updates.title) data.title = updates.title;
+			if (updates.tags) data.tags = updates.tags;
 			if (updates.model) {
-				meta.settings = chat.settings;
-				meta.settings.model = updates.model;
+				data.settings = chat.settings;
+				data.settings.model = updates.model;
 			}
 			if (updates.providerId) {
-				meta.settings = chat.settings;
-				meta.settings.providerId = updates.providerId;
+				data.settings = chat.settings;
+				data.settings.providerId = updates.providerId;
 			}
-			await logger.dispatch({
-				user_intent: 'update_chat',
-				meta
-			});
+			await logger.dispatch({ type: 'update_chat', data });
 		}
 	}));
 
@@ -519,11 +516,8 @@ function ChatPageComponent() {
 		const $chat = chat();
 		if (loaderData().isNewChat) {
 			await logger.dispatch({
-				user_intent: 'create_chat',
-				meta: {
-					...$chat,
-					messages: $chat.messages.toJSON()
-				}
+				type: 'create_chat',
+				data: { ...$chat, messages: $chat.messages.toJSON() }
 			});
 
 			await navigate({
@@ -613,11 +607,8 @@ function ChatPageComponent() {
 			setCurrentPath(path.concat(getLatestPath(parentNode.children[path.at(-1)!])));
 		}
 		await logger.dispatch({
-			user_intent: 'update_chat',
-			meta: {
-				id: chat().id,
-				messages: chat().messages.toJSON()
-			}
+			type: 'update_chat',
+			data: { id: chat().id, messages: chat().messages.toJSON() }
 		});
 	}
 
@@ -643,8 +634,8 @@ function ChatPageComponent() {
 				Promise.resolve(!$chat.finished).then(async (shouldUpdateFinished) => {
 					if (!shouldUpdateFinished) return;
 					await logger.dispatch({
-						user_intent: 'update_chat',
-						meta: {
+						type: 'update_chat',
+						data: {
 							id: chat().id,
 							finished: true,
 							messages: $chat.messages.toJSON()
@@ -655,8 +646,8 @@ function ChatPageComponent() {
 					async (shouldUpdateProvider) => {
 						if (!shouldUpdateProvider) return;
 						await logger.dispatch({
-							user_intent: 'set_user_metadata',
-							meta: {
+							type: 'set_user_metadata',
+							data: {
 								id: 'selected-provider-id',
 								value: $chat.settings.providerId
 							}
@@ -667,8 +658,8 @@ function ChatPageComponent() {
 					async (shouldUpdateModel) => {
 						if (!shouldUpdateModel) return;
 						await logger.dispatch({
-							user_intent: 'set_user_metadata',
-							meta: {
+							type: 'set_user_metadata',
+							data: {
 								id: 'selected-model-id',
 								value: $chat.settings.model
 							}
@@ -763,7 +754,12 @@ function ChatPageComponent() {
 		}
 	});
 	onRemoveAttachment((id) => {
-		setAttachments((attachments) => attachments.filter((attachment) => attachment.id !== id));
+		setAttachments(
+			produce((attachments) => {
+				const index = attachments.findIndex((attachment) => attachment.id === id);
+				attachments.splice(index, 1);
+			})
+		);
 	});
 
 	return (

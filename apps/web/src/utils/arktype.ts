@@ -21,4 +21,7 @@ function JsonTreeSchema<const def>(of: type.validate<def>): Type<JsonTree<type.i
 	return type.raw({ value: type('null').or(of), children: type('unknown').array() }) as never;
 }
 
-export { asOption, asOptionWithDefault, JsonTreeSchema };
+const maybeJson = <const def>(t: type.validate<def>): Type<type.infer<def>> =>
+	type.raw('string.json.parse').or(t);
+
+export { asOption, asOptionWithDefault, JsonTreeSchema, maybeJson };

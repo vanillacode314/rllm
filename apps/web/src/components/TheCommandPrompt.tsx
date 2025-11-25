@@ -191,12 +191,12 @@ function TheCommandPrompt() {
 									handler: async () => {
 										await logger.dispatch(
 											{
-												user_intent: 'set_user_metadata',
-												meta: { id: 'selected-provider-id', value: provider.id }
+												type: 'set_user_metadata',
+												data: { id: 'selected-provider-id', value: provider.id }
 											},
 											{
-												user_intent: 'set_user_metadata',
-												meta: { id: 'selected-model-id', value: model.id }
+												type: 'set_user_metadata',
+												data: { id: 'selected-model-id', value: model.id }
 											}
 										);
 									},
@@ -213,8 +213,8 @@ function TheCommandPrompt() {
 		const title = prompt('Enter a new title for this chat');
 		if (!title) return;
 		await logger.dispatch({
-			user_intent: 'update_chat',
-			meta: { id, title }
+			type: 'update_chat',
+			data: { id, title }
 		});
 		if (isChatOpen(location(), id)) {
 			await navigate({
@@ -232,8 +232,8 @@ function TheCommandPrompt() {
 			await navigate({ to: '/chat/$', params: { _splat: 'new' } });
 		}
 		await logger.dispatch({
-			user_intent: 'delete_chat',
-			meta: { id }
+			type: 'delete_chat',
+			data: id
 		});
 	}
 

@@ -60,12 +60,12 @@ function TheChatSettingsDrawer() {
 								onChange={async (provider) => {
 									await logger.dispatch(
 										{
-											user_intent: 'set_user_metadata',
-											meta: { id: 'selected-provider-id', value: provider.id }
+											type: 'set_user_metadata',
+											data: { id: 'selected-provider-id', value: provider.id }
 										},
 										{
-											user_intent: 'set_user_metadata',
-											meta: { id: 'selected-model-id', value: provider.defaultModelIds[0] }
+											type: 'set_user_metadata',
+											data: { id: 'selected-model-id', value: provider.defaultModelIds[0] }
 										}
 									);
 								}}
@@ -76,8 +76,8 @@ function TheChatSettingsDrawer() {
 								fetcher={fetcher()}
 								onChange={async (model) => {
 									await logger.dispatch({
-										user_intent: 'set_user_metadata',
-										meta: { id: 'selected-model-id', value: model.id }
+										type: 'set_user_metadata',
+										data: { id: 'selected-model-id', value: model.id }
 									});
 								}}
 								selectedModelId={selectedModelId.isSuccess ? selectedModelId.data : null}

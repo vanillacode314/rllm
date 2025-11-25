@@ -3,10 +3,10 @@ import { type ClientConfig, SQLocal, type Transaction } from 'sqlocal';
 
 export type TConfig<TEvent extends TBaseEvent> = {
 	config: ClientConfig;
-	eventToUpdates: (event: TEvent, tx: TTransaction) => MaybePromise<TUpdate[]>;
+	eventToUpdates: (event: NoInfer<TEvent>, tx: TTransaction) => MaybePromise<TUpdate[]>;
 	invalidate?: (keys: string[][]) => MaybePromise<void>;
 	onNewEvent?: () => MaybePromise<void>;
-	validateEvent?: (event: unknown) => boolean;
+	validateEvent?: (event: unknown) => TEvent;
 };
 export type TUpdate =
 	| {
@@ -22,12 +22,17 @@ export type TUpdate =
 			operation: 'delete';
 			table: string;
 	  };
-interface Logger<T> {
+interface Logger<T extends TBaseEvent> {
 	db: SQLocal;
 	dispatch: (...events: Array<T & { dontLog?: boolean }>) => Promise<void>;
 	getClientId: () => Promise<string>;
 	getClock: () => Promise<HLC>;
 	getMetadata: (key: string) => Promise<null | string>;
+	on: <U extends T>(
+		type: U['type'],
+		handler: (data: U['data'], timestamp: string) => void,
+		opts?: { self?: boolean }
+	) => () => void;
 	receive: (
 		events: Array<T & { syncedAt: string; timestamp: string }>,
 		tx?: TTransaction
@@ -37,8 +42,8 @@ interface Logger<T> {
 
 type MaybePromise<T> = Promise<T> | T;
 type TBaseEvent = {
-	meta: unknown;
-	user_intent: string;
+	data: unknown;
+	type: string;
 };
 
 type TTransaction = Pick<Transaction, 'query'>;
@@ -79,24 +84,39 @@ export async function createEventLogger<TEvent extends TBaseEvent>({
 			})
 		)
 	);
+	const subscriptions = new Map<
+		string,
+		Set<{ handler: (data: unknown, timestamp: string) => unknown; self?: boolean }>
+	>();
 
 	const logger = {
 		applyUpdates: async (updates: TUpdate[], timestamp: string, tx: TTransaction) => {
 			if (updates.length === 0) return;
-			const statements = updates.map((update) => updateToStatement(update, timestamp, schema));
-			await Promise.all(statements.map((statement) => tx.query(statement)));
+			await Promise.all(
+				updates.map((update) =>
+					tx.query(updateToStatement(update, timestamp, schema)).catch((error) => {
+						throw new Error(`Failed to apply update: ${JSON.stringify(update)}`, { cause: error });
+					})
+				)
+			);
 		},
 		dispatch: async (...events: Array<TEvent & { dontLog?: boolean; timestamp?: string }>) => {
 			if (events.length === 0) return;
 			if (validateEvent) {
-				for (const event of events) {
-					if (!validateEvent(event)) throw new Error(`Invalid event: ${JSON.stringify(event)}`);
+				for (let i = 0; i < events.length; i++) {
+					const event = events[i];
+					try {
+						const validatedEvent = validateEvent(event);
+						events[i] = validatedEvent;
+					} catch (error) {
+						throw new Error(`Invalid event: ${JSON.stringify(event)}`, { cause: error });
+					}
 				}
 			}
 			const clock = await logger.getClock();
 
 			let updates: TUpdate[] = [];
-			await db.transaction(async (tx) => {
+			const loggedEvents = await db.transaction(async (tx) => {
 				updates = (await Promise.all(events.map((event) => eventToUpdates(event, tx)))).flat();
 				for (const event of events) {
 					event.timestamp = clock.increment().toString();
@@ -104,21 +124,34 @@ export async function createEventLogger<TEvent extends TBaseEvent>({
 				const validatedEventsToLog = events.filter(
 					(event) => !('dontLog' in event) || !event.dontLog
 				);
+				let loggedEvents: Array<{ timestamp: string }> | undefined;
 				if (validatedEventsToLog.length > 0) {
-					await tx.query({
+					loggedEvents = await tx.query({
 						params: validatedEventsToLog
 							.values()
-							.flatMap((event) => [event.timestamp, event.user_intent, event.meta])
+							.flatMap((event) => [event.timestamp, event.type, event.data])
 							.map(toSql)
 							.toArray(),
-						sql: `INSERT INTO events (timestamp, user_intent, meta) VALUES ${validatedEventsToLog
+						sql: `INSERT OR IGNORE INTO events (timestamp, type, data) VALUES ${validatedEventsToLog
 							.map(() => '(?, ?, ?)')
-							.join(',')} ON CONFLICT DO NOTHING`
+							.join(',')} RETURNING timestamp`
 					});
 				}
 				await logger.setClock(clock, tx);
 				await logger.applyUpdates(updates, clock.toString(), tx);
+				return loggedEvents;
 			});
+			if (loggedEvents) {
+				for (const { timestamp } of loggedEvents) {
+					const event = events.find((event) => event.timestamp === timestamp)!;
+					const subscribers = subscriptions.get(event.type);
+					if (!subscribers) continue;
+					for (const subscriber of subscribers) {
+						if (!subscriber.self) continue;
+						subscriber.handler(event.data, timestamp);
+					}
+				}
+			}
 			await invalidate?.(updates.flatMap((update) => update.invalidate ?? []));
 			onNewEvent?.();
 		},
@@ -150,14 +183,37 @@ export async function createEventLogger<TEvent extends TBaseEvent>({
 				sql: `SELECT value FROM metadata WHERE key = ?`
 			}).then((rows) => rows[0]?.value ?? null);
 		},
+		on(
+			type: TEvent['type'],
+			handler: (data: TEvent['data'], timestamp: string) => void,
+			opts?: { self?: boolean }
+		) {
+			const subscribers = subscriptions.get(type) ?? new Set();
+			const subscriber = opts?.self ? { handler, self: opts.self } : { handler };
+			subscribers.add(subscriber);
+			subscriptions.set(type, subscribers);
+			return () => {
+				const subscribers = subscriptions.get(type)!;
+				subscribers.delete(subscriber);
+			};
+		},
 		receive: async (
 			events: Array<TEvent & { syncedAt: string; timestamp: string }>,
 			tx?: TTransaction
 		): Promise<string[][]> => {
 			if (events.length === 0) return [];
 			if (validateEvent) {
-				for (const event of events) {
-					if (!validateEvent(event)) throw new Error(`Invalid event: ${JSON.stringify(event)}`);
+				for (let i = 0; i < events.length; i++) {
+					const event = events[i];
+					try {
+						const validatedEvent = validateEvent(event);
+						events[i] = Object.assign(validatedEvent, {
+							syncedAt: event.syncedAt,
+							timestamp: event.timestamp
+						});
+					} catch (error) {
+						throw new Error(`Invalid event: ${JSON.stringify(event)}`, { cause: error });
+					}
 				}
 			}
 			if (!tx) return await db.transaction((tx) => logger.receive(events, tx));
@@ -168,13 +224,13 @@ export async function createEventLogger<TEvent extends TBaseEvent>({
 				event: TEvent & { syncedAt: string; timestamp: string };
 				updates: TUpdate[];
 			}> = [];
-			await tx.query({
+			const loggedEvents = await tx.query({
 				params: events
 					.values()
-					.flatMap((event) => [event.timestamp, event.user_intent, event.meta])
+					.flatMap((event) => [event.timestamp, event.type, event.type])
 					.map(toSql)
 					.toArray(),
-				sql: `INSERT INTO events (timestamp, user_intent, meta) VALUES ${events
+				sql: `INSERT INTO events (timestamp, type, data) VALUES ${events
 					.map(() => '(?, ?, ?)')
 					.join(',')} ON CONFLICT DO NOTHING`
 			});
@@ -197,6 +253,12 @@ export async function createEventLogger<TEvent extends TBaseEvent>({
 				params: [lastPullAt, lastPullAt],
 				sql: `INSERT INTO metadata (key, value) VALUES ('lastPullAt', ?) ON CONFLICT(key) DO UPDATE SET value = ?`
 			});
+			for (const { timestamp } of loggedEvents) {
+				const event = events.find((event) => event.timestamp === timestamp)!;
+				const subscribers = subscriptions.get(event.type);
+				if (!subscribers) continue;
+				for (const subscriber of subscribers) subscriber.handler(event.data, timestamp);
+			}
 			return updates
 				.flatMap((update) => update.updates)
 				.flatMap((update) => update.invalidate ?? []);
@@ -223,6 +285,7 @@ export async function createEventLogger<TEvent extends TBaseEvent>({
 		getClientId: logger.getClientId,
 		getClock: logger.getClock,
 		getMetadata: logger.getMetadata,
+		on: logger.on,
 		receive: logger.receive,
 		setMetadata: logger.setMetadata
 	};

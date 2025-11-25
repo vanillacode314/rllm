@@ -8,7 +8,7 @@ import { For, onCleanup, Show } from 'solid-js';
 import { useNotifications } from '~/context/notifications';
 import { db } from '~/db/client';
 import { logger } from '~/db/client';
-import * as schema from '~/db/schema';
+import { tables } from '~/db/schema';
 import { queries } from '~/queries';
 import { isMobile } from '~/signals';
 import { slugify } from '~/utils/string';
@@ -66,13 +66,13 @@ export function TheSidebar() {
 		queryFn: () =>
 			db
 				.select({
-					finished: schema.chats.finished,
-					id: schema.chats.id,
-					title: schema.chats.title,
-					tags: schema.chats.tags
+					finished: tables.chats.finished,
+					id: tables.chats.id,
+					title: tables.chats.title,
+					tags: tables.chats.tags
 				})
-				.from(schema.chats)
-				.orderBy(desc(schema.chats.createdAt))
+				.from(tables.chats)
+				.orderBy(desc(tables.chats.createdAt))
 	}));
 	const chats = () => (chatsQuery.isSuccess ? chatsQuery.data : []);
 	const currentChatIndex = () => chats().findIndex((chat) => isChatOpen(location(), chat.id));
@@ -86,8 +86,8 @@ export function TheSidebar() {
 		const title = prompt('Enter a new title for this chat');
 		if (!title) return;
 		await logger.dispatch({
-			user_intent: 'update_chat',
-			meta: { id, title }
+			type: 'update_chat',
+			data: { id, title }
 		});
 		if (isChatOpen(location(), id)) {
 			await navigate({
@@ -105,8 +105,8 @@ export function TheSidebar() {
 			await navigate({ to: '/chat/$', params: { _splat: 'new' } });
 		}
 		await logger.dispatch({
-			user_intent: 'delete_chat',
-			meta: { id }
+			type: 'delete_chat',
+			data: id
 		});
 	}
 

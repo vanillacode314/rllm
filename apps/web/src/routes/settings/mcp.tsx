@@ -24,8 +24,8 @@ function SettingsMCPComponent() {
 		const yes = confirm('Are you sure you want to delete this mcp?');
 		if (!yes) return;
 		await logger.dispatch({
-			user_intent: 'delete_mcp',
-			meta: { id }
+			type: 'delete_mcp',
+			data: id
 		});
 	}
 

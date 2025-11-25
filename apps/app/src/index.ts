@@ -236,11 +236,11 @@ const app = new Elysia({ serve: { idleTimeout: 120 } })
 			clientId: 'string',
 			data: 'string',
 			signature: 'string',
-			type: "'new_messages'"
+			type: "'new_events'"
 		}),
 		async message(ws, body) {
 			switch (body.type) {
-				case 'new_messages': {
+				case 'new_events': {
 					const { accountId, clientId, data, signature } = body;
 					const verified = verifyData(data, signature, accountId);
 					if (!verified) return;
@@ -248,24 +248,24 @@ const app = new Elysia({ serve: { idleTimeout: 120 } })
 					const clock = await getLocalClock();
 					const syncedAt = clock.increment().toString();
 					const timestamp = clock.toString();
-					ws.publish(`new_messages-${accountId}`, {
-						messages: [{ data, syncedAt }],
+					ws.publish(`new_events_${accountId}`, {
+						events: [{ data, syncedAt }],
 						timestamp,
-						type: 'new_messages'
+						type: 'new_events'
 					});
 					await db.transaction(async (tx) => {
 						await receiveMessage({ accountId, clientId, data, syncedAt }, tx);
 						await setLocalClock(clock, tx);
 					});
-					ws.send({ timestamp, type: 'got_messages' });
+					ws.send({ timestamp, type: 'got_events' });
 					break;
 				}
 			}
 		},
 		async open(ws) {
 			const { accountId, clientId, lastSyncedAt } = ws.data.query;
-			ws.subscribe(`new_messages-${accountId}`);
-			const messages = await db
+			ws.subscribe(`new_events_${accountId}`);
+			const events = await db
 				.select({ data: schema.messages.data, syncedAt: schema.messages.syncedAt })
 				.from(schema.messages)
 				.where(
@@ -275,11 +275,11 @@ const app = new Elysia({ serve: { idleTimeout: 120 } })
 						eq(schema.messages.accountId, accountId)
 					)
 				);
-			if (messages.length <= 0) return;
+			if (events.length <= 0) return;
 			ws.send({
-				messages,
+				events,
 				timestamp: (await getMetadata('clock'))!,
-				type: 'new_messages'
+				type: 'new_events'
 			});
 		},
 		query: type({

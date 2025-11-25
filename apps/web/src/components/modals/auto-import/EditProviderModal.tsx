@@ -81,8 +81,8 @@ export function EditProviderModal() {
 							return;
 						}
 						await logger.dispatch({
-							user_intent: 'update_provider',
-							meta: parsedFormData
+							type: 'update_provider',
+							data: parsedFormData
 						});
 						setProviderIdToEdit(false);
 					}}

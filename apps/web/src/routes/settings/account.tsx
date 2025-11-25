@@ -188,8 +188,8 @@ function SettingsAccountComponent() {
 								return;
 							}
 							await logger.dispatch({
-								user_intent: 'set_user_metadata',
-								meta: {
+								type: 'set_user_metadata',
+								data: {
 									id: 'user-display-name',
 									value: formData.displayName
 								}

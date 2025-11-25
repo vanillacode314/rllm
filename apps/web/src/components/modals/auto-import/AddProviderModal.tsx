@@ -64,8 +64,8 @@ export function AddProviderModal() {
 							return;
 						}
 						await logger.dispatch({
-							user_intent: 'add_provider',
-							meta: { id: nanoid(), ...parsedFormData }
+							type: 'add_provider',
+							data: { id: nanoid(), ...parsedFormData }
 						});
 						setOpen(false);
 					}}

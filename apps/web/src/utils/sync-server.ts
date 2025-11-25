@@ -4,7 +4,8 @@ import { type $Fetch, ofetch } from 'ofetch';
 import { AsyncResult } from 'ts-result-option';
 import { safeParseJson, tryBlock } from 'ts-result-option/utils';
 
-import * as schema from '~/db/schema';
+import { eventSchema } from '~/db/events-schema';
+import { validMessage } from '~/queries/mutations';
 import { account } from '~/signals/account';
 import { encryptionWorkerPool } from '~/workers/encryption';
 
@@ -127,8 +128,35 @@ const getMessages = (
 						data = await worker
 							.decrypt(data, actualAesKey)
 							.finally(() => encryptionWorkerPool.release(worker));
-						const messages = schema.eventSchema.array().assert(JSON.parse(data));
-						return messages.map((message) => Object.assign(message, { syncedAt }));
+						const events = eventSchema
+							// legacy type
+							.or(
+								type({
+									timestamp: 'string',
+									user_intent: validMessage.get('type'),
+									meta: validMessage.get('data')
+								}).narrow((value) => {
+									validMessage.assert({
+										type: value.user_intent,
+										data: value.meta
+									});
+									return true;
+								})
+							)
+							.pipe((value) => {
+								if ('user_intent' in value) {
+									return {
+										timestamp: value.timestamp,
+										type: value.user_intent,
+										data: value.meta
+									};
+								}
+								return value;
+							})
+							.as<typeof eventSchema.infer>()
+							.array()
+							.assert(JSON.parse(data));
+						return events.map((event) => Object.assign(event, { syncedAt }));
 					})
 					.map((promise) => promise.catch((e) => (controller.abort(), Promise.reject(e))))
 			);

@@ -53,8 +53,8 @@ export function AddMCPModal() {
 							return;
 						}
 						await logger.dispatch({
-							user_intent: 'add_mcp',
-							meta: { id: nanoid(), ...parsedFormData }
+							type: 'add_mcp',
+							data: { id: nanoid(), ...parsedFormData }
 						});
 						setOpen(false);
 					}}

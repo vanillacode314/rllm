@@ -9,12 +9,13 @@ import { tryBlock } from 'ts-result-option/utils';
 import { useNotifications } from '~/context/notifications';
 import { db } from '~/db/client';
 import { logger } from '~/db/client';
-import * as schema from '~/db/schema';
+import { eventSchema } from '~/db/events-schema';
+import { tables } from '~/db/schema';
+import { validMessage } from '~/queries/mutations';
 import { account } from '~/signals/account';
 import { env } from '~/utils/env';
 import { queryClient } from '~/utils/query-client';
 import { isOnline, pageVisible } from '~/utils/signals';
-import { optimizeMessages } from '~/utils/storage';
 import { encryptionWorkerPool } from '~/workers/encryption';
 
 const [notifications, { createNotification, removeNotification, updateNotification }] =
@@ -34,11 +35,11 @@ const shouldPoll = createMemo(
 );
 const websocketMessageSchema = type('string.json.parse').pipe(
 	type({
-		type: "'new_messages'",
-		messages: [{ data: 'string', syncedAt: 'string' }, '[]'],
+		type: "'new_events'",
+		events: [{ data: 'string', syncedAt: 'string' }, '[]'],
 		timestamp: 'string'
 	}).or({
-		type: "'got_messages'",
+		type: "'got_events'",
 		timestamp: 'string'
 	})
 );
@@ -68,7 +69,7 @@ const initSocket = () =>
 						ws = makeReconnectingWS(socketUrl);
 						ws.addEventListener('open', () => {
 							console.debug('[WS] Connected');
-							pushPendingMessages().unwrap();
+							pushPendingEvents().unwrap();
 						});
 
 						const onMessage = (event: MessageEvent) =>
@@ -80,7 +81,7 @@ const initSocket = () =>
 										return;
 									}
 									switch (result.type) {
-										case 'got_messages': {
+										case 'got_events': {
 											const lastPushAt = await logger.getMetadata('lastPushAt');
 											if (lastPushAt && result.timestamp > lastPushAt) {
 												await logger.setMetadata('lastPushAt', result.timestamp);
@@ -88,7 +89,7 @@ const initSocket = () =>
 											removeNotification(pushNotificationId);
 											break;
 										}
-										case 'new_messages': {
+										case 'new_events': {
 											createNotification('Receiving changes', { id: pullNotificationId });
 											const aesKey = await window.crypto.subtle.importKey(
 												'jwk',
@@ -97,26 +98,43 @@ const initSocket = () =>
 												true,
 												['encrypt', 'decrypt']
 											);
-											const decryptedMessages = await Promise.all(
-												result.messages.map(async ({ data, syncedAt }) => {
+											const decryptedEvents = await Promise.all(
+												result.events.map(async ({ data, syncedAt }) => {
 													const worker = await encryptionWorkerPool.get();
 													data = await worker
 														.decrypt(data, aesKey)
 														.finally(() => encryptionWorkerPool.release(worker));
-													const messages = schema.eventSchema.array().assert(JSON.parse(data));
-													return messages.map((message) => Object.assign(message, { syncedAt }));
+													const events = type('string.json.parse')
+														.to(type({ timestamp: 'string' }).array())
+														.assert(data)
+														.map((event) => {
+															try {
+																if ('user_intent' in event) {
+																	return eventSchema.assert({
+																		timestamp: event.timestamp,
+																		type: event.user_intent,
+																		data: event.meta
+																	});
+																}
+																return eventSchema.assert(event);
+															} catch (error) {
+																console.log(event);
+																throw error;
+															}
+														});
+													return events.map((event) => Object.assign(event, { syncedAt }));
 												})
 											);
 											updateNotification(
 												pullNotificationId,
-												`Receiving ${result.messages.length} messages`
+												`Receiving ${result.events.length} messages`
 											);
-											const toInvalidate = await logger.receive(decryptedMessages.flat());
+											const toInvalidate = await logger.receive(decryptedEvents.flat());
 											await Promise.all(
 												toInvalidate.map((queryKey) => queryClient.invalidateQueries({ queryKey }))
 											);
 											removeNotification(pullNotificationId);
-											console.debug(`[WS Pull] Got ${result.messages.length} messages`);
+											console.debug(`[WS Pull] Got ${result.events.length} messages`);
 											break;
 										}
 									}
@@ -147,7 +165,7 @@ const initSocket = () =>
 		(e) => new Error(`Error while initializing websocket`, { cause: e })
 	);
 
-const pushPendingMessages = () =>
+const pushPendingEvents = () =>
 	tryBlock(
 		async function* () {
 			if (account() === null) return;
@@ -158,18 +176,18 @@ const pushPendingMessages = () =>
 				() => new Error('Missing clientId in local database metadata')
 			);
 			const accountId = account()!.id;
-			const messages = await db
+			const events = await db
 				.select()
-				.from(schema.events)
+				.from(tables.events)
 				.where(
 					and(
-						gt(schema.events.timestamp, lastPushAt!).if(lastPushAt),
-						like(schema.events.timestamp, `%${clientId}`)
+						gt(tables.events.timestamp, lastPushAt!).if(lastPushAt),
+						like(tables.events.timestamp, `%${clientId}`)
 					)
 				);
-			if (!messages.length) return;
-			console.debug('[WS Push] Found', messages.length, 'messages to push');
-			createNotification(`Sending ${messages.length} changes`, { id: pushNotificationId });
+			if (!events.length) return;
+			console.debug('[WS Push] Found', events.length, 'messages to push');
+			createNotification(`Sending ${events.length} changes`, { id: pushNotificationId });
 			const aesKey = await window.crypto.subtle.importKey(
 				'jwk',
 				account()!.aesKey,
@@ -179,13 +197,13 @@ const pushPendingMessages = () =>
 			);
 			const worker = await encryptionWorkerPool.get();
 			const data = await worker
-				.encrypt(JSON.stringify(messages), aesKey)
+				.encrypt(JSON.stringify(events), aesKey)
 				.finally(() => encryptionWorkerPool.release(worker));
 			const wallet = new ethers.Wallet(account()!.privateKey);
 			const signature = await wallet.signMessage(data);
 			ws.send(
 				JSON.stringify({
-					type: 'new_messages',
+					type: 'new_events',
 					data,
 					signature,
 					clientId,
@@ -196,4 +214,4 @@ const pushPendingMessages = () =>
 		(e) => new Error(`Error while pushing pending messages`, { cause: e })
 	);
 
-export { initSocket, pushPendingMessages };
+export { initSocket, pushPendingEvents as pushPendingMessages };
