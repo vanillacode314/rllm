@@ -1,0 +1,160 @@
+syntax = "proto3";
+
+package events.v1;
+
+import "google/protobuf/struct.proto";
+
+message Event {
+  string version = 1;
+  string timestamp = 2;
+  EventData data = 3;
+}
+
+message EventData {
+  oneof event_type {
+    CreateProviderEvent create_provider = 1;
+    UpdateProviderEvent update_provider = 2;
+    CreateMCPEvent create_mcp = 3;
+    UpdateMCPEvent update_mcp = 4;
+    CreateChatEvent create_chat = 5;
+    UpdateChatEvent update_chat = 6;
+    DeleteProviderEvent delete_provider = 7;
+    DeleteMCPEvent delete_mcp = 8;
+    DeleteChatEvent delete_chat = 9;
+    SetUserMetadataEvent set_user_metadata = 10;
+    CreatePresetEvent create_preset = 11;
+    UpdatePresetEvent update_preset = 12;
+    DeletePresetEvent delete_preset = 13;
+  }
+}
+
+message CreateProviderEvent {
+  string id = 1;
+  string name = 2;
+  string type = 3;
+  string base_url = 4;
+  string token = 5;
+  repeated string default_model_ids = 6;
+}
+
+message UpdateProviderEvent {
+  string id = 1;
+  optional string name = 2;
+  optional string type = 3;
+  optional string base_url = 4;
+  optional string token = 5;
+  repeated string default_model_ids = 6;
+}
+
+message CreateMCPEvent {
+  string id = 1;
+  string name = 2;
+  string url = 3;
+}
+
+message UpdateMCPEvent {
+  string id = 1;
+  optional string name = 2;
+  optional string url = 3;
+}
+
+message CreateChatEvent {
+  string id = 1;
+  string title = 2;
+  repeated string tags = 3;
+  bool finished = 4;
+  google.protobuf.Struct messages = 5;
+  google.protobuf.Struct settings = 6;
+}
+
+message UpdateChatEvent {
+  string id = 1;
+  optional string title = 2;
+  repeated string tags = 3;
+  optional bool finished = 4;
+  optional google.protobuf.Struct messages = 5;
+  optional google.protobuf.Struct settings = 6;
+}
+
+message CreatePresetEvent {
+  string id = 1;
+  string name = 2;
+  google.protobuf.Struct settings = 3;
+}
+
+message UpdatePresetEvent {
+  string id = 1;
+  optional string name = 2;
+  optional google.protobuf.Struct settings = 3;
+}
+
+message DeletePresetEvent {
+  string id = 1;
+}
+
+message DeleteProviderEvent {
+  string id = 1;
+}
+message DeleteMCPEvent {
+  string id = 1;
+}
+message DeleteChatEvent {
+  string id = 1;
+}
+
+message SetUserMetadataEvent {
+  string id = 1;
+  string value = 2;
+}
+
+message SyncServerGetEventsResponsePayload {
+  bytes data = 1;
+  string synced_at = 3;
+}
+
+message SyncServerGetEventsResponse {
+  bool has_more = 1;
+  optional string next_after = 2;
+  uint32 page_size = 3;
+  repeated SyncServerGetEventsResponsePayload events = 4;
+}
+
+message SyncServerSocketNewEventsRequest {
+  string account_id = 1;
+  string client_id = 2;
+  bytes data = 3;
+  string signature = 4;
+}
+
+message SyncServerSocketNewEventsResponseData {
+  bytes data = 1;
+  string synced_at = 2;
+}
+
+message SyncServerSocketNewEventsResponse {
+  string id = 1;
+  repeated SyncServerSocketNewEventsResponseData events = 2;
+}
+
+message SyncServerSocketGotEventsResponse {
+  string id = 1;
+  string timestamp = 2;
+  uint32 count = 3;
+}
+
+message SyncServerSocketInfoResponse {
+  string id = 1;
+}
+
+message SyncServerSocketRequest {
+  repeated SyncServerSocketNewEventsRequest new_events = 1;
+  string timestamp = 2;
+}
+
+message SyncServerSocketResponse {
+  oneof payload {
+    SyncServerSocketNewEventsResponse new_events = 1;
+    SyncServerSocketGotEventsResponse got_events = 2;
+    SyncServerSocketInfoResponse info = 3;
+  }
+}

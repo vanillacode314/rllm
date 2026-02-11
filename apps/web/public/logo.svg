@@ -1,0 +1,55 @@
+<svg width="1080" xmlns="http://www.w3.org/2000/svg" height="1080" id="screenshot-220e2d72-17bc-8022-8006-f4d79a4d5b9a" viewBox="0 0 1080 1080" xmlns:xlink="http://www.w3.org/1999/xlink" fill="none" version="1.1"><style>/* cyrillic-ext */
+@font-face {
+  font-family: 'Ubuntu Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url(http://localhost:6080/internal/gfonts/font/ubuntumono/v19/KFOjCneDtsqEr0keqCMhbCc3CsTKlA.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Ubuntu Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url(http://localhost:6080/internal/gfonts/font/ubuntumono/v19/KFOjCneDtsqEr0keqCMhbCc-CsTKlA.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek-ext */
+@font-face {
+  font-family: 'Ubuntu Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url(http://localhost:6080/internal/gfonts/font/ubuntumono/v19/KFOjCneDtsqEr0keqCMhbCc2CsTKlA.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+/* greek */
+@font-face {
+  font-family: 'Ubuntu Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url(http://localhost:6080/internal/gfonts/font/ubuntumono/v19/KFOjCneDtsqEr0keqCMhbCc5CsTKlA.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Ubuntu Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url(http://localhost:6080/internal/gfonts/font/ubuntumono/v19/KFOjCneDtsqEr0keqCMhbCc0CsTKlA.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Ubuntu Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url(http://localhost:6080/internal/gfonts/font/ubuntumono/v19/KFOjCneDtsqEr0keqCMhbCc6CsQ.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+</style><g id="shape-220e2d72-17bc-8022-8006-f4d79a4d5b9a"><defs><clipPath id="frame-clip-220e2d72-17bc-8022-8006-f4d79a4d5b9a-render-1" class="frame-clip frame-clip-def"><rect rx="0" ry="0" x="0" y="0" width="1080" height="1080" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)"/></clipPath></defs><g class="frame-container-wrapper"><g class="frame-container-blur"><g class="frame-container-shadows"><g clip-path="url(#frame-clip-220e2d72-17bc-8022-8006-f4d79a4d5b9a-render-1)" fill="none"><g class="fills" id="fills-220e2d72-17bc-8022-8006-f4d79a4d5b9a"><rect width="1080" height="1080" class="frame-background" x="0" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" style="fill: rgb(0, 0, 0); fill-opacity: 1;" ry="0" rx="0" y="0"/></g><g class="frame-children"><g id="shape-220e2d72-17bc-8022-8006-f4d7af3cffe3"><g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="284.0000000000001" y="652" width="511.9999999999999" height="308" rx="0" ry="0"><defs><pattern patternUnits="objectBoundingBox" width="512" height="256.5" id="fill-0-render-2-0"><g><rect width="512" height="256.5" style="fill: rgb(255, 255, 255); fill-opacity: 1;"/></g></pattern></defs><g class="fills" id="fills-220e2d72-17bc-8022-8006-f4d7af3cffe3"><text x="284.0000000000001" y="933.8500061035156" dominant-baseline="ideographic" textLength="512" lengthAdjust="spacingAndGlyphs" style="text-transform: none; font-family: &quot;Ubuntu Mono&quot;; letter-spacing: normal; font-style: normal; font-weight: 400; white-space: pre; font-size: 256px; text-decoration: none; direction: ltr; fill: rgb(255, 255, 255); fill-opacity: 1;">RLLM</text></g></g></g><g id="shape-220e2d72-17bc-8022-8006-f4d8131518c0" width="32" height="32" rx="0" ry="0" style="fill: rgb(0, 0, 0);"><g id="shape-220e2d72-17bc-8022-8006-f4d8131547d7" style="display: none;"><g class="fills" id="fills-220e2d72-17bc-8022-8006-f4d8131547d7"><rect width="530.0000000000001" height="530.0000000000001" x="274.9999999999999" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" style="fill: none;" ry="0" fill="none" rx="0" y="127.99999999999989"/></g><g fill="none" id="strokes-c7debbcc-f208-80df-8006-f4d913fef9f6-220e2d72-17bc-8022-8006-f4d8131547d7" class="strokes"><g class="inner-stroke-shape" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)"><defs><clipPath id="inner-stroke-render-4-220e2d72-17bc-8022-8006-f4d8131547d7-0"><use href="#stroke-shape-render-4-220e2d72-17bc-8022-8006-f4d8131547d7-0"/></clipPath><rect rx="0" ry="0" x="274.9999999999999" y="127.99999999999989" width="530.0000000000001" height="530.0000000000001" id="stroke-shape-render-4-220e2d72-17bc-8022-8006-f4d8131547d7-0" style="fill: none; stroke-width: 32; stroke: rgb(255, 255, 255); stroke-opacity: 1;"/></defs><use href="#stroke-shape-render-4-220e2d72-17bc-8022-8006-f4d8131547d7-0" clip-path="url('#inner-stroke-render-4-220e2d72-17bc-8022-8006-f4d8131547d7-0')"/></g></g></g><g id="shape-220e2d72-17bc-8022-8006-f4d81315f3e0"><g class="fills" id="fills-220e2d72-17bc-8022-8006-f4d81315f3e0"><path d="M440.625,310.1875L639.375,310.1875M440.625,376.4375L540,376.4375M324.6875,409.78369140625C324.6875,445.1162109375,349.48699951171875,475.9014892578125,384.467041015625,481.046142578125C409.40631103515625,484.727294921875,434.60357666015625,487.5174560546875,460.0584716796875,489.4161376953125C467.7877197265625,489.9906005859375,474.8538818359375,494.0531005859375,479.1602783203125,500.4798583984375L540,591.75L600.8397216796875,500.5013427734375C605.1595458984375,494.0611572265625,612.2069091796875,489.9718017578125,619.9415283203125,489.4161376953125C645.2305908203125,487.530517578125,670.44384765625,484.739501953125,695.532958984375,481.046142578125C730.512939453125,475.9014892578125,755.3125,445.13916015625,755.3125,409.7606201171875L755.3125,276.8643798828125C755.3125,241.48583984375,730.512939453125,210.7235107421875,695.532958984375,205.578857421875C644.033935546875,198.0196533203125,592.051025390625,194.23382568359375,540,194.25C487.1767578125,194.25,435.2366943359375,198.1146240234375,384.467041015625,205.578857421875C349.48699951171875,210.7235107421875,324.6875,241.50885009765625,324.6875,276.8643798828125Z" fill="none" stroke-linecap="round" stroke-linejoin="round" style="fill: none;"/></g><g fill="none" stroke-linecap="round" stroke-linejoin="round" id="strokes-c7debbcc-f208-80df-8006-f4d914001e26-220e2d72-17bc-8022-8006-f4d81315f3e0" class="strokes"><g class="stroke-shape"><path d="M440.625,310.1875L639.375,310.1875M440.625,376.4375L540,376.4375M324.6875,409.78369140625C324.6875,445.1162109375,349.48699951171875,475.9014892578125,384.467041015625,481.046142578125C409.40631103515625,484.727294921875,434.60357666015625,487.5174560546875,460.0584716796875,489.4161376953125C467.7877197265625,489.9906005859375,474.8538818359375,494.0531005859375,479.1602783203125,500.4798583984375L540,591.75L600.8397216796875,500.5013427734375C605.1595458984375,494.0611572265625,612.2069091796875,489.9718017578125,619.9415283203125,489.4161376953125C645.2305908203125,487.530517578125,670.44384765625,484.739501953125,695.532958984375,481.046142578125C730.512939453125,475.9014892578125,755.3125,445.13916015625,755.3125,409.7606201171875L755.3125,276.8643798828125C755.3125,241.48583984375,730.512939453125,210.7235107421875,695.532958984375,205.578857421875C644.033935546875,198.0196533203125,592.051025390625,194.23382568359375,540,194.25C487.1767578125,194.25,435.2366943359375,198.1146240234375,384.467041015625,205.578857421875C349.48699951171875,210.7235107421875,324.6875,241.50885009765625,324.6875,276.8643798828125Z" style="fill: none; stroke-width: 16; stroke: rgb(255, 255, 255); stroke-opacity: 1;"/></g></g></g></g></g></g></g></g></g></g></svg>

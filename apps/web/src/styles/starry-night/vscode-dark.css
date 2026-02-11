@@ -1,0 +1,247 @@
+/* =============================================================================
+ *  Neovim‑derived CSS Theme
+ *
+ *  Colours are taken directly from the Lush‑based Neovim theme you posted.
+ *  The theme is a dark‑background theme, therefore the same palette is
+ *  exported for both the default and the dark‑mode media query.
+ *
+ *  Variable naming follows the “prettylights‑syntax‑*” convention used by GitHub,
+ *  which makes the file a drop‑in replacement for the example you gave.
+ * =========================================================================== */
+
+/* ---------------------------------------------------------------------------
+ *  Base colour palette – these map one‑to‑one to the Lua colour definitions.
+ * --------------------------------------------------------------------------- */
+:root {
+	/* Core editor colours */
+	--color-prettylights-syntax-bg: #1e1e1e; /* norm_bg */
+	--color-prettylights-syntax-fg: #d4d4d4; /* norm_fg */
+
+	/* Primary syntax colours */
+	--color-prettylights-syntax-comment: #6a9955; /* green */
+	--color-prettylights-syntax-constant: #569cd6; /* dark_blue */
+	--color-prettylights-syntax-string: #ce9178; /* brown */
+	--color-prettylights-syntax-number: #b5cea8; /* light_green */
+	--color-prettylights-syntax-boolean: #569cd6; /* dark_blue (re‑used) */
+	--color-prettylights-syntax-keyword: #c586c0; /* dark_pink */
+	--color-prettylights-syntax-function: #dcdcaa; /* yellow */
+	--color-prettylights-syntax-variable: #9cdcfe; /* light_blue */
+	--color-prettylights-syntax-operator: #d4d4d4; /* same as default fg */
+
+	/* Misc / decorative */
+	--color-prettylights-syntax-builtin: #4ec9b0; /* blue_green (used for @module, @type, …) */
+	--color-prettylights-syntax-special: #d7ba7d; /* yellow_orange */
+	--color-prettylights-syntax-label: #c8c8c8; /* label_fg */
+	--color-prettylights-syntax-tag: #569cd6; /* dark_blue again */
+	--color-prettylights-syntax-punctuation: #d4d4d4; /* norm_fg */
+	--color-prettylights-syntax-meta: #3794ff; /* info_blue (used for LSP Info) */
+	--color-prettylights-syntax-diff-added: #386229; /* DiffTextAdded bg */
+	--color-prettylights-syntax-diff-removed: #781212; /* DiffTextDeleted bg */
+	--color-prettylights-syntax-diff-changed: #0000ff; /* DiffTextChanged bg */
+
+	/* UI / diagnostics */
+	--color-prettylights-syntax-error: #f14c4c; /* error_red */
+	--color-prettylights-syntax-warning: #cca700; /* warn_yellow */
+	--color-prettylights-syntax-info: #3794ff; /* info_blue */
+	--color-prettylights-syntax-hint: #b0b0b0; /* hint_gray */
+	--color-prettylights-syntax-ok: #89d185; /* ok_green */
+}
+
+/* ---------------------------------------------------------------------------
+ *  Dark‑mode overrides – the original theme is already a dark theme,
+ *  so we simply re‑declare the same values (keeps the file usable when a
+ *  user forces “dark” mode in the browser).
+ * --------------------------------------------------------------------------- */
+@media (prefers-color-scheme: dark) {
+	:root {
+		--color-prettylights-syntax-bg: #1e1e1e;
+		--color-prettylights-syntax-fg: #d4d4d4;
+		--color-prettylights-syntax-comment: #6a9955;
+		--color-prettylights-syntax-constant: #569cd6;
+		--color-prettylights-syntax-string: #ce9178;
+		--color-prettylights-syntax-number: #b5cea8;
+		--color-prettylights-syntax-boolean: #569cd6;
+		--color-prettylights-syntax-keyword: #c586c0;
+		--color-prettylights-syntax-function: #dcdcaa;
+		--color-prettylights-syntax-variable: #9cdcfe;
+		--color-prettylights-syntax-operator: #d4d4d4;
+		--color-prettylights-syntax-builtin: #4ec9b0;
+		--color-prettylights-syntax-special: #d7ba7d;
+		--color-prettylights-syntax-label: #c8c8c8;
+		--color-prettylights-syntax-tag: #569cd6;
+		--color-prettylights-syntax-punctuation: #d4d4d4;
+		--color-prettylights-syntax-meta: #3794ff;
+		--color-prettylights-syntax-diff-added: #386229;
+		--color-prettylights-syntax-diff-removed: #781212;
+		--color-prettylights-syntax-diff-changed: #0000ff;
+		--color-prettylights-syntax-error: #f14c4c;
+		--color-prettylights-syntax-warning: #cca700;
+		--color-prettylights-syntax-info: #3794ff;
+		--color-prettylights-syntax-hint: #b0b0b0;
+		--color-prettylights-syntax-ok: #89d185;
+	}
+}
+
+/* ---------------------------------------------------------------------------
+ *  Classic “GitHub‑style” classes – these are the same selectors that the
+ *  example stylesheet used (pl‑c, pl‑k, pl‑s etc.).  They are now wired to the
+ *  variables defined above.
+ * --------------------------------------------------------------------------- */
+.pl-c {
+	color: var(--color-prettylights-syntax-comment);
+}
+.pl-c1,
+.pl-s .pl-v {
+	color: var(--color-prettylights-syntax-constant);
+}
+.pl-e,
+.pl-en {
+	color: var(--color-prettylights-syntax-tag);
+}
+.pl-smi,
+.pl-s .pl-s1 {
+	color: var(--color-prettylights-syntax-builtin);
+}
+.pl-ent {
+	color: var(--color-prettylights-syntax-tag);
+}
+.pl-k {
+	color: var(--color-prettylights-syntax-keyword);
+}
+.pl-s,
+.pl-pds,
+.pl-s .pl-pse .pl-s1,
+.pl-sr,
+.pl-sr .pl-cce,
+.pl-sr .pl-sre,
+.pl-sr .pl-sra {
+	color: var(--color-prettylights-syntax-string);
+}
+.pl-v,
+.pl-smw {
+	color: var(--color-prettylights-syntax-variable);
+}
+.pl-bu {
+	color: var(--color-prettylights-syntax-punctuation);
+}
+.pl-ii {
+	color: var(--color-prettylights-syntax-error);
+	background-color: var(--color-prettylights-syntax-diff-removed);
+}
+.pl-c2 {
+	color: var(--color-prettylights-syntax-error);
+	background-color: var(--color-prettylights-syntax-diff-added);
+}
+.pl-sr .pl-cce {
+	font-weight: bold;
+	color: var(--color-prettylights-syntax-special);
+}
+.pl-ml {
+	color: var(--color-prettylights-syntax-meta);
+}
+.pl-mh,
+.pl-mh .pl-en,
+.pl-ms {
+	font-weight: bold;
+	color: var(--color-prettylights-syntax-label);
+}
+.pl-mi {
+	font-style: italic;
+	color: var(--color-prettylights-syntax-meta);
+}
+.pl-mb {
+	font-weight: bold;
+	color: var(--color-prettylights-syntax-builtin);
+}
+.pl-md {
+	color: var(--color-prettylights-syntax-error);
+	background-color: var(--color-prettylights-syntax-diff-removed);
+}
+.pl-mi1 {
+	color: var(--color-prettylights-syntax-ok);
+	background-color: var(--color-prettylights-syntax-diff-added);
+}
+.pl-mc {
+	color: var(--color-prettylights-syntax-warning);
+	background-color: var(--color-prettylights-syntax-diff-changed);
+}
+.pl-mi2 {
+	color: var(--color-prettylights-syntax-hint);
+	background-color: var(--color-prettylights-syntax-meta);
+}
+.pl-mdr {
+	font-weight: bold;
+	color: var(--color-prettylights-syntax-info);
+}
+.pl-ba {
+	color: var(--color-prettylights-syntax-punctuation);
+}
+.pl-sg {
+	color: var(--color-prettylights-syntax-punctuation);
+}
+.pl-corl {
+	text-decoration: underline;
+	color: var(--color-prettylights-syntax-constant);
+}
+
+/* ---------------------------------------------------------------------------
+ *  Additional helper classes – useful when you want to reference the same
+ *  colours outside of the .pl‑* selectors (e.g. for UI elements, borders,
+ *  backgrounds, …).
+ * --------------------------------------------------------------------------- */
+.bg-editor {
+	background-color: var(--color-prettylights-syntax-bg);
+}
+.fg-default {
+	color: var(--color-prettylights-syntax-fg);
+}
+.fg-comment {
+	color: var(--color-prettylights-syntax-comment);
+}
+.fg-constant {
+	color: var(--color-prettylights-syntax-constant);
+}
+.fg-string {
+	color: var(--color-prettylights-syntax-string);
+}
+.fg-number {
+	color: var(--color-prettylights-syntax-number);
+}
+.fg-keyword {
+	color: var(--color-prettylights-syntax-keyword);
+}
+.fg-function {
+	color: var(--color-prettylights-syntax-function);
+}
+.fg-variable {
+	color: var(--color-prettylights-syntax-variable);
+}
+.fg-operator {
+	color: var(--color-prettylights-syntax-operator);
+}
+
+.bg-diff-added {
+	background: var(--color-prettylights-syntax-diff-added);
+}
+.bg-diff-removed {
+	background: var(--color-prettylights-syntax-diff-removed);
+}
+.bg-diff-changed {
+	background: var(--color-prettylights-syntax-diff-changed);
+}
+
+.fg-error {
+	color: var(--color-prettylights-syntax-error);
+}
+.fg-warning {
+	color: var(--color-prettylights-syntax-warning);
+}
+.fg-info {
+	color: var(--color-prettylights-syntax-info);
+}
+.fg-hint {
+	color: var(--color-prettylights-syntax-hint);
+}
+.fg-ok {
+	color: var(--color-prettylights-syntax-ok);
+}
