@@ -1,0 +1,41 @@
+{
+  "name": "app",
+  "type": "module",
+  "version": "0.0.50",
+  "private": true,
+  "scripts": {
+    "test": "bun run ./src/utils/env.ts",
+    "dev": "PORT=$SYNC_SERVER_PORT bun run --watch ./src/index.ts",
+    "build": "bun run ./src/utils/env.ts && bun build --minify-whitespace --minify-syntax --target bun --outdir ./dist --sourcemap ./src/index.ts",
+    "start": "bun run ./dist/index.js",
+    "format": "prettier --write ./src",
+    "lint": "eslint --fix ./src"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.10.2",
+    "@elysiajs/cors": "^1.4.1",
+    "@elysiajs/cron": "^1.4.1",
+    "@elysiajs/server-timing": "^1.4.0",
+    "@elysiajs/swagger": "^1.3.1",
+    "@libsql/client": "^0.17.0",
+    "@tanstack/solid-query-devtools": "^5.91.2",
+    "drizzle-orm": "^0.45.1",
+    "elysia": "^1.4.22",
+    "ethers": "^6.16.0",
+    "hlc": "workspace:*",
+    "nanoid": "^5.1.6",
+    "proto": "workspace:*",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@eslint/compat": "^2.0.1",
+    "typescript-eslint": "^8.53.0",
+    "@dword-design/eslint-plugin-import-alias": "^8.1.3",
+    "bun-types": "^1.3.6",
+    "drizzle-kit": "^0.31.8",
+    "eslint": "^9.39.2",
+    "eslint-plugin-perfectionist": "^5.3.1",
+    "prettier": "^3.8.0"
+  },
+  "module": "src/index.js"
+}
