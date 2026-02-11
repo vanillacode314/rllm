@@ -1,0 +1,23 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/styles.css",
+    "baseColor": "slate",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "~/components",
+    "utils": "~/utils/tailwind",
+    "ui": "~/components/ui",
+    "lib": "~/utils",
+    "hooks": "~/hooks"
+  },
+  "registries": {
+    "@solid-ui": "https://solid-ui.com/r/{name}.json"
+  }
+}

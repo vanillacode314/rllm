@@ -1,0 +1,31 @@
+{
+  "name": "eslint-plugin-ts-result-option",
+  "version": "0.0.0",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch src"
+  },
+  "devDependencies": {
+    "tsdown": "^0.15.9"
+  },
+  "dependencies": {
+    "@typescript-eslint/parser": "^8.46.2",
+    "@typescript-eslint/types": "^8.46.2",
+    "@typescript-eslint/utils": "^8.46.2",
+    "eslint": "^9.38.0",
+    "tsutils": "^3.21.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.2"
+  }
+}

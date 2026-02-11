@@ -1,0 +1,30 @@
+{
+  "name": "hlc",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js"
+    }
+  },
+  "scripts": {
+    "build": "tsdown --out-dir ./dist",
+    "dev": "npm run build -- --watch src",
+    "lint": "eslint --fix src",
+    "format": "prettier --write src"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.0",
+    "eslint": "^9.39.2",
+    "prettier": "^3.8.1",
+    "tsdown": "^0.20.1",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "nanoid": "^5.1.6"
+  }
+}
