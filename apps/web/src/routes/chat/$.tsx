@@ -508,7 +508,7 @@ function ChatPageComponent() {
           }}
         />
         <button
-          class="absolute bottom-0 right-0 bg-transparent h-35 w-10 z-10"
+          class="absolute bottom-0 right-0 bg-transparent h-45 w-10 z-10"
           inert={promptBoxOffset() < (promptBoxSize.width ?? 0) * 0.9 || !isMobile()}
           onClick={() => {
             animate(promptBoxOffset(), 0, {
