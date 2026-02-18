@@ -91,7 +91,7 @@ export function ChatListSection(props: ChatListSectionProps) {
   registerInfiniteScrollDetector();
 
   return (
-    <div>
+    <div class="overflow-hidden flex flex-col">
       <Show when={props.showGroupLabel}>
         <SidebarGroupLabel class="pr-2 shrink-0 flex gap-1 items-center">
           <ChatListHeader

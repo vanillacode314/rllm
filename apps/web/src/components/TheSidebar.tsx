@@ -35,7 +35,7 @@ export function TheSidebar() {
           <QuickActionsSection onClose={() => sidebar.setOpenMobile(false)}></QuickActionsSection>
         </SidebarGroup>
 
-        <SidebarGroup class="overflow-hidden flex flex-col min-h-0">
+        <SidebarGroup class="overflow-hidden min-h-0">
           <ChatListSection onClose={() => sidebar.setOpenMobile(false)} showGroupLabel />
         </SidebarGroup>
         <Show when={notifications.length > 0}>
