@@ -12,17 +12,18 @@ import {
   DropdownMenuTrigger
 } from '~/components/ui/dropdown-menu';
 import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '~/components/ui/sidebar';
+import { ChatGenerationManager } from '~/lib/chat/generation';
 
 export interface ChatListItemProps {
   chat: Pick<TChat, 'id' | 'tags' | 'title'>;
   isActive: boolean;
   onClick: () => void;
-  onRename: () => void;
   onDelete: () => void;
-  isPending: boolean;
+  onRename: () => void;
 }
 
 export function ChatListItem(props: ChatListItemProps) {
+  const isPending = ChatGenerationManager.createIsPending(() => props.chat.id);
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
@@ -30,15 +31,15 @@ export function ChatListItem(props: ChatListItemProps) {
         as={Link}
         isActive={props.isActive}
         onClick={props.onClick}
-        to="/chat/$"
-        // @ts-ignore - search param workaround
+        // @ts-expect-error - search param workaround
         search={{ id: props.chat.id }}
         title={props.chat.title}
+        to="/chat/$"
       >
         <span class="truncate">{props.chat.title}</span>
       </SidebarMenuButton>
 
-      <Show when={!props.isPending}>
+      <Show when={!isPending()}>
         <DropdownMenu>
           <DropdownMenuTrigger as={SidebarMenuAction}>
             <span class="icon-[heroicons--ellipsis-horizontal]" />
@@ -57,7 +58,7 @@ export function ChatListItem(props: ChatListItemProps) {
         </DropdownMenu>
       </Show>
 
-      <Show when={props.isPending}>
+      <Show when={isPending()}>
         <div class="absolute right-1 top-1.5 grid place-content-center w-5 aspect-square">
           <span class="icon-[svg-spinners--90-ring-with-bg]" />
         </div>

@@ -7,7 +7,6 @@ import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog'
 import { usePromptDialog } from '~/components/modals/auto-import/PromptDialog';
 import { SidebarGroupLabel, SidebarMenu } from '~/components/ui/sidebar';
 import { logger } from '~/db/client';
-import { ChatGenerationManager } from '~/lib/chat/generation';
 import { queries } from '~/queries';
 import { isChatOpen } from '~/utils/chat';
 
@@ -45,10 +44,6 @@ export function ChatListSection(props: ChatListSectionProps) {
 
   const virtualItems = () => virtualizer().getVirtualItems();
   const totalSize = () => ('sizePx' in props ? props.sizePx : virtualizer().getTotalSize());
-
-  function isPending(chatId: string): boolean {
-    return ChatGenerationManager.createIsPending(() => chatId)();
-  }
 
   async function renameChat(id: string) {
     const promptDialog = usePromptDialog();
@@ -126,7 +121,6 @@ export function ChatListSection(props: ChatListSectionProps) {
                     <ChatListItem
                       chat={chat()!}
                       isActive={isChatOpen(location(), chat()!.id)}
-                      isPending={isPending(chat()!.id)}
                       onClick={() => props.onClose()}
                       onDelete={() => deleteChat(chat()!.id)}
                       onRename={() => renameChat(chat()!.id)}

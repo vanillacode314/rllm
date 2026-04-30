@@ -130,8 +130,8 @@ export function handleCompletion(opts: {
               (chunk): chunk is TLLMMessageChunk & { type: 'tool_call' } =>
                 chunk.type === 'tool_call' && !executedToolCalls.has(chunk.id)
             );
-            onChunk?.(producedChunks);
             yield* executeToolCalls(tool_calls, tools, signal);
+            onChunk?.(producedChunks);
             for (const tool_call of tool_calls) {
               executedToolCalls.add(tool_call.id);
             }

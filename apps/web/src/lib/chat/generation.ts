@@ -45,9 +45,7 @@ export class ChatGenerationManager {
     const idMemo = createMemo(id);
     const s = createMemo(() => {
       const $id = idMemo();
-      return from<boolean>((set) => {
-        return this.onPendingChange($id, set);
-      }, ChatGenerationManager.isPending($id));
+      return from<boolean>((set) => this.onPendingChange($id, set), this.isPending($id));
     });
     return () => s()();
   }
@@ -69,6 +67,7 @@ export class ChatGenerationManager {
     };
   }
   static removeChat(id: string) {
+    if (!this.chats.has(id)) return;
     this.chats.delete(id);
     this.emitPendingUpdate(id);
   }
