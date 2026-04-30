@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/solid-query';
 import { createFileRoute } from '@tanstack/solid-router';
 import { For, Show } from 'solid-js';
 
+import { AppDrawerFab } from '~/components/AppDrawer';
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
 import { setEditPresetModalOpen } from '~/components/modals/auto-import/EditPresetModal';
 import { setChatSettingsDrawerOpen } from '~/components/TheChatSettingsDrawer';
@@ -25,7 +26,8 @@ function PresetComponent() {
   const confirmDialog = useConfirmDialog();
 
   return (
-    <div class="flex w-full flex-col gap-8 py-4 h-full overflow-hidden">
+    <div class="flex w-full flex-col gap-4 py-4 h-full overflow-hidden">
+      <AppDrawerFab />
       <Show
         fallback={<div class="text-muted-foreground">Loading presets...</div>}
         when={presets.isSuccess && presets.data}

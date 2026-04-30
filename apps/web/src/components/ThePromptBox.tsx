@@ -9,6 +9,7 @@ import { chatSettings } from '~/routes/chat/-state';
 import { getFile } from '~/utils/files';
 import { cn } from '~/utils/tailwind';
 
+import { useAppDrawer } from './AppDrawer';
 import { ExpandableTextField } from './ExpandableTextField';
 import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
 import { setChatSettingsDrawerOpen } from './TheChatSettingsDrawer';
@@ -55,6 +56,8 @@ export function PromptBox(props: Props) {
     'feedbackEnabled',
     'onFeedbackEnabledChange'
   ]);
+
+  const appDrawer = useAppDrawer();
 
   return (
     <div class={cn('[view-transition-name:prompt-box] flex flex-col', local.class)} {...others}>
@@ -136,6 +139,12 @@ export function PromptBox(props: Props) {
           onRemoveAttachment={props.onRemoveAttachment}
         />
       </form>
+      <button
+        class="md:hidden grid place-content-center py-1 px-2 bg-secondary/20 rounded-b"
+        onClick={appDrawer.open}
+      >
+        <span class="text-sm icon-[heroicons--chevron-up]"></span>
+      </button>
     </div>
   );
 }
@@ -178,14 +187,14 @@ function Toolbar(props: {
             }}
             size="icon"
             type="button"
-            variant="destructive"
+            variant="outline"
           >
             <span class="icon-[heroicons--trash] text-xl" />
             <span class="sr-only">Delete chat</span>
           </Button>
         </Show>
         <Show when={mcpClients()}>
-          <div class="flex gap-4 items-center overflow-x-auto">
+          <div class="flex gap-4 items-center overflow-x-auto max-md:hidden">
             <For each={mcpClients()}>
               {(client) => (
                 <button
@@ -217,7 +226,7 @@ function Toolbar(props: {
           </div>
         </Show>
         <span class="grow" />
-        <div class="[&>button]:first:rounded-l-md [&>button]:rounded-none [&>button]:last:rounded-r-md flex">
+        <div class="flex">
           <Show when={!props.isNewChat}>
             <Button
               class="border-px border-r-0"
@@ -233,7 +242,7 @@ function Toolbar(props: {
             </Button>
           </Show>
           <Button
-            class="border-px flex gap-2 items-center max-w-36 sm:max-w-48 md:max-w-64"
+            class="border-px flex gap-2 items-center max-w-36 sm:max-w-48 md:max-w-64 max-sm:hidden"
             onClick={() => {
               setChatSettingsDrawerOpen(true);
             }}
@@ -245,7 +254,7 @@ function Toolbar(props: {
             <span class="shrink-0 icon-[heroicons--cog-6-tooth] text-xl" />
           </Button>
           <Button
-            class="border-px"
+            class="border-px max-md:hidden"
             onClick={() => {
               setCommandPromptOpen(true);
             }}
@@ -259,7 +268,7 @@ function Toolbar(props: {
           <DropdownMenu>
             <DropdownMenuTrigger
               as={Button<'button'>}
-              class="border-px"
+              class="border-px max-sm:hidden"
               disabled={props.isPending}
               size="icon"
               variant="outline"
@@ -287,7 +296,7 @@ function Toolbar(props: {
             </DropdownMenuContent>
           </DropdownMenu>
           <Button
-            class="border-px"
+            class="border-px rounded-r-md"
             onClick={() => props.onFeedbackEnabledChange(!props.feedbackEnabled)}
             size="icon"
             type="button"

@@ -1,4 +1,5 @@
 import { Result } from 'ts-result-option';
+import type { ParsedLocation } from '@tanstack/solid-router';
 
 import type { TMessage } from '~/types/chat';
 
@@ -15,3 +16,11 @@ const getMessagesForPath = (path: number[], tree: TTree<TMessage>) =>
   );
 
 export { getMessagesForPath };
+
+export function isChatOpen(location: ParsedLocation, chatId: string): boolean {
+  return (
+    location.pathname.startsWith('/chat/') &&
+    'id' in location.search &&
+    location.search.id === chatId
+  );
+}

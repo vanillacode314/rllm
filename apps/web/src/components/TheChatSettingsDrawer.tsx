@@ -7,7 +7,6 @@ import { REASONING_VALUE_TO_LABEL_MAP } from '~/constants/chat-settings';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { createPreset, type TChatPreset } from '~/lib/chat/presets';
 import { type TChatSettings, updateChatSettings } from '~/lib/chat/settings';
-import { ProxyManager } from '~/lib/proxy';
 import { queries } from '~/queries';
 import { chatSettings } from '~/routes/chat/-state';
 import { isMobile } from '~/signals';
@@ -33,7 +32,7 @@ import { TextField, TextFieldInput, TextFieldLabel, TextFieldTextArea } from './
 const [chatSettingsDrawerOpen, setChatSettingsDrawerOpen] = createSignal(false);
 
 function PresetsSection(props: {
-  onApplyPreset: (settings: TChatSettings) => void;
+  onApplyPreset: (preset: TChatPreset) => void;
   settings: TChatSettings;
 }) {
   const queryClient = useQueryClient();
@@ -77,7 +76,7 @@ function PresetsSection(props: {
               </SelectItem>
             )}
             onChange={(preset) => {
-              if (preset) props.onApplyPreset(preset.settings);
+              if (preset) props.onApplyPreset(preset);
             }}
             options={presets.data!}
             optionTextValue={(preset) => preset.name}
@@ -97,11 +96,7 @@ function PresetsSection(props: {
 
       <Show when={presets.data && presets.data.length > 0}>
         <div class="text-xs text-muted-foreground">
-          <Link
-            class="underline hover:text-primary"
-            onClick={() => setChatSettingsDrawerOpen(false)}
-            to="/presets"
-          >
+          <Link class="underline hover:text-primary" to="/presets">
             Manage presets
           </Link>
         </div>
@@ -178,7 +173,8 @@ function TheChatSettingsDrawer() {
     reasoning: localReasoning()
   });
 
-  const handleApplyPreset = (settings: TChatSettings) => {
+  const handleApplyPreset = (preset: TChatPreset) => {
+    const settings = preset.settings
     setLocalSystemPrompt(settings.systemPrompt);
     setLocalIncludeDateTimeInSystemPrompt(settings.includeDateTimeInSystemPrompt);
     setLocalReasoning(settings.reasoning);
@@ -300,4 +296,5 @@ function TheChatSettingsDrawer() {
   );
 }
 export { chatSettingsDrawerOpen, setChatSettingsDrawerOpen };
+export { PresetsSection };
 export default TheChatSettingsDrawer;

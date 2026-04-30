@@ -4,6 +4,7 @@ import { QueryClientProvider } from '@tanstack/solid-query';
 import { createRootRouteWithContext, Outlet } from '@tanstack/solid-router';
 import { createSignal, For, type JSXElement, onMount, Suspense } from 'solid-js';
 
+import AppDrawer from '~/components/AppDrawer';
 import TheChatSettingsDrawer from '~/components/TheChatSettingsDrawer';
 import TheCommandPrompt from '~/components/TheCommandPrompt';
 import TheSidebar from '~/components/TheSidebar';
@@ -31,7 +32,7 @@ export const Route = createRootRouteWithContext()({
     console.debug('[Finished DB Setup]');
     void initSocket().unwrap();
     void ProxyManager.initialize().finally(() => void MCPManager.initialize());
-    await BackgroundTaskManager.init();
+    void BackgroundTaskManager.init();
   })
 });
 
@@ -81,6 +82,9 @@ function RootComponent() {
             <TheCommandPrompt />
           </Suspense>
           <Outlet />
+          <Suspense>
+            <AppDrawer />
+          </Suspense>
           <Suspense>
             <TheChatSettingsDrawer />
           </Suspense>

@@ -7,6 +7,7 @@ import {
 } from '@tanstack/solid-router';
 import { createMemo, For, Show } from 'solid-js';
 
+import { AppDrawerFab } from '~/components/AppDrawer';
 import {
   Select,
   SelectContent,
@@ -57,8 +58,9 @@ function SettingsComponent() {
       class="h-full content-grid py-4 mx-auto grid-rows-[auto_1fr] content-start gap-y-4 w-full"
       style={{ '--padding-inline': '0px' }}
     >
+      <AppDrawerFab />
       <div class="flex justify-between gap-4 items-center px-4">
-        <SidebarTrigger />
+        <SidebarTrigger class="max-md:hidden" />
         <Select
           class="lg:hidden w-full"
           defaultValue={currentPage()}

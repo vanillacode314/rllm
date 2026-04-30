@@ -25,6 +25,7 @@ import { z } from 'zod/mini';
 
 import type { TAttachment, TChat, TMessage, TUserMessageChunk } from '~/types/chat';
 
+import { useAppDrawer } from '~/components/AppDrawer';
 import Chat from '~/components/Chat';
 import ThePromptBox from '~/components/ThePromptBox';
 import { SidebarTrigger, useSidebar } from '~/components/ui/sidebar';
@@ -45,6 +46,7 @@ import { queryClient } from '~/utils/query-client';
 import { slugify } from '~/utils/string';
 import { ReactiveTree, ReactiveTreeNode, type TTree } from '~/utils/tree';
 
+import ChatAppDrawer from './-ChatAppDrawer';
 import {
   chatSettings,
   feedbackEnabled,
@@ -132,6 +134,8 @@ const [attachments, setAttachments] = makePersisted(createStore<TAttachment[]>([
   storage: localforage
 });
 function ChatPageComponent() {
+  const appDrawer = useAppDrawer();
+  appDrawer.setContent(ChatAppDrawer);
   const router = useRouter();
   const searchParams = Route.useSearch();
   const loaderData = Route.useLoaderData();
