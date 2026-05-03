@@ -29,6 +29,7 @@ import { useAppDrawer } from '~/components/AppDrawer';
 import Chat from '~/components/Chat';
 import ThePromptBox from '~/components/ThePromptBox';
 import { SidebarTrigger, useSidebar } from '~/components/ui/sidebar';
+import { FALLBACK_CHAT_SETTINGS } from '~/constants/chat-settings';
 import { useNotifications } from '~/context/notifications';
 import { logger } from '~/db/client';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
@@ -99,9 +100,10 @@ export const Route = createFileRoute('/chat/$')({
     if (isNewChat && params._splat !== 'new')
       throw redirect({ to: '/chat/$', params: { _splat: 'new' } });
 
-    const [defaultProviderId, defaultModelId] = await Promise.all([
+    const [defaultProviderId, defaultModelId, defaultChatSettingsPresetId] = await Promise.all([
       queryClient.ensureQueryData(queries.userMetadata.byId('default-provider-id')),
       queryClient.ensureQueryData(queries.userMetadata.byId('default-model-id')),
+      queryClient.ensureQueryData(queries.userMetadata.byId('default-chat-settings-preset')),
       queryClient.ensureQueryData(queries.userMetadata.byId('selected-model-id')),
       queryClient.ensureQueryData(queries.userMetadata.byId('user-display-name')),
       queryClient.ensureQueryData(queries.providers.all()),
@@ -109,17 +111,23 @@ export const Route = createFileRoute('/chat/$')({
     ]);
 
     if (isNewChat) {
+      if (defaultChatSettingsPresetId) {
+        const preset = await fetchers.chatPresets.byId(defaultChatSettingsPresetId);
+        return {
+          chat: null,
+          isNewChat,
+          id,
+          chatSettings: {
+            ...FALLBACK_CHAT_SETTINGS(defaultModelId!, defaultProviderId!),
+            ...preset.settings
+          }
+        };
+      }
       return {
         chat: null,
         isNewChat,
         id,
-        chatSettings: {
-          modelId: defaultModelId!,
-          providerId: defaultProviderId!,
-          systemPrompt: '',
-          includeDateTimeInSystemPrompt: true,
-          reasoning: 'medium' as const
-        }
+        chatSettings: FALLBACK_CHAT_SETTINGS(defaultModelId!, defaultProviderId!)
       };
     }
 
