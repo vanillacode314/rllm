@@ -8,6 +8,7 @@ import { setEditPresetModalOpen } from '~/components/modals/auto-import/EditPres
 import { setChatSettingsDrawerOpen } from '~/components/TheChatSettingsDrawer';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '~/components/ui/card';
+import { REASONING_VALUE_TO_LABEL_MAP } from '~/constants/chat-settings';
 import { deletePreset, duplicatePreset, setDefaultPresetId } from '~/lib/chat/presets';
 import { queries } from '~/queries';
 import { queryClient } from '~/utils/query-client';
@@ -73,10 +74,12 @@ function PresetComponent() {
                         <span class="text-muted-foreground">Provider:</span>{' '}
                         {preset.settings.providerId}
                       </p>
-                      <p>
-                        <span class="text-muted-foreground">Reasoning:</span>{' '}
-                        {preset.settings.reasoning ?? 'medium'}
-                      </p>
+                      <Show when={preset.settings.reasoning}>
+                        <p>
+                          <span class="text-muted-foreground">Reasoning:</span>{' '}
+                          {REASONING_VALUE_TO_LABEL_MAP[preset.settings.reasoning]}
+                        </p>
+                      </Show>
                       <Show when={preset.settings.systemPrompt}>
                         <div class="text-muted-foreground text-xs">
                           <span class="font-medium">System Prompt:</span>
