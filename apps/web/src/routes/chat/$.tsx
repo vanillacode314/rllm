@@ -423,9 +423,9 @@ function ChatPageComponent() {
       if (!event) return;
       if (document.activeElement?.id === 'prompt') {
         event.preventDefault();
-        const form = document.getElementById('message-form') as HTMLFormElement;
-        if (!form) throw new Error('form missing');
-        form.requestSubmit();
+        const button = document.getElementById('prompt-submit-button') as HTMLButtonElement;
+        if (!button) throw new Error('submit button missing');
+        button.click();
       }
     },
     { preventDefault: false }

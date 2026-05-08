@@ -305,7 +305,13 @@ function Toolbar(props: {
             }
             when={!props.isPending}
           >
-            <Button onClick={() => props.onSubmit()} size="icon" type="button" variant="secondary">
+            <Button
+              id="prompt-submit-button"
+              onClick={() => props.onSubmit()}
+              size="icon"
+              type="button"
+              variant="secondary"
+            >
               <span class="icon-[heroicons--arrow-right] text-xl" />
               <span class="sr-only">Send message</span>
             </Button>
