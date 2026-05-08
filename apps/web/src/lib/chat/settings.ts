@@ -169,7 +169,7 @@ export async function updateChatSettings(
   settings: Partial<TChatSettings>,
   location: ParsedLocation<{ id?: string }>
 ) {
-  const chatId = location.pathname.startsWith('/chat/') ? location.search.id : undefined;
+  const chatId = location.pathname.startsWith('/chat') ? location.search.id : undefined;
   if (chatSettings().isNone()) return;
   const newValue = { ...chatSettings().unwrap(), ...settings };
   setChatSettings(Option.Some(newValue));
