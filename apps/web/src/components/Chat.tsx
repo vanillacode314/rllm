@@ -347,18 +347,29 @@ function LLMReasoningChunk(props: {
   return (
     <Collapsible class="space-y-1.5" onOpenChange={(value) => setOpen(value)} open={open()}>
       <CollapsibleTrigger class="text-sm opacity-90 flex w-full items-center gap-2">
-        <span>Reasoning</span>
-        <Show fallback={<span class="icon-[heroicons--chevron-up-down]" />} when={props.inProgress}>
+        <span class="font-mono text-xs tracking-wider uppercase">Reasoning</span>
+        <Show
+          fallback={
+            <span
+              class="text-xs"
+              classList={{
+                'icon-[heroicons--chevron-right]': open(),
+                'icon-[heroicons--chevron-down]': !open()
+              }}
+            />
+          }
+          when={props.inProgress}
+        >
           <span class="icon-[svg-spinners--180-ring-with-bg]" />
         </Show>
       </CollapsibleTrigger>
       <CollapsibleContent class="bg-muted p-4 border-l-4 border-l-muted-foreground rounded-r-lg">
-        <Markdown
-          class="max-w-none prose dark:prose-invert text-muted-foreground"
-          content={props.chunk.content}
-          contentId={props.chunk.id}
-          inProgress={props.inProgress}
-        />
+        <div>
+          <span
+            class="whitespace-pre-wrap text-muted-foreground"
+            textContent={props.chunk.content ?? ''}
+          />
+        </div>
       </CollapsibleContent>
     </Collapsible>
   );
@@ -416,13 +427,20 @@ function LLMToolCallChunk(props: {
   return (
     <Collapsible class="space-y-1.5" onOpenChange={setOpen} open={open()}>
       <CollapsibleTrigger class="text-sm opacity-90 flex w-full items-center gap-2">
-        <span>Tool Call ({props.chunk.tool.name})</span>
+        <span class="font-mono text-xs tracking-wider uppercase">
+          Tool Call <span class="normal-case">({props.chunk.tool.name})</span>
+        </span>
         <Switch>
           <Match when={props.isPending}>
             <span class="icon-[svg-spinners--180-ring-with-bg]" />
           </Match>
           <Match when={props.chunk.success}>
-            <span class="icon-[heroicons--chevron-up-down]" />
+            <span
+              classList={{
+                'icon-[heroicons--chevron-right]': open(),
+                'icon-[heroicons--chevron-down]': !open()
+              }}
+            />
             <span class="icon-[heroicons--check-circle-16-solid] text-green-600" />
           </Match>
           <Match when={!props.chunk.success}>
