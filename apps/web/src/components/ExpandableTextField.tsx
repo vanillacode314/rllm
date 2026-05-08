@@ -2,13 +2,7 @@ import type { PolymorphicProps } from '@kobalte/core';
 
 import * as TextFieldPrimitive from '@kobalte/core/text-field';
 import { createEventListenerMap } from '@solid-primitives/event-listener';
-import {
-  createRenderEffect,
-  type JSXElement,
-  splitProps,
-  untrack,
-  type ValidComponent
-} from 'solid-js';
+import { createEffect, type JSXElement, splitProps, untrack, type ValidComponent } from 'solid-js';
 
 import { cn } from '~/utils/tailwind';
 
@@ -23,7 +17,7 @@ export function ExpandableTextField<T extends ValidComponent = 'textarea'>(
   let ref!: HTMLTextAreaElement;
   const [local, others] = splitProps(props as TextFieldTextAreaProps, ['class', 'ref']);
 
-  createRenderEffect(() => {
+  createEffect(() => {
     if (!('value' in others)) return;
     void others.value;
     untrack(adjustHeight);
