@@ -54,71 +54,146 @@ Use this tool to search for relevant information within attached documents (PDFs
 `;
 
 export const ASK_QUESTIONS_TOOL_PROMPT = dedent`
-You have access to a tool named \`ask_questions\`. This tool renders a form UI to the user containing multiple questions, multiple choice options, or free-text text areas. You must use this tool to gather information ONLY when specific data points are required to fulfill the user's request.
+This tool shows a modal dialog to collect structured answers from the user. It is ideal for gathering multiple precise pieces of information at once, but should be used judiciously to avoid breaking conversational flow.
 
-## 1. When to Use This Tool (Triggers)
-Use the \`ask_questions\` tool when:
-*   **Task Specifics:** You need concrete details to execute a task (e.g., programming language, budget, tone of voice, target audience).
-*   **Preferences:** You want the user to select from a finite list of options.
-*   **Clarification (Pre-execution):** The user's request is ambiguous, and you need clarification *before* you start generating the response.
-*   **Iterative Data Gathering:** You have asked a set of questions, received answers, and now need more details based on those answers.
+## When to Use
 
-## 2. When NOT to Use This Tool (Avoid)
-Do **NOT** use this tool for:
-*   **Conversational Fluff:** Greetings, casual chat, or simple acknowledgments (e.g., "Hello", "Thanks", "Okay").
-*   **Long-Form Answers:** If the answer requires a paragraph or a complex explanation, let the user type it in the chat. Only use this tool for *short* answers (single words, numbers, selections).
-*   **Yes/No Confirmations:** If a simple chat reply suffices (e.g., "Do you want me to continue?"), do not use the tool.
-*   **Re-asking answered questions:** Do not ask again if the user has already provided the information in the chat history.
+- You need **structured input** (e.g., a choice from a list, a short confirmation, a few brief fields).
+- The questions are **independent** and can be answered in any order.
+- The user expects a form-like experience, or you need to enforce specific options.
+- You want to reduce back-and-forth by batching questions.
 
-## 3. Logic & Flow Strategy
-*   **Prioritize:** Ask broad questions first.
-*   **Branch Logic:** If a question depends on the answer to a previous one, ask the first set, wait for the user's response, and then trigger the tool again with the follow-up questions.
-    *   *Example:* Ask "What framework do you use?" (React/Vue/Angular). If they pick "React", *then* use the tool to ask "Which state management library?" (Redux/Zustand).
-*   **Single vs. Multiple:** Use \`'checkbox'\` if the user can select multiple valid answers. Use \`'radio'\` for mutually exclusive choices. Use \`'textarea'\` if the answer is a phrase or sentence.
+## When NOT to Use
 
-## 4. Formatting Rules & Constraints
-*   **Strict Schema:** All questions must adhere to the JSON format required by the tool.
-    *   \`type: 'radio'\`: For single selection.
-    *   \`type: 'checkbox'\`: For multiple selection.
-    *   \`type: 'textarea'\`: For free text input (short or long).
-*   **The "Other" Rule:** NEVER include an "Other" option in the \`options\` array.
-    *   *Reasoning:* The UI always allows the user to enter a custom answer (either via a custom input field or because \`textarea\` is available). Adding "Other" is redundant and clutters the UI.
-    *   *Solution:* If you believe the standard options do not cover the user's potential answer, use a \`textarea\` type instead of radio/checkbox, OR ensure your options are exhaustive.
-*   **IDs:** Use simple, unique string IDs (e.g., "q1", "q2" or "role", "budget") so the backend can track which question is being answered.
-*   **Placeholders:** Include a \`placeholder\` string only for \`textarea\` types to guide the user on what to type.
+- The answer is likely **very long** (multiple sentences or paragraphs). Use the chat interface instead, as the modal textarea is small.
+- The interaction is **conversational** and a modal would feel disruptive (e.g., a single simple yes/no that could be asked inline).
+- You are asking for a **short, one-off** piece of data that doesn’t need the overhead of a modal.
 
-## 5. Example Usage
+## Parameters
 
-**Scenario:** The user asks: "Help me write a marketing email."
+The tool takes a single object with a \`questions\` array. Each question has these fields:
 
-**Incorrect Tool Use:**
-Asking: "Write the email now." (Just do it in chat).
-Asking: "What is the specific history of email marketing?" (Don't use tool for long text generation).
+| Field         | Type           | Required | Description |
+|---------------|----------------|----------|-------------|
+| \`id\`          | string         | YES      | Unique key to identify the response. Use a descriptive name (e.g., \`"project_name"\`). |
+| \`question\`    | string         | YES      | The text displayed to the user. Keep it concise. |
+| \`type\`        | enum           | YES      | \`"radio"\` (single choice), \`"checkbox"\` (zero or more), or \`"textarea"\` (free text). |
+| \`options\`     | string[]       | Only for \`radio\` and \`checkbox\` | The list of selectable items. Must have **at least 2**. **Do NOT include an "Other" option** — the modal automatically provides one. Any option named "other" (case-insensitive) will be removed. |
+| \`placeholder\` | string         | NO       | Hint text shown inside \`textarea\` fields. Ignored for other types. |
 
-**Correct Tool Use:**
-Trigger tool with:
+## Strategy: Parallel vs. Serial Calls
+
+- **Parallel (one call with many questions)**: Use this when questions are **independent**. The modal displays all at once, and the user can submit them together. This is efficient and reduces friction.
+- **Serial (multiple calls with fewer questions)**: Use this when a later question **depends on a previous answer**. Make the first call, receive the response, consider the answer, and then construct the next call with tailored questions. This allows dynamic, context-aware forms. For example, ask if the user needs a feature; if yes, ask follow-up details in a second modal.
+
+*Note*: Even when using serial calls, you can group a few related dependent questions together if they don’t require the user to see intermediary answers.
+
+## Response
+
+The tool returns **JSON** of structure:
+
+On success:
+\`\`\`json
+{
+  "success": true,
+  "responses": [
+    {
+      "questionId": "question_id_1",
+      "answer": "answer for textarea or radio"
+    },
+    {
+      "questionId": "question_id_2",
+      "answer": ["selected", "options", "for checkbox"]
+    }
+    ...
+  ]
+}
+\`\`\`
+- For \`radio\`, the value is a **string** (the chosen option).
+- For \`checkbox\`, the value is an **array of strings** (all selected options, possibly empty).
+- For \`textarea\`, the value is a **string**.
+
+On cancellation:
+\`\`\`json
+{
+  "success": false,
+  "message": "Cancelled by user"
+}
+\`\`\`
+
+If cancelled, politely ask if the user wants to try again, skip, or provide the information in another way. Do not treat it as a failure unless the information is critical and cannot be bypassed.
+
+## Examples
+
+### Example 1: Independent questions (parallel)
 \`\`\`json
 {
   "questions": [
     {
-      "id": "tone",
+      "id": "account_type",
       "type": "radio",
-      "question": "What tone should the email have?",
-      "options": ["Professional", "Casual", "Humorous", "Urgent"]
+      "question": "What type of account do you want?",
+      "options": ["Personal", "Business", "Education"]
     },
     {
-      "id": "target_audience",
-      "type": "textarea",
-      "question": "Who is the target audience?",
-      "placeholder": "e.g. CTOs of SaaS companies..."
-    },
-    {
-      "id": "goal",
+      "id": "interests",
       "type": "checkbox",
-      "question": "What are the goals of this email?",
-      "options": ["Brand Awareness", "Lead Generation", "Product Launch", "Retargeting"]
+      "question": "Which topics interest you?",
+      "options": ["Coding", "Design", "Marketing", "Finance"]
+    },
+    {
+      "id": "bio",
+      "type": "textarea",
+      "question": "Short bio",
+      "placeholder": "Tell us about yourself..."
     }
   ]
 }
 \`\`\`
+
+### Example 2: Dependent questions (serial)
+**Step 1**  
+Ask the initial question:
+\`\`\`json
+{
+  "questions": [
+    {
+      "id": "travel_mode",
+      "type": "radio",
+      "question": "How do you plan to travel?",
+      "options": ["Flight", "Car", "Train"]
+    }
+  ]
+}
+\`\`\`
+**Step 2**  
+After receiving \`{ "travel_mode": "Car" }\`, ask relevant follow-ups:
+\`\`\`json
+{
+  "questions": [
+    {
+      "id": "car_type",
+      "type": "radio",
+      "question": "What type of car do you prefer?",
+      "options": ["Sedan", "SUV", "Electric"]
+    },
+    {
+      "id": "car_extras",
+      "type": "checkbox",
+      "question": "Any extras?",
+      "options": ["GPS", "Child seat", "Additional driver"]
+    }
+  ]
+}
+\`\`\`
+
+## Rules & Tips
+
+1. **Always include at least one question** (the array must not be empty).
+2. **Never provide an "Other" option** – it is added automatically. Explicitly including it will cause it to be stripped, confusing you and the user.
+3. **Use clear, descriptive \`id\`s** – they are your only handle to map responses back to meaning.
+4. **For \`radio\` and \`checkbox\`, provide at least 2 options**, and ensure they are mutually exclusive (for radio) or non-overlapping (unless intentional).
+6. **Do not ask for sensitive personal data** (passwords, credit card numbers) through this tool.
+7. **If the user cancels, handle gracefully** – offer alternatives, don’t force the modal again immediately.
+8. **Prefer parallel calls** when possible to minimize interruptions, but use serial when context-dependent follow-ups are needed.
 `;
