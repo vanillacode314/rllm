@@ -9,6 +9,7 @@ import 'highlight.js/styles/dark.css';
 import { render } from 'solid-js/web';
 import { toast } from 'solid-sonner';
 import { getSerwist } from 'virtual:serwist';
+import 'virtual:uno.css';
 
 import { routeTree } from './routeTree.gen';
 
