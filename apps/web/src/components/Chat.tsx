@@ -267,7 +267,7 @@ function LLMChat(props: {
             <Show when={hasPrev() || hasNext()}>
               <Button
                 class="size-6"
-                disabled={!hasPrev() || props.isPending}
+                disabled={!hasPrev()}
                 onClick={() => {
                   props.onTraversal(-1);
                 }}
@@ -283,7 +283,7 @@ function LLMChat(props: {
               </span>
               <Button
                 class="size-6"
-                disabled={!hasNext() || props.isPending}
+                disabled={!hasNext()}
                 onClick={() => {
                   props.onTraversal(1);
                 }}
