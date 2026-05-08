@@ -87,7 +87,7 @@ const processor = unified()
             <pre
               class={cn(
                 local.class,
-                'border border-secondary relative overflow-auto bg-neutral-950 mt-0',
+                'border border-secondary relative overflow-auto bg-neutral-950 mt-0 whitespace-pre-wrap',
                 expanded() ? 'max-h-none' : 'max-h-72'
               )}
               ref={(el) =>
