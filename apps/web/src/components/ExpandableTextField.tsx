@@ -9,7 +9,10 @@ import { cn } from '~/utils/tailwind';
 import { TextField, TextFieldTextArea } from './ui/text-field';
 
 type TextFieldTextAreaProps<T extends ValidComponent = 'textarea'> =
-  TextFieldPrimitive.TextFieldTextAreaProps<T> & { class?: string | undefined };
+  TextFieldPrimitive.TextFieldTextAreaProps<T> & {
+    class?: string | undefined;
+    onPaste: (event: ClipboardEvent) => void;
+  };
 
 export function ExpandableTextField<T extends ValidComponent = 'textarea'>(
   props: PolymorphicProps<T, TextFieldTextAreaProps<T>>
