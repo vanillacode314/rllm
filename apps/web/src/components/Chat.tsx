@@ -566,7 +566,7 @@ function UserChat(props: {
             </Show>
           </div>
           <CollapsibleContent>
-            <CardContent class="p-4 pt-0 flex flex-col gap-4">
+            <CardContent class="p-4 pt-0 flex flex-col gap-4 h-full max-h-[30vh] overflow-auto">
               <Index each={filteredChunks()}>
                 {(chunk, index) => (
                   <Switch>
