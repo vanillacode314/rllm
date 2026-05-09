@@ -12,6 +12,7 @@ import { MCPManager } from '~/lib/mcp/manager';
 import { queries } from '~/queries';
 
 import ModelSelector from './ModelSelector';
+import PresetSelector from './PresetSelector';
 import ProviderSelector from './ProviderSelector';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -205,31 +206,10 @@ export function PresetsSection(props: {
           fallback={<div class="text-sm text-muted-foreground">No presets saved yet.</div>}
           when={presets.data!.length > 0}
         >
-          <Select<TChatPreset>
-            itemComponent={(itemProps) => (
-              <SelectItem item={itemProps.item}>
-                {itemProps.item.rawValue.name}
-                {defaultPresetId.data === itemProps.item.key && (
-                  <span class="ml-2 text-xs text-muted-foreground">(Default)</span>
-                )}
-              </SelectItem>
-            )}
-            onChange={(preset) => {
-              if (preset) props.onApplyPreset(preset);
-            }}
-            options={presets.data!}
-            optionTextValue={(preset) => preset.name}
-            optionValue={(preset) => preset.id}
-            placeholder="Select a preset..."
-            value={undefined}
-          >
-            <SelectTrigger class="w-full">
-              <SelectValue<TChatPreset>>
-                {(state) => state.selectedOption()?.name ?? 'Select a preset...'}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent />
-          </Select>
+          <PresetSelector
+            onChange={(preset) => props.onApplyPreset(preset)}
+            presets={presets.data!}
+          />
         </Show>
       </Show>
 
