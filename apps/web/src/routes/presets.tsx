@@ -9,22 +9,161 @@ import { setChatSettingsDrawerOpen } from '~/components/TheChatSettingsDrawer';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '~/components/ui/card';
 import { REASONING_VALUE_TO_LABEL_MAP } from '~/constants/chat-settings';
-import { deletePreset, duplicatePreset, setDefaultPresetId } from '~/lib/chat/presets';
+import {
+  deletePreset,
+  duplicatePreset,
+  setDefaultPresetId,
+  type TChatPreset
+} from '~/lib/chat/presets';
 import { queries } from '~/queries';
 import { queryClient } from '~/utils/query-client';
 
 export const Route = createFileRoute('/presets')({
   component: PresetComponent,
   loader: async () => {
-    await queryClient.ensureQueryData(queries.chatPresets.all());
-    await queryClient.ensureQueryData(queries.userMetadata.byId('default-chat-settings-preset'));
+    await Promise.all([
+      queryClient.ensureQueryData(queries.providers.all()),
+      queryClient.ensureQueryData(queries.chatPresets.all()),
+      queryClient.ensureQueryData(queries.userMetadata.byId('default-chat-settings-preset'))
+    ]);
   }
 });
 
-function PresetComponent() {
-  const presets = useQuery(() => queries.chatPresets.all());
+export function PresetCardDropdownMenu(props: { preset: TChatPreset }) {
   const defaultPresetId = useQuery(() => queries.userMetadata.byId('default-chat-settings-preset'));
   const confirmDialog = useConfirmDialog();
+  return (
+    <div class="flex-col">
+      <DropdownMenu>
+        <DropdownMenuTrigger as={Button<'button'>} size="icon" variant="ghost">
+          <span class="icon-[heroicons--ellipsis-vertical-16-solid]"></span>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent class="w-48">
+          <Show
+            fallback={
+              <DropdownMenuItem onSelect={() => setDefaultPresetId('')}>
+                <span>Clear Default</span>
+              </DropdownMenuItem>
+            }
+            when={defaultPresetId.data !== props.preset.id}
+          >
+            <DropdownMenuItem onSelect={() => setDefaultPresetId(props.preset.id)}>
+              <span>Set Default</span>
+            </DropdownMenuItem>
+          </Show>
+          <DropdownMenuItem onSelect={() => duplicatePreset(props.preset)}>
+            <span>Duplicate</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onSelect={() => {
+              confirmDialog.confirm({
+                title: `Delete Preset "${props.preset.name}"`,
+                description: `Are you sure you want to delete "${props.preset.name}" preset? This action cannot be undone.`,
+                confirmText: 'Delete',
+                variant: 'destructive',
+                onConfirm: () => deletePreset(props.preset.id)
+              });
+            }}
+          >
+            <span>Delete</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
+function PresetCard(props: { preset: TChatPreset }) {
+  const defaultPresetId = useQuery(() => queries.userMetadata.byId('default-chat-settings-preset'));
+  const providers = useQuery(() => queries.providers.all());
+
+  function getProviderNameById(id: string) {
+    const provider = providers.data?.find((provider) => provider.id === id);
+    if (!provider) throw new Error(`Provider with id ${id} not found`);
+    return provider.name;
+  }
+
+  function simplifyModelId(id: string): string {
+    if (!id.includes('/')) return id;
+    const index = id.lastIndexOf('/');
+    return id.slice(index + 1);
+  }
+
+  return (
+    <Card class="flex flex-col">
+      <CardHeader>
+        <div class="flex items-baseline gap-4">
+          <CardTitle class="text-lg truncate" title={props.preset.name}>
+            {props.preset.name}
+          </CardTitle>
+          <Show when={defaultPresetId.data === props.preset.id}>
+            <span class="rounded bg-primary/10 px-2 py-0.5 text-xs text-primary">Default</span>
+          </Show>
+          <span class="grow" />
+          <PresetCardDropdownMenu preset={props.preset} />
+          <Button
+            onClick={() => setEditPresetModalOpen(props.preset.id)}
+            size="icon"
+            variant="secondary"
+          >
+            <span class="icon-[heroicons--pencil-square-16-solid]"></span>
+            <span class="sr-only">Edit Preset</span>
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent class="grow flex flex-col gap-2">
+        <Show when={props.preset.settings.systemPrompt}>
+          <div class="text-muted-foreground text-xs p-2 bg-muted rounded overflow-y-auto max-h-36 whitespace-pre-wrap">
+            {props.preset.settings.systemPrompt}
+          </div>
+        </Show>
+        <span class="grow" />
+        <div class="flex flex-col gap-5">
+          <span class="text-sm text-muted-foreground">
+            <span class="flex gap-2 items-center lowercase">
+              <span class="shrink-0 icon-[heroicons--square-3-stack-3d-16-solid]"></span>
+              <span class="flex gap-1 items-center">
+                <span>{simplifyModelId(props.preset.settings.modelId)}</span>
+                <span class="shrink-0 size-3 icon-[heroicons--arrow-left-16-solid]"></span>
+                <span>{getProviderNameById(props.preset.settings.providerId)}</span>
+              </span>
+            </span>
+            <Show
+              when={props.preset.settings.reasoning && props.preset.settings.reasoning !== 'none'}
+            >
+              <span class="flex gap-2 items-center lowercase">
+                <span class="shrink-0 icon-[fluent--brain-20-filled]"></span>
+                {REASONING_VALUE_TO_LABEL_MAP[props.preset.settings.reasoning]}
+              </span>
+            </Show>
+          </span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuGroupLabel,
+  DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger
+} from '~/components/ui/dropdown-menu';
+
+function PresetComponent() {
+  const presets = useQuery(() => queries.chatPresets.all());
 
   return (
     <div class="flex w-full flex-col gap-4 py-4 h-full overflow-hidden">
@@ -52,89 +191,7 @@ function PresetComponent() {
             </Button>
           </div>
           <div class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4 self-start overflow-y-auto h-full px-4">
-            <For each={presets.data}>
-              {(preset) => (
-                <Card class="flex flex-col">
-                  <CardHeader>
-                    <div class="flex items-center justify-between">
-                      <CardTitle class="text-lg">{preset.name}</CardTitle>
-                      <Show when={defaultPresetId.data === preset.id}>
-                        <span class="rounded bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                          Default
-                        </span>
-                      </Show>
-                    </div>
-                  </CardHeader>
-                  <CardContent class="grow">
-                    <div class="text-sm space-y-1">
-                      <p>
-                        <span class="text-muted-foreground">Model:</span> {preset.settings.modelId}
-                      </p>
-                      <p>
-                        <span class="text-muted-foreground">Provider:</span>{' '}
-                        {preset.settings.providerId}
-                      </p>
-                      <Show when={preset.settings.reasoning}>
-                        <p>
-                          <span class="text-muted-foreground">Reasoning:</span>{' '}
-                          {REASONING_VALUE_TO_LABEL_MAP[preset.settings.reasoning]}
-                        </p>
-                      </Show>
-                      <Show when={preset.settings.systemPrompt}>
-                        <div class="text-muted-foreground text-xs">
-                          <span class="font-medium">System Prompt:</span>
-                          <div class="mt-1 p-2 bg-muted rounded overflow-y-auto max-h-24 whitespace-pre-wrap">
-                            {preset.settings.systemPrompt}
-                          </div>
-                        </div>
-                      </Show>
-                    </div>
-                  </CardContent>
-                  <CardFooter class="max-sm:grid grid-cols-[auto_1fr] justify-end gap-2">
-                    <Show when={defaultPresetId.data !== preset.id}>
-                      <Button
-                        onClick={() => setDefaultPresetId(preset.id)}
-                        size="sm"
-                        variant="secondary"
-                      >
-                        Set Default
-                      </Button>
-                    </Show>
-                    <Show when={defaultPresetId.data === preset.id}>
-                      <Button onClick={() => setDefaultPresetId('')} size="sm" variant="secondary">
-                        Clear Default
-                      </Button>
-                    </Show>
-                    <Button
-                      onClick={() => setEditPresetModalOpen(preset.id)}
-                      size="sm"
-                      variant="secondary"
-                    >
-                      Edit
-                    </Button>
-                    <Button onClick={() => duplicatePreset(preset)} size="sm" variant="secondary">
-                      Duplicate
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        confirmDialog.confirm({
-                          title: 'Delete Preset',
-                          description:
-                            'Are you sure you want to delete this preset? This action cannot be undone.',
-                          confirmText: 'Delete',
-                          variant: 'destructive',
-                          onConfirm: () => deletePreset(preset.id)
-                        });
-                      }}
-                      size="sm"
-                      variant="destructive"
-                    >
-                      Delete
-                    </Button>
-                  </CardFooter>
-                </Card>
-              )}
-            </For>
+            <For each={presets.data}>{(preset) => <PresetCard preset={preset} />}</For>
           </div>
         </Show>
       </Show>
