@@ -50,7 +50,10 @@ export function ChatSettingsControls(props: ChatSettingsControlsProps) {
   return (
     <div class="flex flex-col gap-6">
       <div class="flex flex-col gap-2">
-        <Label>Provider &amp; Model</Label>
+        <Label class="text-muted-foreground text-xs flex gap-1 items-center">
+          <span class="icon-[heroicons--cog-8-tooth-16-solid]" />
+          <span>Provider &amp; Model</span>
+        </Label>
         <ProviderSelector
           onChange={(provider) => {
             props.onProviderChange?.(provider);
@@ -68,7 +71,10 @@ export function ChatSettingsControls(props: ChatSettingsControlsProps) {
         />
       </div>
       <div class="flex flex-col gap-1.5">
-        <Label>Reasoning Effort</Label>
+        <Label class="text-muted-foreground text-xs flex gap-1 items-center">
+          <span class="icon-[fluent--brain-20-filled]" />
+          <span>Reasoning</span>
+        </Label>
         <Select
           itemComponent={(itemProps) => (
             <SelectItem item={itemProps.item}>
@@ -91,7 +97,10 @@ export function ChatSettingsControls(props: ChatSettingsControlsProps) {
       </div>
       <Show when={mcpClients().length > 0}>
         <div class="flex flex-col gap-1.5">
-          <Label>MCP Clients</Label>
+          <Label class="text-muted-foreground text-xs flex gap-1 items-center">
+            <span class="icon-[heroicons--server-stack-16-solid]" />
+            <span>MCP Clients</span>
+          </Label>
           <div class="flex gap-4 items-center overflow-x-auto">
             <For each={mcpClients()}>
               {(client) => (
@@ -125,7 +134,10 @@ export function ChatSettingsControls(props: ChatSettingsControlsProps) {
         </div>
       </Show>
       <TextField class="flex flex-col gap-1.5">
-        <TextFieldLabel>System Prompt</TextFieldLabel>
+        <TextFieldLabel class="text-muted-foreground text-xs flex gap-1 items-center">
+          <span class="icon-[heroicons--chat-bubble-bottom-center-text-16-solid]" />
+          <span>System Prompt</span>
+        </TextFieldLabel>
         <TextFieldTextArea
           onInput={(e) => props.onSystemPromptChange?.(e.currentTarget.value)}
           placeholder="You are a helpful AI assistant..."
@@ -142,7 +154,7 @@ export function ChatSettingsControls(props: ChatSettingsControlsProps) {
         <SwitchControl>
           <SwitchThumb />
         </SwitchControl>
-        <SwitchLabel>Include current date/time in system prompt</SwitchLabel>
+        <SwitchLabel>Include current date &amp; time in system prompt</SwitchLabel>
       </SwitchPrimitive>
       <PresetsSection
         onApplyPreset={props.onApplyPreset}
@@ -259,4 +271,3 @@ export function PresetsSection(props: {
 }
 
 export default ChatSettingsControls;
-
