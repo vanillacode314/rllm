@@ -192,7 +192,10 @@ export function PresetsSection(props: {
   return (
     <div class="space-y-1.5">
       <div class="flex items-center justify-between">
-        <span class="text-sm font-medium">Presets</span>
+        <span class="text-muted-foreground text-xs flex gap-1 items-center">
+          <span class="icon-[heroicons--bookmark-16-solid]" />
+          <span>Presets</span>
+        </span>
         <Button onClick={() => setSaveDialogOpen(true)} size="sm" variant="outline">
           <span class="icon-[heroicons--document-plus-16-solid]" />
           <span>Save As Preset</span>
@@ -211,14 +214,6 @@ export function PresetsSection(props: {
             presets={presets.data!}
           />
         </Show>
-      </Show>
-
-      <Show when={presets.data && presets.data.length > 0}>
-        <div class="text-xs text-muted-foreground">
-          <Link class="underline hover:text-primary" to="/presets">
-            Manage presets
-          </Link>
-        </div>
       </Show>
 
       <Dialog onOpenChange={setSaveDialogOpen} open={saveDialogOpen()}>
