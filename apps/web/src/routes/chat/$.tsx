@@ -218,6 +218,15 @@ function ChatPageComponent() {
   onCleanup(() => setMessages(new ReactiveTree<TMessage>()));
 
   onMount(() =>
+    createEventListenerMap(document, {
+      'chat:handoff': (event: CustomEvent<{ prefilledPrompt: string }>) => {
+        setPrompt(event.detail.prefilledPrompt);
+        navigate({ to: '/chat/$', params: { _splat: 'new' } });
+      }
+    })
+  );
+
+  onMount(() =>
     onCleanup(
       ChatGenerationManager.subscribe(loaderData().id, ($chat, newPath) => {
         setChat({ ...$chat });

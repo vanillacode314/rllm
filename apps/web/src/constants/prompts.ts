@@ -53,6 +53,22 @@ Use this tool to search for relevant information within attached documents (PDFs
 - ${attachments.join('\n- ')}
 `;
 
+export const HANDOFF_TOOL_INSTRUCTIONS_PROMPT = dedent`
+This tool creates a new chat with a pre-filled prompt, carrying forward relevant context from the current conversation. It is triggered when the user types "/handoff <goal>" — the LLM reads the goal from the conversation and uses this tool to start a fresh chat.
+
+## Tool Name
+\`handoff_to_new_chat\`
+
+## Parameter
+- \`prefilledPrompt\` (string, min 1 char): The prompt that will pre-populate the new chat's message box. Write it as a complete, self-contained instruction — as if the user is typing it fresh. Include any context from THIS conversation that is essential for the new chat to understand the goal.
+
+## Strategy
+1. Read the goal the user wrote \`/handoff <goal>\`. 
+2. Interpret their intent.
+3. If the goal is vague or ambiguous, clarify first by asking questions, then call this tool.
+4. Once the tool resolves, tell the user if the handoff succeeded or failed, if it failed and a reason was provided explain the reason otherwise just end the chat.
+`;
+
 export const ASK_QUESTIONS_TOOL_PROMPT = dedent`
 This tool shows a modal dialog to collect structured answers from the user. It is ideal for gathering multiple precise pieces of information at once, but should be used judiciously to avoid breaking conversational flow.
 

@@ -14,7 +14,8 @@ import {
 } from '~/components/modals/auto-import/FeedbackModal';
 import {
   ASK_QUESTIONS_TOOL_PROMPT,
-  ATTACHMENT_TOOL_INSTRUCTIONS_PROMPT
+  ATTACHMENT_TOOL_INSTRUCTIONS_PROMPT,
+  HANDOFF_TOOL_INSTRUCTIONS_PROMPT
 } from '~/constants/prompts';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { MCPManager } from '~/lib/mcp/manager';
@@ -239,6 +240,38 @@ export class ChatGenerationManager {
       tools = Option.Some(
         tools.mapOr([feedbackTool], (tools) => {
           tools.push(feedbackTool);
+          return tools;
+        })
+      );
+    }
+
+    function isHandoffMode() {
+      const lastUserMsg = messages
+        .filter((m): m is TMessage & { type: 'user' } => m.type === 'user')
+        .at(-1);
+      return (
+        lastUserMsg?.chunks
+          .find((c) => c.type === 'text')
+          ?.content.trim()
+          .startsWith('/handoff ') ?? false
+      );
+    }
+
+    if (isHandoffMode()) {
+      const handoffTool = makeTool({
+        name: 'handoff_to_new_chat',
+        inputSchema: z.object({
+          prefilledPrompt: z.string().check(z.minLength(1))
+        }),
+        description: HANDOFF_TOOL_INSTRUCTIONS_PROMPT,
+        handler: (args) => {
+          document.dispatchEvent(new CustomEvent('chat:handoff', { detail: args }));
+          return JSON.stringify({ success: true });
+        }
+      });
+      tools = Option.Some(
+        tools.mapOr([handoffTool], (tools) => {
+          tools.push(handoffTool);
           return tools;
         })
       );
