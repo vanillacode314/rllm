@@ -424,7 +424,11 @@ function ChatPageComponent() {
       if (document.activeElement?.id === 'prompt') {
         event.preventDefault();
         const button = document.getElementById('prompt-submit-button') as HTMLButtonElement;
-        if (!button) throw new Error('submit button missing');
+        if (!button) {
+          console.error('submit button missing');
+          toast.error('An Error Occurred');
+          return;
+        }
         button.click();
       }
     },
