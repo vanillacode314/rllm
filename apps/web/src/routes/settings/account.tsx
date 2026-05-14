@@ -2,7 +2,7 @@ import { fromBinary } from '@bufbuild/protobuf';
 import { useQuery } from '@tanstack/solid-query';
 import { createFileRoute, useBlocker } from '@tanstack/solid-router';
 import { ethers } from 'ethers';
-import { SyncServerGetEventsResponseSchema } from 'proto/event_pb';
+import { SyncServerGetEventsResponseSchema } from 'proto/events/v1/event_pb';
 import { Match, Switch } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { toast } from 'solid-sonner';
@@ -30,7 +30,6 @@ import { withTransaction } from '~/utils/db';
 import { queryClient } from '~/utils/query-client';
 import {
   createAuthenticatedSyncServerFetcher,
-  getServerId,
   parseEventsFromServer,
   syncServerApi
 } from '~/utils/sync-server';
@@ -135,7 +134,6 @@ function SettingsAccountComponent() {
         yield* withTransaction((tx) =>
           tryBlock(
             async function* () {
-              const serverId = yield* getServerId();
               const response = await syncServerApi
                 .query({ accountId: id })
                 .get('/api/v1/messages/stream')
@@ -177,7 +175,7 @@ function SettingsAccountComponent() {
                     );
 
                     const messages = await parseEventsFromServer(data, actualAesKey);
-                    await logger.receive(serverId, messages, tx);
+                    await logger.receive(messages, tx);
                     setStatus({ processed: status.processed + messages.length });
 
                     accumulated = accumulated.slice(4 + messageLength);

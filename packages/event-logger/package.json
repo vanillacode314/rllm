@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "hlc": "workspace:*",
+    "merkle-tree": "workspace:*",
     "sqlocal": "^0.17.0"
   },
   "devDependencies": {

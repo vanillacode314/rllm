@@ -19,7 +19,6 @@ import { Route as SettingsProxyRouteImport } from './routes/settings/proxy'
 import { Route as SettingsProvidersRouteImport } from './routes/settings/providers'
 import { Route as SettingsModelsRouteImport } from './routes/settings/models'
 import { Route as SettingsMcpRouteImport } from './routes/settings/mcp'
-import { Route as SettingsDebugRouteImport } from './routes/settings/debug'
 import { Route as SettingsDataRouteImport } from './routes/settings/data'
 import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
 import { Route as SettingsAccountRouteImport } from './routes/settings/account'
@@ -75,11 +74,6 @@ const SettingsMcpRoute = SettingsMcpRouteImport.update({
   path: '/mcp',
   getParentRoute: () => SettingsRoute,
 } as any)
-const SettingsDebugRoute = SettingsDebugRouteImport.update({
-  id: '/debug',
-  path: '/debug',
-  getParentRoute: () => SettingsRoute,
-} as any)
 const SettingsDataRoute = SettingsDataRouteImport.update({
   id: '/data',
   path: '/data',
@@ -110,7 +104,6 @@ export interface FileRoutesByFullPath {
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/data': typeof SettingsDataRoute
-  '/settings/debug': typeof SettingsDebugRoute
   '/settings/mcp': typeof SettingsMcpRoute
   '/settings/models': typeof SettingsModelsRoute
   '/settings/providers': typeof SettingsProvidersRoute
@@ -126,7 +119,6 @@ export interface FileRoutesByTo {
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/data': typeof SettingsDataRoute
-  '/settings/debug': typeof SettingsDebugRoute
   '/settings/mcp': typeof SettingsMcpRoute
   '/settings/models': typeof SettingsModelsRoute
   '/settings/providers': typeof SettingsProvidersRoute
@@ -144,7 +136,6 @@ export interface FileRoutesById {
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/data': typeof SettingsDataRoute
-  '/settings/debug': typeof SettingsDebugRoute
   '/settings/mcp': typeof SettingsMcpRoute
   '/settings/models': typeof SettingsModelsRoute
   '/settings/providers': typeof SettingsProvidersRoute
@@ -163,7 +154,6 @@ export interface FileRouteTypes {
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/data'
-    | '/settings/debug'
     | '/settings/mcp'
     | '/settings/models'
     | '/settings/providers'
@@ -179,7 +169,6 @@ export interface FileRouteTypes {
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/data'
-    | '/settings/debug'
     | '/settings/mcp'
     | '/settings/models'
     | '/settings/providers'
@@ -196,7 +185,6 @@ export interface FileRouteTypes {
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/data'
-    | '/settings/debug'
     | '/settings/mcp'
     | '/settings/models'
     | '/settings/providers'
@@ -285,13 +273,6 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof SettingsMcpRouteImport
       parentRoute: typeof SettingsRoute
     }
-    '/settings/debug': {
-      id: '/settings/debug'
-      path: '/debug'
-      fullPath: '/settings/debug'
-      preLoaderRoute: typeof SettingsDebugRouteImport
-      parentRoute: typeof SettingsRoute
-    }
     '/settings/data': {
       id: '/settings/data'
       path: '/data'
@@ -327,7 +308,6 @@ interface SettingsRouteChildren {
   SettingsAccountRoute: typeof SettingsAccountRoute
   SettingsAppearanceRoute: typeof SettingsAppearanceRoute
   SettingsDataRoute: typeof SettingsDataRoute
-  SettingsDebugRoute: typeof SettingsDebugRoute
   SettingsMcpRoute: typeof SettingsMcpRoute
   SettingsModelsRoute: typeof SettingsModelsRoute
   SettingsProvidersRoute: typeof SettingsProvidersRoute
@@ -340,7 +320,6 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsAccountRoute: SettingsAccountRoute,
   SettingsAppearanceRoute: SettingsAppearanceRoute,
   SettingsDataRoute: SettingsDataRoute,
-  SettingsDebugRoute: SettingsDebugRoute,
   SettingsMcpRoute: SettingsMcpRoute,
   SettingsModelsRoute: SettingsModelsRoute,
   SettingsProvidersRoute: SettingsProvidersRoute,

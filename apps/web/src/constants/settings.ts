@@ -42,11 +42,6 @@ const SETTINGS_PAGES: Page[] = [
     name: 'Models',
     icon: 'icon-[heroicons--puzzle-piece]',
     path: '/settings/models'
-  },
-  {
-    name: 'Debug',
-    icon: 'icon-[heroicons--bug-ant]',
-    path: '/settings/debug'
   }
 ];
 

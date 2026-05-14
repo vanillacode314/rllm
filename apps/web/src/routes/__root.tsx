@@ -11,7 +11,7 @@ import TheSidebar from '~/components/TheSidebar';
 import { Button } from '~/components/ui/button';
 import { SidebarProvider } from '~/components/ui/sidebar';
 import { Toaster } from '~/components/ui/sonner';
-import { deleteDatabaseFile, setupDb } from '~/db/client';
+import { deleteDatabaseFile, logger, setupDb } from '~/db/client';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { initChatSettings } from '~/lib/chat/settings';
 import { MCPManager } from '~/lib/mcp/manager';

@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package peers.v1;
+
+message TreePath {
+  repeated uint32 segments = 1;
+}
+
+message SyncHandshake {
+  string version = 2;
+}
+
+message MerkleDigestQuery {
+  uint32 merkle_depth = 1;
+  repeated TreePath paths = 2;
+}
+
+message DigestWithPath {
+  repeated uint32 path = 1;
+  bytes digest = 2;
+}
+
+message MerkleDigestUpdate {
+  uint32 merkle_depth = 1;
+  repeated DigestWithPath digests = 2;
+}
+
+message PeerEvent {
+  string timestamp = 1;
+  string signature = 2;
+  bytes data = 3;
+}
+
+message HasEventWithTimestampQuery {
+  string timestamp = 1;
+}
+
+message HasEventWithTimestampUpdate {
+  bool yes = 1;
+  string timestamp = 2;
+}
+
+message EventBatch {
+  repeated PeerEvent events = 1;
+}
+
+message SyncWireMessage {
+  string account_id = 1;
+  string client_id = 2;
+  oneof payload {
+    SyncHandshake handshake = 3;
+    MerkleDigestQuery digest_query = 4;
+    MerkleDigestUpdate digest_update = 5;
+    EventBatch event_batch = 6;
+    HasEventWithTimestampQuery has_event_with_timestamp_query = 7;
+    HasEventWithTimestampUpdate has_event_with_timestamp_update = 8;
+  }
+}

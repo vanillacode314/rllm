@@ -11,7 +11,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file events/v1/event.proto.
  */
 export const file_events_v1_event: GenFile = /*@__PURE__*/
-  fileDesc("ChVldmVudHMvdjEvZXZlbnQucHJvdG8SCWV2ZW50cy52MSJPCgVFdmVudBIPCgd2ZXJzaW9uGAEgASgJEhEKCXRpbWVzdGFtcBgCIAEoCRIiCgRkYXRhGAMgASgLMhQuZXZlbnRzLnYxLkV2ZW50RGF0YSLZBQoJRXZlbnREYXRhEjkKD2NyZWF0ZV9wcm92aWRlchgBIAEoCzIeLmV2ZW50cy52MS5DcmVhdGVQcm92aWRlckV2ZW50SAASOQoPdXBkYXRlX3Byb3ZpZGVyGAIgASgLMh4uZXZlbnRzLnYxLlVwZGF0ZVByb3ZpZGVyRXZlbnRIABIvCgpjcmVhdGVfbWNwGAMgASgLMhkuZXZlbnRzLnYxLkNyZWF0ZU1DUEV2ZW50SAASLwoKdXBkYXRlX21jcBgEIAEoCzIZLmV2ZW50cy52MS5VcGRhdGVNQ1BFdmVudEgAEjEKC2NyZWF0ZV9jaGF0GAUgASgLMhouZXZlbnRzLnYxLkNyZWF0ZUNoYXRFdmVudEgAEjEKC3VwZGF0ZV9jaGF0GAYgASgLMhouZXZlbnRzLnYxLlVwZGF0ZUNoYXRFdmVudEgAEjkKD2RlbGV0ZV9wcm92aWRlchgHIAEoCzIeLmV2ZW50cy52MS5EZWxldGVQcm92aWRlckV2ZW50SAASLwoKZGVsZXRlX21jcBgIIAEoCzIZLmV2ZW50cy52MS5EZWxldGVNQ1BFdmVudEgAEjEKC2RlbGV0ZV9jaGF0GAkgASgLMhouZXZlbnRzLnYxLkRlbGV0ZUNoYXRFdmVudEgAEjwKEXNldF91c2VyX21ldGFkYXRhGAogASgLMh8uZXZlbnRzLnYxLlNldFVzZXJNZXRhZGF0YUV2ZW50SAASNQoNY3JlYXRlX3ByZXNldBgLIAEoCzIcLmV2ZW50cy52MS5DcmVhdGVQcmVzZXRFdmVudEgAEjUKDXVwZGF0ZV9wcmVzZXQYDCABKAsyHC5ldmVudHMudjEuVXBkYXRlUHJlc2V0RXZlbnRIABI1Cg1kZWxldGVfcHJlc2V0GA0gASgLMhwuZXZlbnRzLnYxLkRlbGV0ZVByZXNldEV2ZW50SABCDAoKZXZlbnRfdHlwZSJ5ChNDcmVhdGVQcm92aWRlckV2ZW50EgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDAoEdHlwZRgDIAEoCRIQCghiYXNlX3VybBgEIAEoCRINCgV0b2tlbhgFIAEoCRIZChFkZWZhdWx0X21vZGVsX2lkcxgGIAMoCSK2AQoTVXBkYXRlUHJvdmlkZXJFdmVudBIKCgJpZBgBIAEoCRIRCgRuYW1lGAIgASgJSACIAQESEQoEdHlwZRgDIAEoCUgBiAEBEhUKCGJhc2VfdXJsGAQgASgJSAKIAQESEgoFdG9rZW4YBSABKAlIA4gBARIZChFkZWZhdWx0X21vZGVsX2lkcxgGIAMoCUIHCgVfbmFtZUIHCgVfdHlwZUILCglfYmFzZV91cmxCCAoGX3Rva2VuIjcKDkNyZWF0ZU1DUEV2ZW50EgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSCwoDdXJsGAMgASgJIlIKDlVwZGF0ZU1DUEV2ZW50EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARIQCgN1cmwYAyABKAlIAYgBAUIHCgVfbmFtZUIGCgRfdXJsIqIBCg9DcmVhdGVDaGF0RXZlbnQSCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSDAoEdGFncxgDIAMoCRIQCghmaW5pc2hlZBgEIAEoCBIpCghtZXNzYWdlcxgFIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSKQoIc2V0dGluZ3MYBiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0IucBCg9VcGRhdGVDaGF0RXZlbnQSCgoCaWQYASABKAkSEgoFdGl0bGUYAiABKAlIAIgBARIMCgR0YWdzGAMgAygJEhUKCGZpbmlzaGVkGAQgASgISAGIAQESLgoIbWVzc2FnZXMYBSABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0SAKIAQESLgoIc2V0dGluZ3MYBiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0SAOIAQFCCAoGX3RpdGxlQgsKCV9maW5pc2hlZEILCglfbWVzc2FnZXNCCwoJX3NldHRpbmdzIlgKEUNyZWF0ZVByZXNldEV2ZW50EgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSKQoIc2V0dGluZ3MYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0IngKEVVwZGF0ZVByZXNldEV2ZW50EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARIuCghzZXR0aW5ncxgDIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RIAYgBAUIHCgVfbmFtZUILCglfc2V0dGluZ3MiHwoRRGVsZXRlUHJlc2V0RXZlbnQSCgoCaWQYASABKAkiIQoTRGVsZXRlUHJvdmlkZXJFdmVudBIKCgJpZBgBIAEoCSIcCg5EZWxldGVNQ1BFdmVudBIKCgJpZBgBIAEoCSIdCg9EZWxldGVDaGF0RXZlbnQSCgoCaWQYASABKAkiMQoUU2V0VXNlck1ldGFkYXRhRXZlbnQSCgoCaWQYASABKAkSDQoFdmFsdWUYAiABKAkiRQoiU3luY1NlcnZlckdldEV2ZW50c1Jlc3BvbnNlUGF5bG9hZBIMCgRkYXRhGAEgASgMEhEKCXN5bmNlZF9hdBgDIAEoCSKpAQobU3luY1NlcnZlckdldEV2ZW50c1Jlc3BvbnNlEhAKCGhhc19tb3JlGAEgASgIEhcKCm5leHRfYWZ0ZXIYAiABKAlIAIgBARIRCglwYWdlX3NpemUYAyABKA0SPQoGZXZlbnRzGAQgAygLMi0uZXZlbnRzLnYxLlN5bmNTZXJ2ZXJHZXRFdmVudHNSZXNwb25zZVBheWxvYWRCDQoLX25leHRfYWZ0ZXIiagogU3luY1NlcnZlclNvY2tldE5ld0V2ZW50c1JlcXVlc3QSEgoKYWNjb3VudF9pZBgBIAEoCRIRCgljbGllbnRfaWQYAiABKAkSDAoEZGF0YRgDIAEoDBIRCglzaWduYXR1cmUYBCABKAkiSAolU3luY1NlcnZlclNvY2tldE5ld0V2ZW50c1Jlc3BvbnNlRGF0YRIMCgRkYXRhGAEgASgMEhEKCXN5bmNlZF9hdBgCIAEoCSJxCiFTeW5jU2VydmVyU29ja2V0TmV3RXZlbnRzUmVzcG9uc2USCgoCaWQYASABKAkSQAoGZXZlbnRzGAIgAygLMjAuZXZlbnRzLnYxLlN5bmNTZXJ2ZXJTb2NrZXROZXdFdmVudHNSZXNwb25zZURhdGEiUQohU3luY1NlcnZlclNvY2tldEdvdEV2ZW50c1Jlc3BvbnNlEgoKAmlkGAEgASgJEhEKCXRpbWVzdGFtcBgCIAEoCRINCgVjb3VudBgDIAEoDSIqChxTeW5jU2VydmVyU29ja2V0SW5mb1Jlc3BvbnNlEgoKAmlkGAEgASgJIm0KF1N5bmNTZXJ2ZXJTb2NrZXRSZXF1ZXN0Ej8KCm5ld19ldmVudHMYASADKAsyKy5ldmVudHMudjEuU3luY1NlcnZlclNvY2tldE5ld0V2ZW50c1JlcXVlc3QSEQoJdGltZXN0YW1wGAIgASgJIuYBChhTeW5jU2VydmVyU29ja2V0UmVzcG9uc2USQgoKbmV3X2V2ZW50cxgBIAEoCzIsLmV2ZW50cy52MS5TeW5jU2VydmVyU29ja2V0TmV3RXZlbnRzUmVzcG9uc2VIABJCCgpnb3RfZXZlbnRzGAIgASgLMiwuZXZlbnRzLnYxLlN5bmNTZXJ2ZXJTb2NrZXRHb3RFdmVudHNSZXNwb25zZUgAEjcKBGluZm8YAyABKAsyJy5ldmVudHMudjEuU3luY1NlcnZlclNvY2tldEluZm9SZXNwb25zZUgAQgkKB3BheWxvYWRiBnByb3RvMw", [file_google_protobuf_struct]);
+  fileDesc("ChVldmVudHMvdjEvZXZlbnQucHJvdG8SCWV2ZW50cy52MSI8CgVFdmVudBIPCgd2ZXJzaW9uGAEgASgJEiIKBGRhdGEYAyABKAsyFC5ldmVudHMudjEuRXZlbnREYXRhItkFCglFdmVudERhdGESOQoPY3JlYXRlX3Byb3ZpZGVyGAEgASgLMh4uZXZlbnRzLnYxLkNyZWF0ZVByb3ZpZGVyRXZlbnRIABI5Cg91cGRhdGVfcHJvdmlkZXIYAiABKAsyHi5ldmVudHMudjEuVXBkYXRlUHJvdmlkZXJFdmVudEgAEi8KCmNyZWF0ZV9tY3AYAyABKAsyGS5ldmVudHMudjEuQ3JlYXRlTUNQRXZlbnRIABIvCgp1cGRhdGVfbWNwGAQgASgLMhkuZXZlbnRzLnYxLlVwZGF0ZU1DUEV2ZW50SAASMQoLY3JlYXRlX2NoYXQYBSABKAsyGi5ldmVudHMudjEuQ3JlYXRlQ2hhdEV2ZW50SAASMQoLdXBkYXRlX2NoYXQYBiABKAsyGi5ldmVudHMudjEuVXBkYXRlQ2hhdEV2ZW50SAASOQoPZGVsZXRlX3Byb3ZpZGVyGAcgASgLMh4uZXZlbnRzLnYxLkRlbGV0ZVByb3ZpZGVyRXZlbnRIABIvCgpkZWxldGVfbWNwGAggASgLMhkuZXZlbnRzLnYxLkRlbGV0ZU1DUEV2ZW50SAASMQoLZGVsZXRlX2NoYXQYCSABKAsyGi5ldmVudHMudjEuRGVsZXRlQ2hhdEV2ZW50SAASPAoRc2V0X3VzZXJfbWV0YWRhdGEYCiABKAsyHy5ldmVudHMudjEuU2V0VXNlck1ldGFkYXRhRXZlbnRIABI1Cg1jcmVhdGVfcHJlc2V0GAsgASgLMhwuZXZlbnRzLnYxLkNyZWF0ZVByZXNldEV2ZW50SAASNQoNdXBkYXRlX3ByZXNldBgMIAEoCzIcLmV2ZW50cy52MS5VcGRhdGVQcmVzZXRFdmVudEgAEjUKDWRlbGV0ZV9wcmVzZXQYDSABKAsyHC5ldmVudHMudjEuRGVsZXRlUHJlc2V0RXZlbnRIAEIMCgpldmVudF90eXBlInkKE0NyZWF0ZVByb3ZpZGVyRXZlbnQSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIMCgR0eXBlGAMgASgJEhAKCGJhc2VfdXJsGAQgASgJEg0KBXRva2VuGAUgASgJEhkKEWRlZmF1bHRfbW9kZWxfaWRzGAYgAygJIrYBChNVcGRhdGVQcm92aWRlckV2ZW50EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARIRCgR0eXBlGAMgASgJSAGIAQESFQoIYmFzZV91cmwYBCABKAlIAogBARISCgV0b2tlbhgFIAEoCUgDiAEBEhkKEWRlZmF1bHRfbW9kZWxfaWRzGAYgAygJQgcKBV9uYW1lQgcKBV90eXBlQgsKCV9iYXNlX3VybEIICgZfdG9rZW4iNwoOQ3JlYXRlTUNQRXZlbnQSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRILCgN1cmwYAyABKAkiUgoOVXBkYXRlTUNQRXZlbnQSCgoCaWQYASABKAkSEQoEbmFtZRgCIAEoCUgAiAEBEhAKA3VybBgDIAEoCUgBiAEBQgcKBV9uYW1lQgYKBF91cmwiogEKD0NyZWF0ZUNoYXRFdmVudBIKCgJpZBgBIAEoCRINCgV0aXRsZRgCIAEoCRIMCgR0YWdzGAMgAygJEhAKCGZpbmlzaGVkGAQgASgIEikKCG1lc3NhZ2VzGAUgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIpCghzZXR0aW5ncxgGIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3Qi5wEKD1VwZGF0ZUNoYXRFdmVudBIKCgJpZBgBIAEoCRISCgV0aXRsZRgCIAEoCUgAiAEBEgwKBHRhZ3MYAyADKAkSFQoIZmluaXNoZWQYBCABKAhIAYgBARIuCghtZXNzYWdlcxgFIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RIAogBARIuCghzZXR0aW5ncxgGIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RIA4gBAUIICgZfdGl0bGVCCwoJX2ZpbmlzaGVkQgsKCV9tZXNzYWdlc0ILCglfc2V0dGluZ3MiWAoRQ3JlYXRlUHJlc2V0RXZlbnQSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIpCghzZXR0aW5ncxgDIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QieAoRVXBkYXRlUHJlc2V0RXZlbnQSCgoCaWQYASABKAkSEQoEbmFtZRgCIAEoCUgAiAEBEi4KCHNldHRpbmdzGAMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdEgBiAEBQgcKBV9uYW1lQgsKCV9zZXR0aW5ncyIfChFEZWxldGVQcmVzZXRFdmVudBIKCgJpZBgBIAEoCSIhChNEZWxldGVQcm92aWRlckV2ZW50EgoKAmlkGAEgASgJIhwKDkRlbGV0ZU1DUEV2ZW50EgoKAmlkGAEgASgJIh0KD0RlbGV0ZUNoYXRFdmVudBIKCgJpZBgBIAEoCSIxChRTZXRVc2VyTWV0YWRhdGFFdmVudBIKCgJpZBgBIAEoCRINCgV2YWx1ZRgCIAEoCSJYCiJTeW5jU2VydmVyR2V0RXZlbnRzUmVzcG9uc2VQYXlsb2FkEgwKBGRhdGEYASABKAwSEQoJdGltZXN0YW1wGAIgASgJEhEKCXNpZ25hdHVyZRgDIAEoCSKpAQobU3luY1NlcnZlckdldEV2ZW50c1Jlc3BvbnNlEhAKCGhhc19tb3JlGAEgASgIEhcKCm5leHRfYWZ0ZXIYAiABKAlIAIgBARIRCglwYWdlX3NpemUYAyABKA0SPQoGZXZlbnRzGAQgAygLMi0uZXZlbnRzLnYxLlN5bmNTZXJ2ZXJHZXRFdmVudHNSZXNwb25zZVBheWxvYWRCDQoLX25leHRfYWZ0ZXJiBnByb3RvMw", [file_google_protobuf_struct]);
 
 /**
  * @generated from message events.v1.Event
@@ -21,11 +21,6 @@ export type Event = Message<"events.v1.Event"> & {
    * @generated from field: string version = 1;
    */
   version: string;
-
-  /**
-   * @generated from field: string timestamp = 2;
-   */
-  timestamp: string;
 
   /**
    * @generated from field: events.v1.EventData data = 3;
@@ -511,9 +506,14 @@ export type SyncServerGetEventsResponsePayload = Message<"events.v1.SyncServerGe
   data: Uint8Array;
 
   /**
-   * @generated from field: string synced_at = 3;
+   * @generated from field: string timestamp = 2;
    */
-  syncedAt: string;
+  timestamp: string;
+
+  /**
+   * @generated from field: string signature = 3;
+   */
+  signature: string;
 };
 
 /**
@@ -554,181 +554,4 @@ export type SyncServerGetEventsResponse = Message<"events.v1.SyncServerGetEvents
  */
 export const SyncServerGetEventsResponseSchema: GenMessage<SyncServerGetEventsResponse> = /*@__PURE__*/
   messageDesc(file_events_v1_event, 16);
-
-/**
- * @generated from message events.v1.SyncServerSocketNewEventsRequest
- */
-export type SyncServerSocketNewEventsRequest = Message<"events.v1.SyncServerSocketNewEventsRequest"> & {
-  /**
-   * @generated from field: string account_id = 1;
-   */
-  accountId: string;
-
-  /**
-   * @generated from field: string client_id = 2;
-   */
-  clientId: string;
-
-  /**
-   * @generated from field: bytes data = 3;
-   */
-  data: Uint8Array;
-
-  /**
-   * @generated from field: string signature = 4;
-   */
-  signature: string;
-};
-
-/**
- * Describes the message events.v1.SyncServerSocketNewEventsRequest.
- * Use `create(SyncServerSocketNewEventsRequestSchema)` to create a new message.
- */
-export const SyncServerSocketNewEventsRequestSchema: GenMessage<SyncServerSocketNewEventsRequest> = /*@__PURE__*/
-  messageDesc(file_events_v1_event, 17);
-
-/**
- * @generated from message events.v1.SyncServerSocketNewEventsResponseData
- */
-export type SyncServerSocketNewEventsResponseData = Message<"events.v1.SyncServerSocketNewEventsResponseData"> & {
-  /**
-   * @generated from field: bytes data = 1;
-   */
-  data: Uint8Array;
-
-  /**
-   * @generated from field: string synced_at = 2;
-   */
-  syncedAt: string;
-};
-
-/**
- * Describes the message events.v1.SyncServerSocketNewEventsResponseData.
- * Use `create(SyncServerSocketNewEventsResponseDataSchema)` to create a new message.
- */
-export const SyncServerSocketNewEventsResponseDataSchema: GenMessage<SyncServerSocketNewEventsResponseData> = /*@__PURE__*/
-  messageDesc(file_events_v1_event, 18);
-
-/**
- * @generated from message events.v1.SyncServerSocketNewEventsResponse
- */
-export type SyncServerSocketNewEventsResponse = Message<"events.v1.SyncServerSocketNewEventsResponse"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * @generated from field: repeated events.v1.SyncServerSocketNewEventsResponseData events = 2;
-   */
-  events: SyncServerSocketNewEventsResponseData[];
-};
-
-/**
- * Describes the message events.v1.SyncServerSocketNewEventsResponse.
- * Use `create(SyncServerSocketNewEventsResponseSchema)` to create a new message.
- */
-export const SyncServerSocketNewEventsResponseSchema: GenMessage<SyncServerSocketNewEventsResponse> = /*@__PURE__*/
-  messageDesc(file_events_v1_event, 19);
-
-/**
- * @generated from message events.v1.SyncServerSocketGotEventsResponse
- */
-export type SyncServerSocketGotEventsResponse = Message<"events.v1.SyncServerSocketGotEventsResponse"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string timestamp = 2;
-   */
-  timestamp: string;
-
-  /**
-   * @generated from field: uint32 count = 3;
-   */
-  count: number;
-};
-
-/**
- * Describes the message events.v1.SyncServerSocketGotEventsResponse.
- * Use `create(SyncServerSocketGotEventsResponseSchema)` to create a new message.
- */
-export const SyncServerSocketGotEventsResponseSchema: GenMessage<SyncServerSocketGotEventsResponse> = /*@__PURE__*/
-  messageDesc(file_events_v1_event, 20);
-
-/**
- * @generated from message events.v1.SyncServerSocketInfoResponse
- */
-export type SyncServerSocketInfoResponse = Message<"events.v1.SyncServerSocketInfoResponse"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-};
-
-/**
- * Describes the message events.v1.SyncServerSocketInfoResponse.
- * Use `create(SyncServerSocketInfoResponseSchema)` to create a new message.
- */
-export const SyncServerSocketInfoResponseSchema: GenMessage<SyncServerSocketInfoResponse> = /*@__PURE__*/
-  messageDesc(file_events_v1_event, 21);
-
-/**
- * @generated from message events.v1.SyncServerSocketRequest
- */
-export type SyncServerSocketRequest = Message<"events.v1.SyncServerSocketRequest"> & {
-  /**
-   * @generated from field: repeated events.v1.SyncServerSocketNewEventsRequest new_events = 1;
-   */
-  newEvents: SyncServerSocketNewEventsRequest[];
-
-  /**
-   * @generated from field: string timestamp = 2;
-   */
-  timestamp: string;
-};
-
-/**
- * Describes the message events.v1.SyncServerSocketRequest.
- * Use `create(SyncServerSocketRequestSchema)` to create a new message.
- */
-export const SyncServerSocketRequestSchema: GenMessage<SyncServerSocketRequest> = /*@__PURE__*/
-  messageDesc(file_events_v1_event, 22);
-
-/**
- * @generated from message events.v1.SyncServerSocketResponse
- */
-export type SyncServerSocketResponse = Message<"events.v1.SyncServerSocketResponse"> & {
-  /**
-   * @generated from oneof events.v1.SyncServerSocketResponse.payload
-   */
-  payload: {
-    /**
-     * @generated from field: events.v1.SyncServerSocketNewEventsResponse new_events = 1;
-     */
-    value: SyncServerSocketNewEventsResponse;
-    case: "newEvents";
-  } | {
-    /**
-     * @generated from field: events.v1.SyncServerSocketGotEventsResponse got_events = 2;
-     */
-    value: SyncServerSocketGotEventsResponse;
-    case: "gotEvents";
-  } | {
-    /**
-     * @generated from field: events.v1.SyncServerSocketInfoResponse info = 3;
-     */
-    value: SyncServerSocketInfoResponse;
-    case: "info";
-  } | { case: undefined; value?: undefined };
-};
-
-/**
- * Describes the message events.v1.SyncServerSocketResponse.
- * Use `create(SyncServerSocketResponseSchema)` to create a new message.
- */
-export const SyncServerSocketResponseSchema: GenMessage<SyncServerSocketResponse> = /*@__PURE__*/
-  messageDesc(file_events_v1_event, 23);
 

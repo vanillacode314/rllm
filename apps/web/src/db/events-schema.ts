@@ -12,7 +12,7 @@ const metadata = sqliteTable('metadata', {
 const events = sqliteTable('events', {
   timestamp: timestamp().primaryKey().notNull(),
   type: text().notNull(),
-  data: text().notNull(),
+  data: text({ mode: 'json' }).notNull(),
   version: text()
 });
 export const tables = { metadata, events };

@@ -10,7 +10,7 @@ async function receiveMessage(
     .insert(schema.messages)
     .values(message)
     .onConflictDoNothing({
-      target: [schema.messages.accountId, schema.messages.data]
+      target: [schema.messages.accountId, schema.messages.timestamp]
     })
     .returning();
   return row ?? null;

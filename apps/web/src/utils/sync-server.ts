@@ -1,14 +1,13 @@
 import { fromBinary } from '@bufbuild/protobuf';
 import { ethers } from 'ethers';
-import { EventSchema, SyncServerGetEventsResponseSchema } from 'proto/event_pb';
+import * as EventPB from 'proto/events/v1/event_pb';
 import { AsyncResult } from 'ts-result-option';
 import { safeParseJson, tryBlock } from 'ts-result-option/utils';
 import wretch from 'wretch';
 import { queryStringAddon } from 'wretch/addons';
 import { z } from 'zod/mini';
 
-import type { TValidEvent } from '~/queries/mutations';
-
+import { type TValidEvent, validEventSchema } from '~/queries/mutations';
 import { account } from '~/signals/account';
 import { decrypt } from '~/workers/encryption';
 
@@ -83,7 +82,10 @@ const getMessages = (
         .blob();
       const data = yield* AsyncResult.from(
         async () =>
-          fromBinary(SyncServerGetEventsResponseSchema, new Uint8Array(await blob.arrayBuffer())),
+          fromBinary(
+            EventPB.SyncServerGetEventsResponseSchema,
+            new Uint8Array(await blob.arrayBuffer())
+          ),
         (error) => new Error('Failed to decode protobuf', { cause: error })
       );
 
@@ -102,17 +104,42 @@ const getMessages = (
     (e) => new Error('Failed to get paginated messages', { cause: e })
   );
 
-export async function parseEventsFromServer(data: unknown, aesKey: CryptoKey) {
-  const events = [] as Array<TValidEvent & { syncedAt: string }>;
-  for (const event of data.events) {
-    const decryptedEvent = await decrypt(event.data, aesKey);
-    const deserialzedEvent = fromBinary(EventSchema, decryptedEvent);
-    const type = deserialzedEvent.data.eventType.case;
-    const data = deserialzedEvent.data.eventType.value;
-    delete data['$typeName'];
-    const timestamp = deserialzedEvent.timestamp;
-    const version = deserialzedEvent.version;
-    events.push({ type, data, timestamp, version, syncedAt: event.syncedAt });
+export async function parseEventsFromServer(
+  response: EventPB.SyncServerGetEventsResponse,
+  aesKey: CryptoKey
+) {
+  const events = [] as Array<TValidEvent & { timestamp: string; version: string }>;
+  for (const { data, timestamp } of response.events) {
+    const decryptedEvent = await decrypt(data, aesKey);
+    const deserialzedEvent = fromBinary(EventPB.EventSchema, decryptedEvent);
+    events.push(
+      z
+        .object({
+          type: z.string(),
+          data: z.unknown(),
+          timestamp: z.string(),
+          version: z.string()
+        })
+        .check(
+          z.refine(
+            (value) => {
+              return validEventSchema.safeParse({
+                type: value.type,
+                data: value.data
+              }).success;
+            },
+            {
+              error: 'Invalid event'
+            }
+          )
+        )
+        .parse({
+          type: deserialzedEvent.data!.eventType.case!,
+          data: deserialzedEvent.data!.eventType.value!,
+          timestamp: timestamp,
+          version: deserialzedEvent.version
+        }) as TValidEvent & { timestamp: string; version: string }
+    );
   }
   return events;
 }

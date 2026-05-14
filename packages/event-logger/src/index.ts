@@ -1,4 +1,5 @@
 import { HLC } from 'hlc';
+import { MerkleTree, stringHasher } from 'merkle-tree';
 import { type ClientConfig, SQLocal, type Transaction } from 'sqlocal';
 
 export type TConfig<TEvent extends Omit<TBaseEvent, 'timestamp' | 'version'>> = {
@@ -13,7 +14,6 @@ export type TConfig<TEvent extends Omit<TBaseEvent, 'timestamp' | 'version'>> = 
       keys: string[][];
     }>
   ) => MaybePromise<void>;
-  onNewEvent?: () => MaybePromise<void>;
   validateEvent?: (event: unknown) => TEvent;
 };
 export type TUpdate =
@@ -31,6 +31,7 @@ export type TUpdate =
       table: string;
     };
 interface Logger<T extends TBaseEvent> {
+  clearMetadata: (key: string, tx?: TTransaction) => Promise<void>;
   db: SQLocal;
   dispatch: (
     ...events: Array<
@@ -39,25 +40,19 @@ interface Logger<T extends TBaseEvent> {
   ) => Promise<void>;
   getClientId: () => Promise<string>;
   getClock: () => Promise<HLC>;
-  getLatestReceivedAt: (sourceId: string) => Promise<string>;
-  getLatestSentAt: (sourceId: string) => Promise<string>;
+  getMerkleTree: () => Promise<MerkleTree<string, string>>;
   getMetadata: (key: string) => Promise<null | string>;
-  getUnsyncedEvents: (
-    sourceId: string,
-    limit?: number
-  ) => Promise<{ events: T[]; hasMore: boolean }>;
   getVersion: () => Promise<string | undefined>;
-  on: <U extends T, TType extends U['type']>(
+  on: <
+    U extends T,
+    TType extends '*' | U['type'],
+    TData = TType extends '*' ? unknown : (U & { type: TType })['data']
+  >(
     type: TType,
-    handler: (data: (U & { type: TType })['data'], timestamp: string) => void,
-    opts?: { self?: boolean }
+    handler: (data: TData, timestamp: string, version: string, type: string) => void,
+    opts?: { remote?: boolean; self?: boolean }
   ) => () => void;
-  receive: (
-    sourceId: string,
-    events: Array<T & { syncedAt: string; timestamp: string }>,
-    tx?: TTransaction
-  ) => Promise<() => Promise<void>>;
-  setLatestSentAt: (sourceId: string, timestamp: string) => Promise<void>;
+  receive: (events: Array<T>, tx?: TTransaction) => Promise<() => Promise<void>>;
   setMetadata: (key: string, value: string) => Promise<void>;
   setVersion: (version: string, tx?: TTransaction) => Promise<void>;
 }
@@ -70,7 +65,6 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
   config,
   eventToUpdates,
   invalidate,
-  onNewEvent,
   validateEvent
 }: TConfig<TEvent>): Promise<Logger<TEvent & { timestamp: string; version: string }>> {
   const newClock = HLC.generate();
@@ -81,8 +75,6 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
       sql`CREATE TABLE IF NOT EXISTS \`metadata\` ( \`key\` text PRIMARY KEY NOT NULL, \`value\` text NOT NULL);`,
       sql`INSERT OR IGNORE INTO \`metadata\` (\`key\`, \`value\`) VALUES ('clock', ${newClock.toString()}), ('clientId', ${newClock.clientId});`,
       sql`CREATE TABLE IF NOT EXISTS \`events\` (\`timestamp\` text PRIMARY KEY NOT NULL, \`type\` text NOT NULL, \`data\` text NOT NULL, \`version\` text NOT NULL);`,
-      sql`CREATE TABLE IF NOT EXISTS \`sync_state\` (\`sourceId\` text PRIMARY KEY NOT NULL, \`latest_received\` text, \`latest_sent\` text);`,
-      sql`CREATE TABLE IF NOT EXISTS \`sync_state_missing\` (\`sourceId\` text NOT NULL, \`timestamp\` text NOT NULL, PRIMARY KEY (\`sourceId\`, \`timestamp\`));`,
       sql`CREATE TABLE IF NOT EXISTS \`pendingEvents\` (\`id\` text NOT NULL, \`table\` text NOT NULL, \`timestamp\` text NOT NULL, \`data\` text NOT NULL, \`operation\` text NOT NULL, PRIMARY KEY (\`id\`, \`table\`, \`timestamp\`));`,
       ...(config.onInit?.(sql) ?? [])
     ]
@@ -108,14 +100,17 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
     );
     return schema;
   }
+
   const subscriptions = new Map<
     string,
     Set<{
-      handler: (data: unknown, timestamp: string, version: string) => unknown;
-      self?: boolean;
+      handler: (data: unknown, timestamp: string, version: string, type: string) => unknown;
+      remote: boolean;
+      self: boolean;
     }>
   >();
 
+  let merkleTree: MerkleTree<string, string> | undefined;
   const logger = {
     applyUpdates: async (updates: TUpdate[], timestamp: string, tx: TTransaction) => {
       if (updates.length === 0) return;
@@ -143,6 +138,13 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         }
       }
     },
+    clearMetadata: async (key: string, tx?: TTransaction) => {
+      const q = tx ? tx.query : query;
+      await q({
+        params: [key],
+        sql: `DELETE FROM metadata WHERE key = ?`
+      });
+    },
     dispatch: async (...events: Array<TEvent & { dontLog?: boolean }>) => {
       if (events.length === 0) return;
       if (validateEvent) {
@@ -165,6 +167,7 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         updates: TUpdate[];
       }> = [];
       const loggedEvents = await db.transaction(async (tx) => {
+        const tree = await logger.getMerkleTree(tx);
         const enhancedEvents = [];
         for (const event of events)
           enhancedEvents.push({ ...event, timestamp: clock.increment().toString(), version });
@@ -199,15 +202,26 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         await Promise.all(
           updates.map(({ event, updates }) => logger.applyUpdates(updates, event.timestamp, tx))
         );
+        for (const event of loggedEvents ?? []) {
+          tree.insert(event.timestamp, event.timestamp);
+        }
+        await logger.persistMerkleTree(tx);
         return loggedEvents;
       });
       if (loggedEvents) {
         for (const { data, timestamp, type, version } of loggedEvents) {
-          const subscribers = subscriptions.get(type);
-          if (!subscribers) continue;
+          const blanketSubscribers = subscriptions.get('*');
+          const eventSubscribers = subscriptions.get(type);
+          let subscribers = new Set<{
+            handler: (data: unknown, timestamp: string, version: string, type: string) => unknown;
+            remote: boolean;
+            self: boolean;
+          }>();
+          if (blanketSubscribers) subscribers = subscribers.union(blanketSubscribers);
+          if (eventSubscribers) subscribers = subscribers.union(eventSubscribers);
           for (const subscriber of subscribers) {
             if (!subscriber.self) continue;
-            subscriber.handler(JSON.parse(data), timestamp, version);
+            subscriber.handler(JSON.parse(data), timestamp, version, type);
           }
         }
       }
@@ -217,7 +231,6 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
           keys: updates.flatMap((update) => update.invalidate ?? [])
         }))
       );
-      onNewEvent?.();
     },
     getClientId: async (tx?: TTransaction): Promise<string> => {
       const _query = tx ? tx.query : query;
@@ -237,39 +250,21 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         })
       );
     },
-    getLatestReceivedAt: async (sourceId: string) => {
-      const result = await query<{ latest_received: string }>({
-        params: [sourceId],
-        sql: `SELECT latest_received FROM sync_state WHERE sourceId = ?`
-      });
-      return result[0]?.latest_received ?? '0';
+    async getMerkleTree(tx?: TTransaction): Promise<MerkleTree<string, string>> {
+      if (merkleTree) return merkleTree;
+      const jsonTree = await logger.getMetadata('merkle-tree', tx);
+      if (!jsonTree) {
+        merkleTree = new MerkleTree(16, stringHasher);
+        return merkleTree;
+      }
+      return (merkleTree = MerkleTree.fromString(jsonTree, stringHasher));
     },
-    getLatestSentAt: async (sourceId: string) => {
-      const result = await query<{ latest_sent: string }>({
-        params: [sourceId],
-        sql: `SELECT latest_sent FROM sync_state WHERE sourceId = ?`
-      });
-      return result[0]?.latest_sent ?? '0';
-    },
-    getMetadata: async (key: string) => {
-      return await query<{ value: string }>({
+    getMetadata: async (key: string, tx?: TTransaction) => {
+      const _query = tx ? tx.query : query;
+      return await _query<{ value: string }>({
         params: [key],
-        sql: `SELECT value FROM metadata WHERE key = ?`
+        sql: 'SELECT value FROM metadata WHERE key = ?'
       }).then((rows) => rows[0]?.value ?? null);
-    },
-    getUnsyncedEvents: async (sourceId: string, limit: number = 100) => {
-      const clientId = await logger.getClientId();
-      const latestSentAt = await logger.getLatestSentAt(sourceId);
-      const events = await query<TEvent & { timestamp: string; version: string }>({
-        params: [latestSentAt, `%${clientId}`, limit + 1],
-        sql: `SELECT timestamp, type, data, version FROM events WHERE timestamp > ? AND timestamp LIKE ? ORDER BY timestamp ASC LIMIT ?`
-      });
-      for (let i = 0; i < events.length; i++)
-        events[i]!.data = JSON.parse(events[i]!.data as string);
-
-      const hasMore = events.length > limit;
-      if (hasMore) events.pop();
-      return { events, hasMore };
     },
     getVersion: async (tx?: TTransaction) => {
       const _query = tx ? tx.query : query;
@@ -278,13 +273,27 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         sql: "SELECT value FROM metadata WHERE key = 'version'"
       }).then((rows) => rows[0]?.value);
     },
+    async insertTimestampIntoMerkleTree(id: string, tx?: TTransaction) {
+      const tree = await logger.getMerkleTree(tx);
+      tree.insert(id, id);
+      await logger.persistMerkleTree();
+    },
     on(
-      type: TEvent['type'],
-      handler: (data: TEvent['data'], timestamp: string) => void,
-      opts?: { self?: boolean }
+      type: '*' | TEvent['type'],
+      handler: (
+        data: TEvent['data'] | unknown,
+        timestamp: string,
+        version: string,
+        type: string
+      ) => void,
+      opts: { remote?: boolean; self?: boolean } = {}
     ) {
       const subscribers = subscriptions.get(type) ?? new Set();
-      const subscriber = opts?.self ? { handler, self: opts.self } : { handler };
+      const subscriber = {
+        handler,
+        remote: 'remote' in opts ? opts.remote! : true,
+        self: 'self' in opts ? opts.self! : false
+      };
       subscribers.add(subscriber);
       subscriptions.set(type, subscribers);
       return () => {
@@ -292,16 +301,18 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         subscribers.delete(subscriber);
       };
     },
+    async persistMerkleTree(tx?: TTransaction) {
+      const tree = await logger.getMerkleTree(tx);
+      await logger.setMetadata('merkle-tree', tree.toString(), tx);
+    },
     receive: async (
-      sourceId: string,
-      events: Array<TEvent & { syncedAt: string; timestamp: string; version: string }>,
+      events: Array<TEvent & { timestamp: string; version: string }>,
       tx?: TTransaction
     ): Promise<() => Promise<void>> => {
-      if (!tx) return await db.transaction((tx) => logger.receive(sourceId, events, tx));
+      if (!tx) return await db.transaction((tx) => logger.receive(events, tx));
       const version = await logger.getVersion(tx);
       if (version === undefined) throw new Error('Version not set');
-      let futureEvents: Array<TEvent & { syncedAt: string; timestamp: string }>;
-      [events, futureEvents] = partitionArray(events, (event) => event.version <= version);
+      [events] = partitionArray(events, (event) => event.version <= version);
       if (events.length === 0) return async () => {};
       if (validateEvent) {
         for (let i = 0; i < events.length; i++) {
@@ -309,7 +320,6 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
           try {
             const validatedEvent = validateEvent(event);
             events[i] = Object.assign(validatedEvent, {
-              syncedAt: event.syncedAt,
               timestamp: event.timestamp,
               version: event.version
             });
@@ -318,17 +328,9 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
           }
         }
       }
-      await Promise.all(
-        futureEvents.map((event) =>
-          tx.query({
-            params: [sourceId, event.syncedAt],
-            sql: `INSERT OR IGNORE INTO sync_state_missing (sourceId, timestamp) VALUES (?, ?)`
-          })
-        )
-      );
       const clock = await logger.getClock(tx);
       let updates: Array<{
-        event: TEvent & { syncedAt: string; timestamp: string; version: string };
+        event: TEvent & { timestamp: string; version: string };
         updates: TUpdate[];
       }> = [];
       const loggedEvents = await tx.query({
@@ -347,30 +349,29 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         })
       );
       for (const { event, updates: _updates } of updates) {
-        try {
-          await logger.applyUpdates(_updates, event.timestamp, tx);
-        } catch (error) {
-          await tx.query({
-            params: [sourceId, event.syncedAt],
-            sql: `INSERT OR IGNORE INTO sync_state_missing (sourceId, timestamp) VALUES (?, ?)`
-          });
-          console.error('Failed to apply update', error);
-        }
+        await logger.applyUpdates(_updates, event.timestamp, tx);
         clock.receive(event.timestamp);
       }
-
+      await logger.recomputeMerkleTree(tx);
       await logger.setClock(clock, tx);
-      const latestReceivedAt = clock.toString();
-      await tx.query({
-        params: [sourceId, latestReceivedAt, latestReceivedAt],
-        sql: `INSERT INTO sync_state (sourceId, latest_received) VALUES (?, ?) ON CONFLICT(sourceId) DO UPDATE SET latest_received = ?`
-      });
       const tasks = [] as Promise<unknown>[];
       for (const { data, timestamp, type, version } of loggedEvents) {
-        const subscribers = subscriptions.get(type);
+        const blanketSubscribers = subscriptions.get('*');
+        const eventSubscribers = subscriptions.get(type);
+        let subscribers = new Set<{
+          handler: (data: unknown, timestamp: string, version: string, type: string) => unknown;
+          remote: boolean;
+          self: boolean;
+        }>();
+        if (blanketSubscribers) subscribers = subscribers.union(blanketSubscribers);
+        if (eventSubscribers) subscribers = subscribers.union(eventSubscribers);
         if (!subscribers) continue;
-        for (const subscriber of subscribers)
-          tasks.push(Promise.resolve(subscriber.handler(JSON.parse(data), timestamp, version)));
+        for (const subscriber of subscribers) {
+          if (subscriber.remote)
+            tasks.push(
+              Promise.resolve(subscriber.handler(JSON.parse(data), timestamp, version, type))
+            );
+        }
       }
       await Promise.all(tasks);
       return async () =>
@@ -381,22 +382,40 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
           }))
         );
     },
+    async recomputeMerkleTree(tx?: TTransaction) {
+      await logger.resetMerkleTree(tx);
+      const tree = await logger.getMerkleTree(tx);
+      let hasNext = true;
+      let after: null | string = null;
+      const q = tx ? tx.query : query;
+      while (hasNext) {
+        const events: Array<{ timestamp: string }> = await q<{ timestamp: string }>({
+          params: after ? [after] : [],
+          sql: `SELECT timestamp FROM events ${after ? 'WHERE timestamp > ?' : ''} ORDER BY timestamp ASC LIMIT 1000`
+        });
+        hasNext = events.length === 1000;
+        for (const event of events) {
+          tree.insert(event.timestamp, event.timestamp);
+        }
+        after = events[events.length - 1]?.timestamp ?? null;
+      }
+      await logger.persistMerkleTree(tx);
+    },
+    async resetMerkleTree(tx?: TTransaction) {
+      merkleTree = undefined;
+      logger.clearMetadata('merkle-tree', tx);
+    },
     setClock: async (clock: HLC, tx: TTransaction) => {
       await tx.query({
         params: [clock.toString()],
         sql: `UPDATE metadata SET value = ? WHERE key = 'clock'`
       });
     },
-    setLatestSentAt: async (sourceId: string, timestamp: string) => {
-      await query({
-        params: [sourceId, timestamp, timestamp, timestamp],
-        sql: `INSERT INTO sync_state (sourceId, latest_sent) VALUES (?, ?) ON CONFLICT(sourceId) DO UPDATE SET latest_sent = ? WHERE latest_sent < ? OR latest_sent IS NULL`
-      });
-    },
-    setMetadata: async (key: string, value: string) => {
+    setMetadata: async (key: string, value: string, tx?: TTransaction) => {
       if (['clientId', 'clock', 'version'].includes(key))
         throw new Error(`not allowed to manually set metadata key: ${key}`);
-      await query({
+      const q = tx ? tx.query : query;
+      await q({
         params: [key, value, value],
         sql: `INSERT INTO metadata (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = ?`
       });
@@ -411,19 +430,18 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
   };
 
   return {
+    clearMetadata: logger.clearMetadata,
     db,
-    // TOOD: figure out typescript here
+    // TODO: figure out typescript here
     dispatch: logger.dispatch as never,
     getClientId: logger.getClientId,
     getClock: logger.getClock,
-    getLatestReceivedAt: logger.getLatestReceivedAt,
-    getLatestSentAt: logger.getLatestSentAt,
+    getMerkleTree: logger.getMerkleTree,
     getMetadata: logger.getMetadata,
-    getUnsyncedEvents: logger.getUnsyncedEvents,
     getVersion: logger.getVersion,
+    // @ts-expect-error: will fix later
     on: logger.on,
     receive: logger.receive,
-    setLatestSentAt: logger.setLatestSentAt,
     setMetadata: logger.setMetadata,
     setVersion: logger.setVersion
   };

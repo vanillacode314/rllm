@@ -1,4 +1,3 @@
-import { debounce } from '@tanstack/solid-pacer';
 import { hashKey } from '@tanstack/solid-query';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import { createEventLogger } from 'event-logger';
@@ -45,14 +44,7 @@ export const logger = await createEventLogger<TValidEvent>({
     );
   },
   eventToUpdates: (event) => processMessage(event),
-  validateEvent: (event) => validEventSchema.parse(event),
-  onNewEvent: debounce(
-    async () => {
-      const { pushPendingMessages } = await import('~/sockets/messages');
-      await pushPendingMessages().unwrap();
-    },
-    { wait: 1000 }
-  )
+  validateEvent: (event) => validEventSchema.parse(event)
 });
 
 const db = drizzle(driver, batchDriver, {

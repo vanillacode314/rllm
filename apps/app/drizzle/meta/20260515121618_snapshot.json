@@ -1,9 +1,33 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "b3fb901d-1386-4e79-bfdf-eff666d42238",
+  "id": "b0622e04-5efc-40e1-85d8-5278536e187a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
+    "merkleTrees": {
+      "name": "merkleTrees",
+      "columns": {
+        "accountId": {
+          "name": "accountId",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tree": {
+          "name": "tree",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "messages": {
       "name": "messages",
       "columns": {
@@ -23,28 +47,20 @@
         },
         "data": {
           "name": "data",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "data_format": {
-          "name": "data_format",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "data_proto": {
-          "name": "data_proto",
           "type": "blob",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
-        "syncedAt": {
-          "name": "syncedAt",
+        "signature": {
+          "name": "signature",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "timestamp": {
+          "name": "timestamp",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -54,21 +70,16 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {
-        "messages_accountId_syncedAt_pk": {
+        "messages_accountId_timestamp_pk": {
           "columns": [
             "accountId",
-            "syncedAt"
+            "timestamp"
           ],
-          "name": "messages_accountId_syncedAt_pk"
+          "name": "messages_accountId_timestamp_pk"
         }
       },
       "uniqueConstraints": {},
-      "checkConstraints": {
-        "data_format_check": {
-          "name": "data_format_check",
-          "value": "\"messages\".\"data_format\" IN (0, 1)"
-        }
-      }
+      "checkConstraints": {}
     },
     "metadata": {
       "name": "metadata",

@@ -6,7 +6,6 @@ import "google/protobuf/struct.proto";
 
 message Event {
   string version = 1;
-  string timestamp = 2;
   EventData data = 3;
 }
 
@@ -109,7 +108,8 @@ message SetUserMetadataEvent {
 
 message SyncServerGetEventsResponsePayload {
   bytes data = 1;
-  string synced_at = 3;
+  string timestamp = 2;
+  string signature = 3;
 }
 
 message SyncServerGetEventsResponse {
@@ -117,44 +117,4 @@ message SyncServerGetEventsResponse {
   optional string next_after = 2;
   uint32 page_size = 3;
   repeated SyncServerGetEventsResponsePayload events = 4;
-}
-
-message SyncServerSocketNewEventsRequest {
-  string account_id = 1;
-  string client_id = 2;
-  bytes data = 3;
-  string signature = 4;
-}
-
-message SyncServerSocketNewEventsResponseData {
-  bytes data = 1;
-  string synced_at = 2;
-}
-
-message SyncServerSocketNewEventsResponse {
-  string id = 1;
-  repeated SyncServerSocketNewEventsResponseData events = 2;
-}
-
-message SyncServerSocketGotEventsResponse {
-  string id = 1;
-  string timestamp = 2;
-  uint32 count = 3;
-}
-
-message SyncServerSocketInfoResponse {
-  string id = 1;
-}
-
-message SyncServerSocketRequest {
-  repeated SyncServerSocketNewEventsRequest new_events = 1;
-  string timestamp = 2;
-}
-
-message SyncServerSocketResponse {
-  oneof payload {
-    SyncServerSocketNewEventsResponse new_events = 1;
-    SyncServerSocketGotEventsResponse got_events = 2;
-    SyncServerSocketInfoResponse info = 3;
-  }
 }

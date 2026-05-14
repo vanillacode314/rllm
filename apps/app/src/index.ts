@@ -4,7 +4,7 @@ import serverTiming from '@elysiajs/server-timing';
 import { swagger } from '@elysiajs/swagger';
 import { and, asc, eq, gt, gte, lte, ne } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
-import { SyncServerGetEventsResponseSchema } from 'proto/event_pb';
+import { SyncServerGetEventsResponseSchema } from 'proto/events/v1/event_pb';
 
 import { db } from './db/client';
 import { receiveMessage } from './db/messages';
@@ -12,7 +12,7 @@ import * as schema from './db/schema';
 import { authPlugin } from './plugins/auth';
 import { socketPlugin } from './plugins/socket';
 import { verifyData } from './utils/auth';
-import { getLocalClock, setLocalClock } from './utils/clock';
+import { getLocalClock } from './utils/clock';
 import { env } from './utils/env';
 
 const DEFAULT_PAGE_SIZE = 50;
@@ -28,21 +28,18 @@ const app = new Elysia({ prefix: '/api/v1' })
     'messages',
     async ({ body, status, token }) => {
       if (token.accountId !== body.accountId) return status(401, 'Unauthorized');
-      const { accountId, clientId, data, signature } = body;
+      const { accountId, clientId, data, signature, timestamp } = body;
       const verified = verifyData(data, signature, token.accountId);
       if (!verified) return status(401, 'Unauthorized');
-      const clock = await getLocalClock();
-      const syncedAt = clock.increment().toString();
       const message = await db.transaction(async (tx) => {
         const message = await receiveMessage(
-          { accountId, clientId, data: Buffer.from(data), syncedAt },
+          { accountId, clientId, data: Buffer.from(data), signature, timestamp },
           tx
         );
-        await setLocalClock(clock, tx);
         return message;
       });
       if (!message) throw new Error('Failed to receive message');
-      return { timestamp: syncedAt };
+      return { timestamp };
     },
     {
       auth: true,
@@ -50,7 +47,8 @@ const app = new Elysia({ prefix: '/api/v1' })
         accountId: t.String(),
         clientId: t.String(),
         data: t.Uint8Array(),
-        signature: t.String()
+        signature: t.String(),
+        timestamp: t.String()
       }),
       response: {
         200: t.Object({ timestamp: t.String() }),
@@ -62,7 +60,10 @@ const app = new Elysia({ prefix: '/api/v1' })
     'account',
     async ({ body, status, token }) => {
       if (token.accountId !== body.accountId) return status(401, 'Unauthorized');
-      await db.delete(schema.messages).where(eq(schema.messages.accountId, body.accountId));
+      await db.batch([
+        db.delete(schema.messages).where(eq(schema.messages.accountId, body.accountId)),
+        db.delete(schema.merkleTrees).where(eq(schema.merkleTrees.accountId, body.accountId))
+      ]);
       return status(202, 'Accepted');
     },
     {
@@ -85,8 +86,8 @@ const app = new Elysia({ prefix: '/api/v1' })
           and(
             eq(schema.messages.accountId, accountId),
             eq(schema.messages.clientId, clientId!).if(clientId),
-            gte(schema.messages.syncedAt, after!).if(after),
-            lte(schema.messages.syncedAt, before!).if(before)
+            gte(schema.messages.timestamp, after!).if(after),
+            lte(schema.messages.timestamp, before!).if(before)
           )
         );
       return status(202);
@@ -106,27 +107,32 @@ const app = new Elysia({ prefix: '/api/v1' })
     async ({ query }) => {
       const { accountId, after, clientId, pageSize = DEFAULT_PAGE_SIZE } = query;
       const events = await db
-        .select({ data: schema.messages.data, syncedAt: schema.messages.syncedAt })
+        .select({
+          data: schema.messages.data,
+          signature: schema.messages.signature,
+          timestamp: schema.messages.timestamp
+        })
         .from(schema.messages)
         .where(
           and(
             eq(schema.messages.accountId, accountId),
             ne(schema.messages.clientId, clientId!).if(clientId),
-            gt(schema.messages.syncedAt, after!).if(after)
+            gt(schema.messages.timestamp, after!).if(after)
           )
         )
-        .orderBy(asc(schema.messages.syncedAt))
+        .orderBy(asc(schema.messages.timestamp))
         .limit(pageSize + 1);
 
       const hasMore = events.length > pageSize;
-      const nextAfter = hasMore && events.pop() ? events[events.length - 1].syncedAt : undefined;
+      const nextAfter = hasMore && events.pop() ? events[events.length - 1].timestamp : undefined;
 
       return toBinary(
         SyncServerGetEventsResponseSchema,
         create(SyncServerGetEventsResponseSchema, {
           events: events.map((event) => ({
             data: new Uint8Array(event.data),
-            syncedAt: event.syncedAt
+            signature: event.signature,
+            timestamp: event.timestamp
           })),
           hasMore,
           nextAfter,
@@ -155,27 +161,32 @@ const app = new Elysia({ prefix: '/api/v1' })
 
             do {
               const events = await db
-                .select({ data: schema.messages.data, syncedAt: schema.messages.syncedAt })
+                .select({
+                  data: schema.messages.data,
+                  signature: schema.messages.signature,
+                  timestamp: schema.messages.timestamp
+                })
                 .from(schema.messages)
                 .where(
                   and(
                     eq(schema.messages.accountId, accountId),
                     ne(schema.messages.clientId, clientId!).if(clientId),
-                    gt(schema.messages.syncedAt, nextAfter!).if(nextAfter)
+                    gt(schema.messages.timestamp, nextAfter!).if(nextAfter)
                   )
                 )
-                .orderBy(asc(schema.messages.syncedAt))
+                .orderBy(asc(schema.messages.timestamp))
                 .limit(pageSize + 1);
 
               hasMore = events.length > pageSize;
-              nextAfter = hasMore && events.pop() ? events[events.length - 1].syncedAt : undefined;
+              nextAfter = hasMore && events.pop() ? events[events.length - 1].timestamp : undefined;
 
               const messageBytes = toBinary(
                 SyncServerGetEventsResponseSchema,
                 create(SyncServerGetEventsResponseSchema, {
                   events: events.map((event) => ({
                     data: new Uint8Array(event.data),
-                    syncedAt: event.syncedAt
+                    signature: event.signature,
+                    timestamp: event.timestamp
                   })),
                   hasMore,
                   nextAfter,
