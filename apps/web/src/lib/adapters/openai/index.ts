@@ -299,6 +299,7 @@ export class OpenAIAdapter implements TAdapter {
     if (reasoningEffort) {
       requestBody.reasoning = { effort: reasoningEffort };
       requestBody.reasoning_effort = reasoningEffort;
+      requestBody.chat_template_kwargs = { enable_thinking: reasoningEffort !== 'none' };
     }
 
     if (tools)
