@@ -44,10 +44,6 @@ export class Node<T> {
       value: this.value
     };
   }
-
-  *traverse() {
-    for (const child of this.children) yield child;
-  }
 }
 
 export class Tree<T> {
@@ -105,10 +101,5 @@ export class Tree<T> {
   toJSON() {
     if (this.root === null) return null;
     return this.root.toJSON();
-  }
-
-  *traverse() {
-    if (this.root === null) return;
-    yield* this.root.traverse();
   }
 }

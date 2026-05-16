@@ -68,12 +68,19 @@ export class MerkleTree<T, TMeta = unknown> {
     for (let depth = 0; depth < this.#maxDepth; depth++) {
       const newChildren = new Array<Node<{ digest: Uint8Array; meta?: TMeta }>>();
       for (let i = 0; i < children.length; i += this.#arity) {
-        const slicedChildren = children.slice(i, i + this.#arity);
-        const digest = byteHasher.hash(
-          concatUint8Arrays(...slicedChildren.map((node) => node.value.digest))
-        );
+        let length = 0;
+        const end = Math.min(i + this.#arity, children.length);
+        for (let j = i; j < end; j++) length += children[j]!.value.digest.length;
+        const buf = new Uint8Array(length);
+        let off = 0;
+        for (let j = i; j < end; j++) {
+          buf.set(children[j]!.value.digest, off);
+          off += children[j]!.value.digest.length;
+        }
+        const digest = byteHasher.hash(buf);
         const node = new Tree.Node({ digest });
-        for (const child of slicedChildren) {
+        for (let j = i; j < end; j++) {
+          const child = children[j]!;
           node.insertNode(child);
         }
         newChildren.push(node);
@@ -109,10 +116,7 @@ export class MerkleTree<T, TMeta = unknown> {
       node = node.getNthChild(index);
     }
 
-    return node
-      .traverse()
-      .map((child) => child.value.digest)
-      .toArray();
+    return node.children.map((child) => child.value.digest);
   }
 
   getHash(path: number[]): null | Uint8Array {
@@ -177,69 +181,77 @@ export class MerkleTree<T, TMeta = unknown> {
   }
 
   insert(value: T, meta: TMeta) {
-    let done = false;
     const digest = this.#hasher.hash(value);
-    while (!done) {
-      if (this.#tree.root === null) {
-        this.#maxDepth += 1;
-        this.#tree.root = new Tree.Node({ digest });
-        this.#tree.insert({ digest, meta });
-        done = true;
-        return;
+
+    // Phase 1: Empty tree
+    if (this.#tree.root === null) {
+      this.#maxDepth = 1;
+      this.#tree.root = new Node({ digest });
+      this.#tree.root.insert({ digest, meta });
+      return;
+    }
+
+    // Phase 2: Walk down rightmost path
+    const path: Node<{ digest: Uint8Array; meta?: TMeta }>[] = [];
+    let node = this.#tree.root;
+    for (let depth = 0; depth < this.#maxDepth; depth++) {
+      path.push(node);
+      if (depth < this.#maxDepth - 1) {
+        node = node.getNthChild(node.width - 1)!;
       }
+    }
 
-      let node = this.#tree.root;
-      const nodeStack = [{ depth: 0, node }];
-      let noSpaceLeft = false;
-
-      for (let depth = 0; depth < this.#maxDepth; depth++) {
-        if (depth === this.#maxDepth - 1) {
-          if (node.width === this.arity) {
-            noSpaceLeft = true;
-            break;
-          }
-          node.insert({ digest, meta });
-          done = true;
-        } else {
-          const width = node.width;
-          node = node.getNthChild(width - 1)!;
-          nodeStack.push({ depth: depth + 1, node });
+    // Phase 3: Insert value into the tree
+    const leafHasSpace = path[path.length - 1]!.width < this.#arity;
+    if (leafHasSpace) {
+      path[path.length - 1]!.insert({ digest, meta });
+    } else {
+      // Walk up rightmost path to find first non-full ancestor
+      let splitIndex = -1;
+      for (let i = path.length - 2; i >= 0; i--) {
+        if (path[i]!.width < this.#arity) {
+          splitIndex = i;
+          break;
         }
       }
 
-      do {
-        const { depth, node } = nodeStack.pop()!;
-        if (noSpaceLeft) {
-          if (node.width < this.arity) {
-            noSpaceLeft = false;
-            done = true;
-            let node2 = node;
-            for (let i = 0; i < this.#maxDepth - depth; i++) {
-              nodeStack.push({ depth: depth + i, node: node2 });
-              if (depth + i === this.#maxDepth - 1) {
-                node2.insert({ digest, meta });
-              } else {
-                node2.insert({ digest });
-              }
-              node2 = node2.getNthChild(node2.width - 1)!;
-            }
-          }
-        } else {
-          const accumulatedDigest = byteHasher.hash(
-            concatUint8Arrays(...node.traverse().map((node) => node.value.digest))
-          );
-          node.value = { digest: accumulatedDigest };
-        }
-      } while (nodeStack.length > 0);
-
-      if (noSpaceLeft) {
-        noSpaceLeft = false;
+      const treeFull = splitIndex < 0;
+      if (treeFull) {
         this.#maxDepth += 1;
-        const newTree = new Tree<{ digest: Uint8Array; meta?: TMeta }>();
-        newTree.setRoot({ digest: this.#tree.root.value.digest });
-        newTree.insertNode(this.#tree.root);
-        this.#tree = newTree;
+        const newRoot = new Node({ digest: this.#tree.root.value.digest });
+        newRoot.insertNode(this.#tree.root);
+        this.#tree.root = newRoot;
+        splitIndex = 0;
+        path.unshift(newRoot);
       }
+
+      // Insert a new sibling branch below path[splitIndex]
+      for (let depth = splitIndex + 1; depth < this.#maxDepth; depth++) {
+        const newNode = new Node({ digest: new Uint8Array(0) });
+        path[depth - 1]!.insertNode(newNode);
+        // Track new node for rehashing (replace old path node or append)
+        if (depth < path.length) {
+          path[depth] = newNode;
+        } else {
+          path.push(newNode);
+        }
+      }
+      // Insert leaf data at the final depth
+      path[path.length - 1]!.insert({ digest, meta });
+    }
+
+    // Phase 4: Rehash bottom-up along the affected path
+    for (let i = path.length - 1; i >= 0; i--) {
+      const n = path[i]!;
+      let length = 0;
+      for (const child of n.children) length += child.value.digest.length;
+      const buf = new Uint8Array(length);
+      let off = 0;
+      for (const child of n.children) {
+        buf.set(child.value.digest, off);
+        off += child.value.digest.length;
+      }
+      n.value.digest = byteHasher.hash(buf);
     }
   }
 
@@ -268,15 +280,4 @@ export class MerkleTree<T, TMeta = unknown> {
       return value;
     });
   }
-}
-
-function concatUint8Arrays(...arrays: Uint8Array[]): Uint8Array {
-  const totalLength = arrays.reduce((sum, a) => sum + a.length, 0);
-  const result = new Uint8Array(totalLength);
-  let offset = 0;
-  for (const arr of arrays) {
-    result.set(arr, offset);
-    offset += arr.length;
-  }
-  return result;
 }
