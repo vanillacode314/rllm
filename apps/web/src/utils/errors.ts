@@ -3,8 +3,15 @@ function formatError(error: Error) {
   const causes = [] as unknown[];
   let cause = error.cause;
   while (true) {
+    if (cause instanceof Error) {
+      if (cause.message.trim().length === 0) {
+        cause = cause.cause;
+        continue;
+      }
+      if (typeof cause.cause === 'string' && cause.cause.trim().length === 0) break;
+    }
     if (cause) causes.push(cause);
-    if (typeof cause !== 'object' || cause === null || !('cause' in cause)) break;
+    if (!(cause instanceof Error)) break;
     cause = cause.cause;
   }
   if (causes.length === 0) return result;
