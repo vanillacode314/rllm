@@ -3,3 +3,10 @@ node_modules
 local.db*
 .aider*
 .turbo
+.envrc*
+.env*
+.direnv
+.vectorcode
+.jj
+.aider*
+.pi-lens
