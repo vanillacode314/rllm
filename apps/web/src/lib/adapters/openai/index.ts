@@ -24,10 +24,14 @@ import {
 } from './types';
 
 export class OpenAIAdapter implements TAdapter {
+  baseUrl: string;
   id = 'openai';
   #wretch: Wretch;
   constructor(baseUrl: string, token: string) {
-    this.#wretch = wretch(baseUrl).auth(`Bearer ${token}`).middlewares([ProxyManager.middleware()]);
+    this.baseUrl = baseUrl;
+    this.#wretch = wretch(this.baseUrl)
+      .auth(`Bearer ${token}`)
+      .middlewares([ProxyManager.middleware()]);
   }
   fetchAllModels(): AsyncResult<TModel[], Error> {
     return tryBlock(
@@ -297,9 +301,12 @@ export class OpenAIAdapter implements TAdapter {
     const requestBody: Record<string, unknown> = { model, messages: serverMessages, stream: true };
 
     if (reasoningEffort) {
-      requestBody.reasoning = { effort: reasoningEffort };
       requestBody.reasoning_effort = reasoningEffort;
-      requestBody.chat_template_kwargs = { enable_thinking: reasoningEffort !== 'none' };
+      // NOTE: google doesn't allow extra params in json body
+      if (!this.baseUrl.startsWith('https://generativelanguage.googleapis.com/v1beta/openai')) {
+        requestBody.reasoning = { effort: reasoningEffort };
+        requestBody.chat_template_kwargs = { enable_thinking: reasoningEffort !== 'none' };
+      }
     }
 
     if (tools)
