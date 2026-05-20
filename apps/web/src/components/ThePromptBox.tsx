@@ -151,10 +151,16 @@ function Toolbar(props: {
   onSubmit: () => void;
 }) {
   const mcpClients = () => MCPManager.getAllClients();
-  const modelName = () => chatSettings().mapOr('Invalid Settings', (settings) => settings.modelId);
+  const modelId = () => chatSettings().mapOr('Invalid Settings', (settings) => settings.modelId);
 
   const navigate = useNavigate();
   const confirmDialog = useConfirmDialog();
+
+  function simplifyModelId(id: string): string {
+    if (!id.includes('/')) return id;
+    const index = id.lastIndexOf('/');
+    return id.slice(index + 1);
+  }
 
   return (
     <div class="flex gap-2 flex-col p-4">
@@ -240,7 +246,7 @@ function Toolbar(props: {
             type="button"
             variant="outline"
           >
-            <span class="max-sm:hidden text-xs truncate">{modelName()}</span>
+            <span class="max-sm:hidden text-xs truncate">{simplifyModelId(modelId())}</span>
             <span class="sr-only">Chat settings</span>
             <span class="shrink-0 icon-[heroicons--cog-6-tooth] text-xl" />
           </Button>
