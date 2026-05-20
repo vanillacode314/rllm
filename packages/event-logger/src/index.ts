@@ -191,7 +191,6 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         updates: TUpdate[];
       }> = [];
       const loggedEvents = await db.transaction(async (tx) => {
-        const tree = await logger.getMerkleTree(tx);
         const enhancedEvents = [];
         for (const event of events)
           enhancedEvents.push({ ...event, timestamp: clock.increment().toString(), version });
@@ -226,10 +225,13 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         await Promise.all(
           updates.map(({ event, updates }) => logger.applyUpdates(updates, event.timestamp, tx))
         );
-        for (const event of loggedEvents ?? []) {
-          tree.insert(event.timestamp, event.timestamp);
+        if (loggedEvents) {
+          const tree = await logger.getMerkleTree(tx);
+          tree.insert(
+            loggedEvents.map((event) => ({ meta: event.timestamp, value: event.timestamp }))
+          );
+          await logger.persistMerkleTree(tree, tx);
         }
-        await logger.persistMerkleTree(tree, tx);
         return loggedEvents;
       });
       if (loggedEvents) {
@@ -297,11 +299,6 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         params: [],
         sql: "SELECT value FROM metadata WHERE key = 'version'"
       }).then((rows) => rows[0]?.value);
-    },
-    async insertTimestampIntoMerkleTree(id: string, tx?: TTransaction) {
-      const tree = await logger.getMerkleTree(tx);
-      tree.insert(id, id);
-      await logger.persistMerkleTree(tree, tx);
     },
     on(
       type: '*' | TEvent['type'],
@@ -417,9 +414,8 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
           sql: `SELECT timestamp FROM events ${after ? 'WHERE timestamp > ?' : ''} ORDER BY timestamp ASC LIMIT 1000`
         });
         hasNext = events.length === 1000;
-        for (const event of events) {
-          tree.insert(event.timestamp, event.timestamp);
-        }
+        if (events.length > 0)
+          tree.insert(events.map((event) => ({ meta: event.timestamp, value: event.timestamp })));
         after = events[events.length - 1]?.timestamp ?? null;
       }
       await logger.persistMerkleTree(tree, tx);

@@ -30,7 +30,7 @@ async function insertTimestampIntoMerkleTree(
 ): Promise<void> {
   if (!tx) return db.transaction((tx) => insertTimestampIntoMerkleTree(accountId, timestamp, tx));
   const tree = await getMerkleTree(accountId, tx);
-  tree.insert(timestamp, timestamp);
+  tree.insert([{ meta: timestamp, value: timestamp }]);
   await tx
     .insert(schema.merkleTrees)
     .values({
@@ -60,9 +60,11 @@ async function recomputeMerkleTree(accountId: string, tx?: TTransaction): Promis
       )
       .orderBy(schema.messages.timestamp)
       .limit(pageSize);
+    const items = [];
     for (const row of rows) {
-      tree.insert(row.timestamp, row.timestamp);
+      items.push({ meta: row.timestamp, value: row.timestamp });
     }
+    tree.insert(items);
     hasNext = rows.length === pageSize;
     after = rows[rows.length - 1].timestamp ?? null;
   }
