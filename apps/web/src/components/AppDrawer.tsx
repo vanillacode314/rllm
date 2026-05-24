@@ -87,7 +87,7 @@ export function useAppDrawer() {
     open: () => setState('open', true),
     close: () => setState('open', false),
     toggle: () => setState('open', (value) => !value),
-    setContent: (Comp: (closeDrawer: () => void) => JSXElement) => {
+    setContent: (Comp: AppDrawerComponent) => {
       onMount(() => setState('Comp', () => Comp));
       onCleanup(() => setState('Comp', null));
     }
