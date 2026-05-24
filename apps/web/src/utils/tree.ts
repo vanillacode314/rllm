@@ -12,6 +12,7 @@ interface TTreeNode<T> {
   iter(path: number[]): IteratorObject<{ node: Option<TTreeNode<T>>; path: number[] }>;
   get parent(): Option<TTreeNode<T>>;
   removeChild(index: number): TTreeNode<T>;
+  removeNodeAndDescendants(path: number[]): void;
   removeParent(): TTreeNode<T>;
   setChild(index: number, child: TTreeNode<T>): TTreeNode<T>;
   setChildren(children: TTreeNode<T>[]): TTreeNode<T>;
@@ -20,6 +21,7 @@ interface TTreeNode<T> {
   toJSON(): JsonTreeNode<T>;
   traverse(path: number[]): Option<TTreeNode<T>>;
   get value(): Option<T>;
+  walk(path?: number[]): IteratorObject<{ node: TTreeNode<T>; path: number[] }>;
 }
 
 class TreeNode<const T> implements TTreeNode<T> {
@@ -74,6 +76,16 @@ class TreeNode<const T> implements TTreeNode<T> {
     child.removeParent();
     return this;
   }
+  removeNodeAndDescendants(path: number[]): void {
+    if (path.length === 0) throw new Error("Can't remove root node!");
+    const index = path[0];
+    if (path.length === 1) {
+      this.children.splice(index!, 1);
+      return;
+    }
+    const node = this.children[index];
+    node.removeNodeAndDescendants(path.slice(1));
+  }
   removeParent() {
     this._parent = Option.None();
     return this;
@@ -114,6 +126,13 @@ class TreeNode<const T> implements TTreeNode<T> {
       node = node.children[index];
     }
     return Option.Some(node);
+  }
+  *walk(path?: number[]): IteratorObject<{ node: TTreeNode<T>; path: number[] }> {
+    path ??= [];
+    for (let i = 0; i < this.children.length; i++) {
+      yield* this.children[i]!.walk([...path, i]);
+    }
+    yield { node: this, path };
   }
 }
 

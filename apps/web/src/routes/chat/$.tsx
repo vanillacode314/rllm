@@ -11,6 +11,7 @@ import { nanoid } from 'nanoid';
 import {
   createEffect,
   createMemo,
+  createRenderEffect,
   createSignal,
   onCleanup,
   onMount,
@@ -206,15 +207,6 @@ function ChatPageComponent() {
 
   const isPending = ChatGenerationManager.createIsPending(() => loaderData().id);
 
-  createEffect(() => {
-    const messages = loaderData().chat?.messages;
-    if (!messages) return;
-    untrack(() => {
-      const tree = ReactiveTree.fromJSON(messages);
-      setMessages(tree);
-      setCurrentPath(getLatestPath(tree));
-    });
-  });
   onCleanup(() => setMessages(new ReactiveTree<TMessage>()));
 
   onMount(() =>
@@ -242,6 +234,34 @@ function ChatPageComponent() {
 
   const [currentPath, setCurrentPath] = createSignal<number[]>(getLatestPath(messages()));
   const currentNode = createMemo(() => messages().traverse(currentPath()).unwrap());
+
+  function purgeOnlyErrorResponses(tree: TTree<TMessage>) {
+    const pathsToRemove = [] as number[][];
+    for (const { node, path } of tree.walk()) {
+      if (node.value.isNone()) continue;
+      const message = node.value.unwrap();
+      if (message.type !== 'llm') continue;
+      if (typeof message.error === 'undefined') continue;
+      if (message.chunks.length > 0) continue;
+      const isLastMessage = tree.traverse(path).unwrap().children.length === 0;
+      if (!isLastMessage) continue;
+      pathsToRemove.push(path);
+    }
+    for (const path of pathsToRemove.toReversed()) {
+      tree.removeNodeAndDescendants(path);
+    }
+  }
+
+  createRenderEffect(() => {
+    const messages = loaderData().chat?.messages;
+    if (!messages) return;
+    untrack(() => {
+      const tree = ReactiveTree.fromJSON(messages);
+      purgeOnlyErrorResponses(tree);
+      setMessages(tree);
+      setCurrentPath(getLatestPath(tree));
+    });
+  });
 
   const sendPrompt = useMutation(() => ({
     onMutate() {
