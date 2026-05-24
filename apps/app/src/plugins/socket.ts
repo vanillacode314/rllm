@@ -263,7 +263,6 @@ export const socketPlugin = new Elysia({ serve: { idleTimeout: 120 } }).ws('ws',
       }
       case 'hasEventWithTimestampUpdate': {
         const { timestamp, yes } = payload.value;
-        console.log(timestamp, yes);
         if (yes) return;
         batchTimestampsToSend(timestamp);
         break;
