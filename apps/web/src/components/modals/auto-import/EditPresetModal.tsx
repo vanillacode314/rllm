@@ -34,7 +34,6 @@ import {
 import { REASONING_VALUE_TO_LABEL_MAP } from '~/constants/chat-settings';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { updatePreset } from '~/lib/chat/presets';
-import { ProxyManager } from '~/lib/proxy';
 import { queries } from '~/queries';
 import { createForm, parseFormErrors } from '~/utils/form';
 
@@ -57,20 +56,7 @@ export function EditPresetModal() {
     ...queries.chatPresets.byId(presetId())
   }));
 
-  const selectedProviderQuery = useQuery(() => ({
-    enabled: presetQuery.isSuccess && !!presetQuery.data,
-    ...queries.providers.byId(presetQuery.data?.settings.providerId || '')
-  }));
-
   const providers = useQuery(() => queries.providers.all());
-
-  const adapter = createMemo(() => {
-    const provider = selectedProviderQuery.data;
-    if (!provider) return null;
-    const token = provider.token;
-    const url = provider.baseUrl;
-    return new OpenAIAdapter(url, token);
-  });
 
   const [{ form, formErrors }, { setFormErrors, setForm, resetForm, resetFormErrors }] = createForm(
     formSchema,
@@ -93,6 +79,19 @@ export function EditPresetModal() {
           reasoning: 'medium' as const
         }
   );
+
+  const selectedProviderQuery = useQuery(() => ({
+    enabled: form.providerId !== '',
+    ...queries.providers.byId(form.providerId)
+  }));
+
+  const adapter = createMemo(() => {
+    const provider = selectedProviderQuery.data;
+    if (!provider) return null;
+    const token = provider.token;
+    const url = provider.baseUrl;
+    return new OpenAIAdapter(url, token);
+  });
 
   createRenderEffect(() => {
     void presetQuery.data;
