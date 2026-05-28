@@ -67,7 +67,13 @@ export class OpenAIAdapter implements TAdapter {
   }): AsyncGenerator<TChatCompletionChunk, TChatCompletionLastChunk, void> {
     const { messages, model, reasoningEffort, signal, system, tools } = opts;
 
-    const requestBody = this.buildRequestBody({ messages, model, reasoningEffort, system, tools });
+    const requestBody = this.buildRequestBody({
+      messages,
+      model,
+      reasoningEffort,
+      system,
+      tools
+    });
     let stream = this.#wretch
       .middlewares([
         retry({
@@ -209,66 +215,94 @@ export class OpenAIAdapter implements TAdapter {
     );
   }
 
-  transformMessageChunksToRequestMessages(
-    messages: TMessage[],
-    config: { includeReasoning?: boolean } = { includeReasoning: false }
-  ) {
+  transformMessageChunksToRequestMessages(messages: TMessage[]) {
     const retval = [] as TOpenAIChatCompletionRequest['messages'][];
-    for (const message of messages) {
+    let currentChunk = null as null | TOpenAIChatCompletionRequest['messages'];
+    function commitChunk() {
+      if (currentChunk === null) throw new Error('Cannot commit null chunk');
+      retval.push(currentChunk);
+      currentChunk = null;
+    }
+    function updateUserChunk(
+      item: (TOpenAIChatCompletionRequest['messages'] & { role: 'user' })['content'][number]
+    ) {
+      if (currentChunk !== null && currentChunk.role !== 'user')
+        throw new Error('Cannot update user chunk with non-user chunk');
+      if (currentChunk === null) {
+        currentChunk = {
+          role: 'user',
+          content: [item]
+        };
+        return;
+      }
+      currentChunk.content.push(item);
+    }
+    function updateAssistantChunk(item: {
+      content?: string;
+      reasoning_content?: string;
+      tool_calls?: (TOpenAIChatCompletionRequest['messages'] & { role: 'assistant' })['tool_calls'];
+    }) {
+      const { content, reasoning_content, tool_calls } = item;
+      if (currentChunk !== null && currentChunk.role !== 'assistant')
+        throw new Error('Cannot update assistant chunk with non-assistant chunk');
+      if (currentChunk === null) {
+        currentChunk = {
+          role: 'assistant',
+          content: content ?? '',
+          reasoning_content,
+          tool_calls
+        };
+        return;
+      }
+      if (content !== undefined) currentChunk.content = content;
+      if (reasoning_content !== undefined) currentChunk.reasoning_content = reasoning_content;
+      if (tool_calls !== undefined) currentChunk.tool_calls = tool_calls;
+    }
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i];
       if (message.type === 'llm') {
+        if (currentChunk !== null && currentChunk.role === 'user') commitChunk();
         for (const chunk of message.chunks) {
           if (chunk.type === 'reasoning') {
-            if (!config.includeReasoning) continue;
-            retval.push({
-              role: 'assistant',
-              content: chunk.content
-            });
+            if (i < messages.length - 1) continue;
+            updateAssistantChunk({ reasoning_content: chunk.content });
           } else if (chunk.type === 'text') {
-            retval.push({
-              role: 'assistant',
-              content: chunk.content
-            });
+            updateAssistantChunk({ content: chunk.content });
           } else if (chunk.type === 'tool_call') {
-            retval.push(
-              {
-                role: 'assistant',
-                content: '',
-                tool_calls: [
-                  {
-                    id: chunk.id,
-                    type: 'function',
-                    function: {
-                      name: chunk.tool.name,
-                      arguments: chunk.tool.arguments
-                    }
+            updateAssistantChunk({
+              tool_calls: [
+                {
+                  id: chunk.id,
+                  type: 'function',
+                  function: {
+                    name: chunk.tool.name,
+                    arguments: chunk.tool.arguments
                   }
-                ]
-              },
-              {
-                role: 'tool',
-                name: chunk.tool.name,
-                content: chunk.content,
-                tool_call_id: chunk.id
-              }
-            );
+                }
+              ]
+            });
+            commitChunk();
+            currentChunk = {
+              role: 'tool',
+              name: chunk.tool.name,
+              content: chunk.content,
+              tool_call_id: chunk.id
+            };
+            commitChunk();
           }
         }
       } else if (message.type === 'user') {
+        if (currentChunk !== null && currentChunk.role === 'assistant') commitChunk();
         for (const chunk of message.chunks) {
-          if (chunk.type === 'image_url') {
-            retval.push({
-              role: 'user',
-              content: [{ type: 'image_url', image_url: { url: chunk.url } }]
-            });
-          } else {
-            retval.push({
-              role: 'user',
-              content: chunk.content
-            });
-          }
+          updateUserChunk(
+            chunk.type === 'image_url' ?
+              { type: 'image_url', image_url: { url: chunk.url } }
+            : { type: 'text', text: chunk.content }
+          );
         }
       }
     }
+    if (currentChunk !== null) commitChunk();
     return retval;
   }
 
@@ -280,19 +314,13 @@ export class OpenAIAdapter implements TAdapter {
     tools?: TTool[];
   }) {
     const { messages, model, reasoningEffort, system, tools } = opts;
-    let serverMessages = this.transformMessageChunksToRequestMessages(messages);
+    const serverMessages = this.transformMessageChunksToRequestMessages(messages);
 
     if (system !== undefined && system.trim().length > 0)
       serverMessages.unshift({
         role: 'system',
         content: system
       });
-
-    if (serverMessages.length === 0) {
-      serverMessages = this.transformMessageChunksToRequestMessages(messages, {
-        includeReasoning: true
-      });
-    }
 
     if (serverMessages.length === 0) {
       throw new Error('No messages to send');
