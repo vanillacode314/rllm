@@ -616,17 +616,12 @@ function UserImageChunk(props: {
   chunk: TUserMessageChunk & { type: 'image_url' };
   onDelete: () => void;
 }) {
-  const confirmDialog = useConfirmDialog();
   return (
-    <div class="relative isolate max-w-36 rounded-lg overflow-hidden first:mt-4">
+    <div class="relative isolate max-w-64 rounded overflow-hidden first:mt-4 shrink-0">
       <img alt={props.chunk.filename} class="w-full h-auto" src={props.chunk.url} />
       <Button
         class="absolute top-2 right-2 size-6"
-        onClick={async () => {
-          if (!(await confirmDialog.confirm({ title: 'Delete', description: 'Are you sure?' })))
-            return;
-          props.onDelete();
-        }}
+        onClick={props.onDelete}
         size="icon"
         type="button"
         variant="destructive"
@@ -634,7 +629,10 @@ function UserImageChunk(props: {
         <span class="sr-only">Delete</span>
         <span class="icon-[heroicons--trash]" />
       </Button>
-      <span class="z-10 absolute bottom-0 p-2 text-xs text-muted-foreground bg-linear-to-t from-background from-30% to-transparent break-all">
+      <span
+        class="z-10 absolute inset-x-0 bottom-0 p-2 text-xs text-muted-foreground bg-linear-to-t from-background from-30% to-transparent truncate"
+        title={props.chunk.filename}
+      >
         {props.chunk.filename}
       </span>
     </div>
