@@ -304,7 +304,7 @@ function ChatPageComponent() {
       (message) => message.type === 'user'
     );
     const shouldAddPrompt = currentMessage.isNoneOr(
-      (message) => message.type !== 'user' || message.chunks.at(-1)?.type !== 'text'
+      (message) => message.type !== 'user' || message.chunks.length === 0
     );
     if (isPromptEmpty && shouldAddPrompt) {
       toast.error('Prompt is empty');
