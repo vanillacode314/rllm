@@ -110,7 +110,6 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
     }>
   >();
 
-  let merkleTree: MerkleTree<string, string> | undefined;
   const logger = {
     applyUpdates: async (updates: TUpdate[], timestamp: string, tx: TTransaction) => {
       if (updates.length === 0) return;
@@ -205,7 +204,7 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         for (const event of loggedEvents ?? []) {
           tree.insert(event.timestamp, event.timestamp);
         }
-        await logger.persistMerkleTree(tx);
+        await logger.persistMerkleTree(tree, tx);
         return loggedEvents;
       });
       if (loggedEvents) {
@@ -251,13 +250,14 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
       );
     },
     async getMerkleTree(tx?: TTransaction): Promise<MerkleTree<string, string>> {
-      if (merkleTree) return merkleTree;
       const jsonTree = await logger.getMetadata('merkle-tree', tx);
-      if (!jsonTree) {
-        merkleTree = new MerkleTree(16, stringHasher);
-        return merkleTree;
+      if (!jsonTree) return new MerkleTree(16, stringHasher);
+
+      try {
+        return MerkleTree.fromString(jsonTree, stringHasher);
+      } catch {
+        return this.recomputeMerkleTree(tx);
       }
-      return (merkleTree = MerkleTree.fromString(jsonTree, stringHasher));
     },
     getMetadata: async (key: string, tx?: TTransaction) => {
       const _query = tx ? tx.query : query;
@@ -276,7 +276,7 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
     async insertTimestampIntoMerkleTree(id: string, tx?: TTransaction) {
       const tree = await logger.getMerkleTree(tx);
       tree.insert(id, id);
-      await logger.persistMerkleTree();
+      await logger.persistMerkleTree(tree, tx);
     },
     on(
       type: '*' | TEvent['type'],
@@ -301,8 +301,7 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         subscribers.delete(subscriber);
       };
     },
-    async persistMerkleTree(tx?: TTransaction) {
-      const tree = await logger.getMerkleTree(tx);
+    async persistMerkleTree(tree: MerkleTree<string, string>, tx?: TTransaction) {
       await logger.setMetadata('merkle-tree', tree.toString(), tx);
     },
     receive: async (
@@ -383,8 +382,7 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         );
     },
     async recomputeMerkleTree(tx?: TTransaction) {
-      await logger.resetMerkleTree(tx);
-      const tree = await logger.getMerkleTree(tx);
+      const tree = new MerkleTree<string, string>(16, stringHasher);
       let hasNext = true;
       let after: null | string = null;
       const q = tx ? tx.query : query;
@@ -399,10 +397,10 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         }
         after = events[events.length - 1]?.timestamp ?? null;
       }
-      await logger.persistMerkleTree(tx);
+      await logger.persistMerkleTree(tree, tx);
+      return tree;
     },
     async resetMerkleTree(tx?: TTransaction) {
-      merkleTree = undefined;
       logger.clearMetadata('merkle-tree', tx);
     },
     setClock: async (clock: HLC, tx: TTransaction) => {
