@@ -218,8 +218,38 @@ export class OpenAIAdapter implements TAdapter {
   transformMessageChunksToRequestMessages(messages: TMessage[]) {
     const retval = [] as TOpenAIChatCompletionRequest['messages'][];
     let currentChunk = null as null | TOpenAIChatCompletionRequest['messages'];
+    const toolCallsChunks = [] as ((TMessage & { role: 'assistant' })['chunks'][number] & {
+      type: 'tool_call';
+    })[];
     function commitChunk() {
       if (currentChunk === null) throw new Error('Cannot commit null chunk');
+      if (currentChunk.role === 'assistant' && toolCallsChunks.length > 0) {
+        updateAssistantChunk({
+          tool_calls: toolCallsChunks.map((chunk) => ({
+            id: chunk.id,
+            type: 'function',
+            function: {
+              name: chunk.tool.name,
+              arguments: chunk.tool.arguments
+            }
+          }))
+        });
+        retval.push(currentChunk);
+        currentChunk = null;
+        retval.push(
+          ...toolCallsChunks.map(
+            (chunk) =>
+              ({
+                role: 'tool',
+                name: chunk.tool.name,
+                content: chunk.content,
+                tool_call_id: chunk.id
+              }) as const
+          )
+        );
+        toolCallsChunks.length = 0;
+        return;
+      }
       retval.push(currentChunk);
       currentChunk = null;
     }
@@ -269,26 +299,7 @@ export class OpenAIAdapter implements TAdapter {
           } else if (chunk.type === 'text') {
             updateAssistantChunk({ content: chunk.content });
           } else if (chunk.type === 'tool_call') {
-            updateAssistantChunk({
-              tool_calls: [
-                {
-                  id: chunk.id,
-                  type: 'function',
-                  function: {
-                    name: chunk.tool.name,
-                    arguments: chunk.tool.arguments
-                  }
-                }
-              ]
-            });
-            commitChunk();
-            currentChunk = {
-              role: 'tool',
-              name: chunk.tool.name,
-              content: chunk.content,
-              tool_call_id: chunk.id
-            };
-            commitChunk();
+            toolCallsChunks.push(chunk);
           }
         }
       } else if (message.type === 'user') {
