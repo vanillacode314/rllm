@@ -78,7 +78,14 @@ const setupDb = () =>
         console.debug(`Migration ${version} applied`);
       }
 
-      console.table(await logger.db.sql`SELECT * FROM metadata;`);
+      console.debug(
+        '[DB Metadata]',
+        Object.fromEntries(
+          (await logger.db.sql<{ key: string; value: string }>`SELECT * FROM metadata;`).map(
+            ({ key, value }) => [key, value]
+          )
+        )
+      );
     },
     (e) => new Error('Failed to setup database', { cause: e })
   );
