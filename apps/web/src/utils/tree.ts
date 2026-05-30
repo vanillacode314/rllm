@@ -7,6 +7,8 @@ type JsonTreeNode<T> = {
   value: null | T;
 };
 interface TTreeNode<T> {
+  _parent: Option<TTreeNode<T>>;
+  _value: Option<T>;
   addChild(child: TTreeNode<T>): TTreeNode<T>;
   children: TTreeNode<T>[];
   iter(path: number[]): IteratorObject<{ node: Option<TTreeNode<T>>; path: number[] }>;
@@ -25,16 +27,16 @@ interface TTreeNode<T> {
 }
 
 class TreeNode<const T> implements TTreeNode<T> {
+  _parent: Option<TTreeNode<T>> = Option.None();
+  _value: Option<T> = Option.None();
   children: TTreeNode<T>[] = [];
+
   get parent() {
     return this._parent;
   }
   get value() {
     return this._value;
   }
-
-  protected _parent: Option<TTreeNode<T>> = Option.None();
-  protected _value: Option<T> = Option.None();
 
   constructor(value?: T) {
     if (value) this.setValue(Option.Some(value));
