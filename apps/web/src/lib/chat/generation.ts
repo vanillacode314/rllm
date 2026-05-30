@@ -333,6 +333,7 @@ export class ChatGenerationManager {
     const $chat = { chat, controller, path, done: false };
     this.chats.set(id, $chat);
     this.emitPendingUpdate(id);
+    this.emitUpdate(id);
     return $chat;
   }
 
