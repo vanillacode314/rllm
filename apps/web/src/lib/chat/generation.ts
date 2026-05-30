@@ -24,7 +24,7 @@ import { finalizeChat } from '~/routes/chat/-utils';
 import { getMessagesForPath } from '~/utils/chat';
 import { formatError } from '~/utils/errors';
 import { Tree, TreeNode } from '~/utils/tree';
-import { ragWorkerPool } from '~/workers/rag';
+import * as rag from '~/workers/rag';
 
 import { handleCompletion } from '.';
 import { makeTool } from './utils';
@@ -149,8 +149,7 @@ export class ChatGenerationManager {
           if (afterIndex !== undefined && beforeIndex !== undefined && afterIndex > beforeIndex) {
             throw new Error('afterIndex must be less than beforeIndex');
           }
-          const worker = await ragWorkerPool.get();
-          const embedding = await worker.getEmbedding(query);
+          const embedding = await rag.getEmbedding(query);
           const documents = await Promise.all(
             attachments
               .values()
@@ -167,7 +166,7 @@ export class ChatGenerationManager {
               })
               .map(async (document) => ({
                 ...document,
-                similarity: await worker.cosineSimilarity(embedding, unwrap(document.embeddings))
+                similarity: await rag.cosineSimilarity(embedding, unwrap(document.embeddings))
               }))
           );
           documents.sort((a, b) => b.similarity - a.similarity);

@@ -9,7 +9,7 @@ import { Result } from 'ts-result-option';
 import { tryBlock } from 'ts-result-option/utils';
 
 import { IterativeTextSplitter } from '~/utils/string';
-import { ragWorkerPool } from '~/workers/rag';
+import * as rag from '~/workers/rag';
 
 import type { TRAGAdapter } from './types';
 
@@ -60,17 +60,11 @@ const baseRagAdapter = Object.freeze({
         console.debug('[RAG] Got Chunks:', chunks.length);
         let progress = 0;
         const promises = chunks.map(async (chunk, index) => {
-          const worker = await ragWorkerPool.get();
-          try {
-            const embeddings = await worker.getEmbedding(chunk);
-            progress += 1;
-            onProgress?.(progress / chunks.length);
-            // console.debug(`[RAG] Progress: ${progress}/${chunks.length}`);
-            return { content: chunk, embeddings, index };
-          } finally {
-            // console.debug('[RAG] Releasing worker');
-            ragWorkerPool.release(worker);
-          }
+          const embeddings = await rag.getEmbedding(chunk);
+          progress += 1;
+          onProgress?.(progress / chunks.length);
+          // console.debug(`[RAG] Progress: ${progress}/${chunks.length}`);
+          return { content: chunk, embeddings, index };
         });
         const docs = await Promise.all(promises);
         return Result.Ok(docs);
