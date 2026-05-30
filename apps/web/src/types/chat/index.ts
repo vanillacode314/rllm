@@ -22,7 +22,7 @@ export const llmMessageChunkSchema = z.discriminatedUnion('type', [
       name: z.string(),
       arguments: z.string()
     }),
-    success: z.boolean()
+    success: z.nullable(z.boolean())
   })
 ]);
 export type TLLMMessageChunk = z.infer<typeof llmMessageChunkSchema>;

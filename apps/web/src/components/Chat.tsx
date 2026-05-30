@@ -431,7 +431,7 @@ function LLMToolCallChunk(props: {
           Tool Call <span class="normal-case">({props.chunk.tool.name})</span>
         </span>
         <Switch>
-          <Match when={props.isPending}>
+          <Match when={props.chunk.success === null}>
             <span class="icon-[svg-spinners--180-ring-with-bg]" />
           </Match>
           <Match when={props.chunk.success}>
@@ -465,7 +465,7 @@ function LLMToolCallChunk(props: {
                 <span class="icon-[svg-spinners--180-ring-with-bg]" />
               </div>
             }
-            when={!props.isPending}
+            when={props.chunk.success !== null}
           >
             <Show
               fallback={

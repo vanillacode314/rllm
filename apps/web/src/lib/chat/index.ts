@@ -23,29 +23,30 @@ export function handleCompletion(opts: {
 }): AsyncResult<void, Error> {
   return tryBlock(
     async function* () {
-      let {
+      const {
         onAbort,
         adapter,
         reasoningEffort = 'medium',
         signal,
         model,
-        messages,
         onChunk,
         system,
         tools
       } = opts;
+      let messages = structuredClone(opts.messages);
 
       const producedChunks = [] as TLLMMessageChunk[];
       const executedToolCalls = new Set<string>();
 
       const controller = new AbortController();
+      if (signal) signal.addEventListener('abort', () => controller.abort());
       if (onAbort) controller.signal.addEventListener('abort', onAbort);
       while (!controller.signal.aborted) {
         const generator = adapter.generateCompletion({
           messages,
           model,
           reasoningEffort,
-          signal,
+          signal: controller.signal,
           system,
           tools
         });
@@ -79,7 +80,7 @@ export function handleCompletion(opts: {
               if (chunk.isNone()) {
                 const newChunk: TLLMMessageChunk = {
                   type: 'tool_call',
-                  success: false,
+                  success: null,
                   content: '',
                   tool: {
                     name: name.unwrap(),
@@ -130,8 +131,9 @@ export function handleCompletion(opts: {
               (chunk): chunk is TLLMMessageChunk & { type: 'tool_call' } =>
                 chunk.type === 'tool_call' && !executedToolCalls.has(chunk.id)
             );
-            yield* executeToolCalls(tool_calls, tools, signal);
-            onChunk?.(producedChunks);
+            yield* executeToolCalls(tool_calls, tools, controller.signal, () =>
+              onChunk?.(producedChunks)
+            );
             for (const tool_call of tool_calls) {
               executedToolCalls.add(tool_call.id);
             }
@@ -139,7 +141,7 @@ export function handleCompletion(opts: {
               const message = Option.from(messages.at(-1) as TMessage & { type: 'llm' }).expect(
                 'Expected at least one message'
               );
-              message.chunks.concat(producedChunks);
+              message.chunks = producedChunks;
             });
           }
         }
@@ -154,62 +156,69 @@ export function handleCompletion(opts: {
 function executeToolCalls(
   tool_calls: Array<TLLMMessageChunk & { type: 'tool_call' }>,
   tools: TTool[],
-  signal?: AbortSignal
+  signal: AbortSignal,
+  onUpdate: () => void
 ) {
   return AsyncResult.from(
     async () => {
-      const results = await Promise.allSettled(
-        tool_calls.map((tool_call) => {
-          if (signal?.aborted) throw new Error('Aborted');
-          return Option.fromUndefined(tools.find((tool) => tool.name === tool_call.tool.name))
-            .okOrElse(
-              () =>
-                new Error(
-                  `Tool with name ${tool_call.tool.name} not found. Expected one of (${tools.map((tool) => tool.name).join(', ')})`
-                )
-            )
-            .andThen((tool) =>
-              safeParseJson(tool_call.tool.arguments, {
-                validate: (args) => {
-                  const valid = ajv.validate(tool.jsonSchema, args);
-                  if (!valid)
-                    throw new Error(
-                      JSON.stringify({
-                        success: false,
-                        code: 'INVALID_ARGUMENTS',
-                        error: ajv.errors
-                      })
-                    );
-                  return args;
-                }
-              }).map((args) => ({ tool, args }))
-            )
-            .toAsync()
-            .andThen(({ args, tool }) => {
-              return AsyncResult.from(
-                () => Promise.try(tool.handler, args),
-                (e) => new Error(`Failed to execute tool`, { cause: e })
-              ).inspectErr(console.log);
-            });
-        })
-      );
+      const promises = tool_calls.map(async (tool_call) => {
+        if (signal?.aborted) throw new Error('Aborted');
+        await Option.fromUndefined(tools.find((tool) => tool.name === tool_call.tool.name))
+          .okOrElse(
+            () =>
+              new Error(
+                `Tool with name ${tool_call.tool.name} not found. Expected one of (${tools.map((tool) => tool.name).join(', ')})`
+              )
+          )
+          .andThen((tool) => {
+            if (signal?.aborted) throw new Error('Aborted');
+            return safeParseJson(tool_call.tool.arguments, {
+              validate: (args) => {
+                const valid = ajv.validate(tool.jsonSchema, args);
+                if (!valid)
+                  throw new Error(
+                    JSON.stringify({
+                      success: false,
+                      code: 'INVALID_ARGUMENTS',
+                      error: ajv.errors
+                    })
+                  );
+                return args;
+              }
+            }).map((args) => ({ tool, args }));
+          })
+          .toAsync()
+          .andThen(({ args, tool }) => {
+            if (signal?.aborted) throw new Error('Aborted');
+            return AsyncResult.from(
+              () => Promise.try(tool.handler, args),
+              (e) => new Error(`Failed to execute tool`, { cause: e })
+            ).inspectErr(console.log);
+          })
+          .match(
+            (value) => {
+              tool_call.content = value;
+              tool_call.success = true;
+            },
+            (error) => {
+              tool_call.content = formatError(error);
+              tool_call.success = false;
+            }
+          )
+          .finally(() => onUpdate());
+      });
+      const results = await Promise.allSettled(promises);
       for (let i = 0; i < results.length; i++) {
         const result = results[i];
         const tool_call = tool_calls[i];
-        if (result.status === 'rejected') {
-          tool_call.content = formatError(
-            new Error('Failed to execute tool', { cause: result.reason })
-          );
-          tool_call.success = false;
-        } else if (result.value.isErr()) {
-          tool_call.content = formatError(
-            new Error('Failed to execute tool', { cause: result.value.unwrapErr() })
-          );
-          tool_call.success = false;
-        } else {
-          tool_call.content = result.value.unwrap();
-          tool_call.success = true;
-        }
+        if (result.status !== 'rejected') continue;
+        tool_call.content = formatError(
+          result.reason instanceof Error ?
+            result.reason
+          : new Error('Failed to execute tool', { cause: result.reason })
+        );
+        tool_call.success = false;
+        onUpdate();
       }
     },
     (e) => new Error('Error while executing tool calls', { cause: e })

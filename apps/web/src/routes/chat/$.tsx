@@ -41,6 +41,7 @@ import { epubRAGAdapter } from '~/lib/rag/epub';
 import { pdfRAGAdapter } from '~/lib/rag/pdf';
 import { fetchers, queries } from '~/queries';
 import { isMobile } from '~/signals';
+import { formatError } from '~/utils/errors';
 import { compressImageFile } from '~/utils/files';
 import { fileToBase64 } from '~/utils/files';
 import { produce } from '~/utils/immer';
@@ -252,12 +253,27 @@ function ChatPageComponent() {
     }
   }
 
+  function flushOldToolCalls(tree: TTree<TMessage>) {
+    for (const { node } of tree.walk()) {
+      if (node.value.isNone()) continue;
+      const message = node.value.unwrap();
+      if (message.type !== 'llm') continue;
+      for (const chunk of message.chunks) {
+        if (chunk.type !== 'tool_call') continue;
+        if (chunk.success !== null) continue;
+        chunk.success = false;
+        chunk.content = formatError(new Error('Failed to execute tool'));
+      }
+    }
+  }
+
   createRenderEffect(() => {
     const messages = loaderData().chat?.messages;
     if (!messages) return;
     untrack(() => {
       const tree = ReactiveTree.fromJSON(messages);
       purgeOnlyErrorResponses(tree);
+      flushOldToolCalls(tree);
       setMessages(tree);
       setCurrentPath(getLatestPath(tree));
     });
