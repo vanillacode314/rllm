@@ -56,11 +56,7 @@ class MCPClient implements TMCPClient {
 
   async callTool(name: string, args: Record<string, unknown>): Promise<string> {
     if (this.#sessionId.isNone()) {
-      await this.initSession();
-    }
-
-    if (this.#sessionId.isNone()) {
-      throw new Error('Failed to initialize session');
+      throw new Error('Unitialized session');
     }
 
     const sessionId = this.#sessionId.unwrap();
@@ -126,7 +122,7 @@ class MCPClient implements TMCPClient {
 
     if (sessionResult.isErr()) {
       this.setStatus('disconnected');
-      throw new Error('Failed to initialize session');
+      throw new Error('Failed to initialize session', { cause: sessionResult.unwrapErr() });
     }
 
     const { sessionId, capabilities, serverInfo } = sessionResult.unwrap();

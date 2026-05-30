@@ -26,7 +26,7 @@ export function MCPTestResult(props: MCPTestResultProps) {
               Error
             </Badge>
           </AlertTitle>
-          <AlertDescription class="mt-2">{props.result.error}</AlertDescription>
+          <AlertDescription class="whitespace-pre-wrap mt-2">{props.result.error}</AlertDescription>
         </Alert>
       }
       when={props.result.success}

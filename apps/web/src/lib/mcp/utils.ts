@@ -4,6 +4,7 @@ import { safeFetch, safeParseJson, tryBlock } from 'ts-result-option/utils';
 import type { TTool } from '~/types';
 
 import { ProxyManager } from '~/lib/proxy';
+import { formatError } from '~/utils/errors';
 
 import { MCPClient } from './client';
 import {
@@ -131,12 +132,20 @@ export function makeJSONRPCCall(
       }
 
       // Get content type
-      const contentType = yield* Option.fromNull(response.headers.get('Content-Type'))
-        .okOrElse(() => new Error('Content-Type header is missing'))
-        .context('Missing Content-Type header');
+      const contentType = Option.fromNull(response.headers.get('Content-Type'));
+      if (contentType.isNone()) {
+        return AsyncResult.Ok({
+          response,
+          result: {
+            jsonrpc: '2.0',
+            id,
+            result: undefined
+          }
+        });
+      }
 
-      const isEventStream = contentType.includes('text/event-stream');
-      const isJson = contentType.includes('application/json');
+      const isEventStream = contentType.unwrap().includes('text/event-stream');
+      const isJson = contentType.unwrap().includes('application/json');
 
       let jsonResponse: JSONRPCResponseSchema;
 
@@ -215,7 +224,9 @@ export async function testMCPServer(options: TestMCPServerOptions): Promise<Test
       tools
     };
   } catch (e) {
-    const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+    const errorMessage = formatError(
+      e instanceof Error ? e : new Error('Unknown Error', { cause: e })
+    );
     return {
       success: false,
       serverInfo: null,
