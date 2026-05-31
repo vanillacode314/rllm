@@ -135,7 +135,13 @@ export const Route = createFileRoute('/chat/$')({
 
     const chat = await ensureValidChatProvider(id, defaultProviderId!, defaultModelId!);
 
-    return { chat, isNewChat, id: chat.id, chatSettings: chat.settings };
+    return {
+      chat,
+      isNewChat,
+      id: chat.id,
+      chatSettings: chat.settings,
+      lastAccessedAt: chat.last_accessed_at
+    };
   }
 });
 
@@ -160,6 +166,22 @@ function ChatPageComponent() {
   });
   onMount(() => {
     setChatSettings(Option.Some(chatSettingsSchema.parse(loaderData().chatSettings)));
+  });
+  onMount(async () => {
+    const INCREMENT_THRESHOLD_MILLISECONDS = 1000 * 60 * 60;
+    const id = searchParams().id;
+    if (!id) return;
+    if (loaderData().isNewChat) return;
+    const lastAccessedAt = loaderData().lastAccessedAt;
+    if (
+      typeof lastAccessedAt === 'number' &&
+      Date.now() - lastAccessedAt < INCREMENT_THRESHOLD_MILLISECONDS
+    )
+      return;
+    await logger.dispatch({
+      type: 'incrementChatAccessCount',
+      data: { id }
+    });
   });
   onMount(() => {
     onCleanup(

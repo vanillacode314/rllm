@@ -1,6 +1,7 @@
-import type { TUpdate } from 'event-logger';
+import type { TEventTransformer } from 'event-logger';
 
 import { getTableName } from 'drizzle-orm';
+import { HLC } from 'hlc';
 import * as z from 'zod/mini';
 
 import { tables } from '~/db/app-schema';
@@ -85,6 +86,10 @@ export const validEventSchema = z.discriminatedUnion('type', [
     })
   }),
   z.object({
+    type: z.literal('incrementChatAccessCount'),
+    data: z.object({ id: z.string() })
+  }),
+  z.object({
     type: z.literal('setUserMetadata'),
     data: z.object({
       id: z.string(),
@@ -124,6 +129,7 @@ const userIntentToTable = new Map(
     createChat: tables.chats,
     createPreset: tables.chatPresets,
     deleteChat: tables.chats,
+    incrementChatAccessCount: tables.chats,
     deleteMcp: tables.mcps,
     deleteProvider: tables.providers,
     deletePreset: tables.chatPresets,
@@ -135,10 +141,10 @@ const userIntentToTable = new Map(
   })
 );
 
-export const processMessage = async (value: TValidEvent): Promise<TUpdate[]> => {
-  const table = userIntentToTable.get(value.type)!;
+export const processMessage: TEventTransformer<TValidEvent> = async (event) => {
+  const table = userIntentToTable.get(event.type)!;
   const tableName = getTableName(table);
-  switch (value.type) {
+  switch (event.type) {
     case 'createChat':
     case 'createMcp':
     case 'createPreset':
@@ -147,11 +153,11 @@ export const processMessage = async (value: TValidEvent): Promise<TUpdate[]> => 
         {
           operation: 'insert',
           table: tableName,
-          id: value.data.id,
-          data: value.data,
+          id: event.data.id,
+          data: event.data,
           invalidate: [
             ['db', tableName, 'all'],
-            ['db', tableName, 'byId', value.data.id]
+            ['db', tableName, 'byId', event.data.id]
           ]
         }
       ];
@@ -160,7 +166,7 @@ export const processMessage = async (value: TValidEvent): Promise<TUpdate[]> => 
     case 'deleteMcp':
     case 'deletePreset':
     case 'deleteProvider': {
-      const id = value.data.id;
+      const id = event.data.id;
       return [
         {
           operation: 'delete',
@@ -173,16 +179,35 @@ export const processMessage = async (value: TValidEvent): Promise<TUpdate[]> => 
         }
       ];
     }
+    case 'incrementChatAccessCount': {
+      const id = event.data.id;
+      const hlc = HLC.fromString(event.timestamp);
+      return [
+        {
+          creates: false,
+          operation: 'sql',
+          id,
+          table: tableName,
+          sql: `UPDATE ${tableName} SET access_count = access_count + 1, last_accessed_at = ? WHERE id = ?`,
+          modifiesColumns: [tables.chats.access_count.name, tables.chats.last_accessed_at.name],
+          params: [hlc.physicalTime, id],
+          invalidate: [
+            ['db', tableName, 'all'],
+            ['db', tableName, 'byId', id]
+          ]
+        }
+      ];
+    }
     case 'setUserMetadata': {
       return [
         {
           operation: 'upsert',
           table: tableName,
-          id: value.data.id,
-          data: value.data,
+          id: event.data.id,
+          data: event.data,
           invalidate: [
             ['db', 'userMetadata', 'all'],
-            ['db', 'userMetadata', 'byId', value.data.id]
+            ['db', 'userMetadata', 'byId', event.data.id]
           ]
         }
       ];
@@ -195,11 +220,11 @@ export const processMessage = async (value: TValidEvent): Promise<TUpdate[]> => 
         {
           operation: 'update',
           table: tableName,
-          id: value.data.id,
-          data: value.data,
+          id: event.data.id,
+          data: event.data,
           invalidate: [
             ['db', tableName, 'all'],
-            ['db', tableName, 'byId', value.data.id]
+            ['db', tableName, 'byId', event.data.id]
           ]
         }
       ];

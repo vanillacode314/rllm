@@ -109,10 +109,14 @@ const chats = {
           finished: tables.chats.finished,
           id: tables.chats.id,
           title: tables.chats.title,
-          tags: tables.chats.tags
+          tags: tables.chats.tags,
+          score:
+            sql`${tables.chats.access_count} * exp(-0.693 * (strftime('%s','now') - ${tables.chats.last_accessed_at} / 1000) / 86400.0 / 7.0)`.as(
+              'score'
+            )
         })
         .from(tables.chats)
-        .orderBy(desc(tables.chats.createdAt))
+        .orderBy(sql`score desc`, desc(tables.chats.createdAt), desc(sql`score is null`))
         .limit(limit)
         .offset(offset),
     countChats: () =>

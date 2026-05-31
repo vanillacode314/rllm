@@ -43,7 +43,7 @@ export const logger = await createEventLogger<TValidEvent>({
       uniqueKeys.values().map((key) => queryClient.invalidateQueries({ queryKey: key }))
     );
   },
-  eventToUpdates: (event) => processMessage(event),
+  eventToUpdates: processMessage,
   validateEvent: (event) => validEventSchema.parse(event)
 });
 

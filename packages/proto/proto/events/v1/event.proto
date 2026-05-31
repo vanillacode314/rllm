@@ -24,7 +24,12 @@ message EventData {
     CreatePresetEvent create_preset = 11;
     UpdatePresetEvent update_preset = 12;
     DeletePresetEvent delete_preset = 13;
+    IncrementChatAccessCountEvent increment_chat_access_count = 14;
   }
+}
+
+message IncrementChatAccessCountEvent {
+  string id = 1;
 }
 
 message CreateProviderEvent {

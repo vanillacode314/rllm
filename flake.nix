@@ -28,6 +28,7 @@
             typescript-language-server
             turso-cli
             caddy
+            just
           ];
           shellHook = ''
             echo "node_version: $(${pkgs.nodejs}/bin/node --version)"

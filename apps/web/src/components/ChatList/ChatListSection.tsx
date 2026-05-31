@@ -1,3 +1,4 @@
+import { createImmutable } from '@solid-primitives/immutable';
 import { useInfiniteQuery, useQuery } from '@tanstack/solid-query';
 import { useLocation } from '@tanstack/solid-router';
 import { createVirtualizer } from '@tanstack/solid-virtual';
@@ -24,9 +25,9 @@ export function ChatListSection(props: ChatListSectionProps) {
   const location = useLocation();
 
   const chatsQuery = useInfiniteQuery(() => queries.chats.all()._ctx.pagedMinimal());
-  const chats = createMemo(() => (chatsQuery.isSuccess ? chatsQuery.data.pages.flat() : []));
+  const chats = createImmutable(() => (chatsQuery.isSuccess ? chatsQuery.data.pages.flat() : []));
   const totalCountQuery = useQuery(() => queries.chats.all()._ctx.count());
-  const loadedCount = () => chats().length;
+  const loadedCount = () => chats.length;
   const totalCount = () => totalCountQuery.data ?? 0;
 
   const [localScrollRef, setLocalScrollRef] = createSignal<HTMLUListElement | null>(null);
@@ -37,6 +38,7 @@ export function ChatListSection(props: ChatListSectionProps) {
     return createVirtualizer({
       count: totalCount(),
       getScrollElement: () => (scrollRef()?.isConnected ? scrollRef() : null),
+      getItemKey: (index) => (chats.length <= index ? index : chats[index]!.id),
       estimateSize: () => 36,
       overscan: 5
     });
@@ -60,7 +62,7 @@ export function ChatListSection(props: ChatListSectionProps) {
 
   async function deleteChat(id: string, shouldConfirm: boolean = true) {
     const confirmDialog = useConfirmDialog();
-    const chat = () => chats().find((c) => c.id === id);
+    const chat = () => chats.find((c) => c.id === id);
     const yes =
       !shouldConfirm ||
       (await confirmDialog.confirm({
@@ -79,7 +81,7 @@ export function ChatListSection(props: ChatListSectionProps) {
       if (!items.length) return;
       const lastItem = items[items.length - 1];
       if (
-        lastItem.index >= chats().length &&
+        lastItem.index >= chats.length &&
         chatsQuery.hasNextPage &&
         !chatsQuery.isFetchingNextPage
       ) {
@@ -106,7 +108,7 @@ export function ChatListSection(props: ChatListSectionProps) {
         <div style={{ height: `${totalSize()}px`, position: 'relative' }}>
           <For each={virtualItems()}>
             {(virtualRow) => {
-              const chat = () => chats()[virtualRow.index];
+              const chat = () => chats[virtualRow.index];
               return (
                 <Show when={chat()}>
                   <div

@@ -4,10 +4,7 @@ import { type ClientConfig, SQLocal, type Transaction } from 'sqlocal';
 
 export type TConfig<TEvent extends Omit<TBaseEvent, 'timestamp' | 'version'>> = {
   config: ClientConfig;
-  eventToUpdates: (
-    event: NoInfer<TEvent & { timestamp: string; version: string }>,
-    tx: TTransaction
-  ) => MaybePromise<TUpdate[]>;
+  eventToUpdates: TEventTransformer<TEvent>;
   invalidate?: (
     items: Array<{
       event: NoInfer<TEvent & { timestamp: string; version: string }>;
@@ -16,7 +13,23 @@ export type TConfig<TEvent extends Omit<TBaseEvent, 'timestamp' | 'version'>> = 
   ) => MaybePromise<void>;
   validateEvent?: (event: unknown) => TEvent;
 };
+
+export type TEventTransformer<TEvent = TBaseEvent> = (
+  event: NoInfer<TEvent & { timestamp: string; version: string }>,
+  tx: TTransaction
+) => MaybePromise<TUpdate[]>;
+
 export type TUpdate =
+  | {
+      creates: boolean;
+      id: string;
+      invalidate?: Array<string[]>;
+      modifiesColumns: string[];
+      operation: 'sql';
+      params: unknown[];
+      sql: string;
+      table: string;
+    }
   | {
       data: Record<string, unknown>;
       id: string;
@@ -59,7 +72,7 @@ interface Logger<T extends TBaseEvent> {
 type MaybePromise<T> = Promise<T> | T;
 type TBaseEvent = { data: unknown; timestamp: string; type: string; version: string };
 
-type TTransaction = Pick<Transaction, 'query'>;
+type TTransaction = Pick<Transaction, 'batch' | 'query'>;
 
 export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timestamp' | 'version'>>({
   config,
@@ -115,24 +128,28 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
       if (updates.length === 0) return;
       const schema = await getSchema(tx);
       for (const update of updates) {
-        const statement = await convertUpdateToStatement(update, timestamp, schema, tx);
-        if (statement === null) continue;
+        const statements = await convertUpdateToStatement(update, timestamp, schema, tx);
+        if (statements === null) continue;
         try {
-          if (update.operation === 'insert') {
-            await tx.query(statement);
+          if (update.operation === 'insert' || (update.operation === 'sql' && update.creates)) {
+            await tx.batch(() => statements);
             await processPendingEvents(update.id, update.table, tx, schema);
-          } else if (update.operation === 'update' || update.operation === 'delete') {
+          } else if (
+            update.operation === 'update' ||
+            update.operation === 'delete' ||
+            (update.operation === 'sql' && !update.creates)
+          ) {
             const exists = await checkRecordExists(update.table, update.id, tx, schema);
             if (!exists) {
               await storePendingEvent(update, timestamp, tx);
             } else {
-              await tx.query(statement);
+              await tx.batch(() => statements);
             }
           } else {
-            await tx.query(statement);
+            await tx.batch(() => statements);
           }
         } catch (error) {
-          console.debug(`Failed to apply update`, statement, update);
+          console.debug(`Failed to apply update`, statements, update);
           throw new Error(`Failed to apply update`, { cause: error });
         }
       }
@@ -480,28 +497,31 @@ async function convertUpdateToStatement(
   timestamp: string,
   schema: Map<string, Set<string>>,
   tx: TTransaction
-): Promise<null | { params: unknown[]; sql: string }> {
+): Promise<null | { params: unknown[]; sql: string }[]> {
   const tableName = update.table;
   if (!schema.has(update.table)) throw new Error(`Table ${update.table} not found in schema`);
   const columns =
     update.operation !== 'delete' ?
-      Object.keys(update.data).filter(
-        (column) =>
-          !['createdAt', 'id', 'updatedAt'].includes(column) && update.data[column] !== undefined
-      )
+      update.operation === 'sql' ?
+        update.modifiesColumns
+      : Object.keys(update.data).filter(
+          (column) =>
+            !['createdAt', 'id', 'updatedAt'].includes(column) && update.data[column] !== undefined
+        )
     : [];
 
   const id = update.id;
 
   switch (update.operation) {
     case 'delete': {
-      return { params: [id], sql: `DELETE FROM "${tableName}" WHERE "id" = ?` };
+      return [{ params: [id], sql: `DELETE FROM "${tableName}" WHERE "id" = ?` }];
     }
     case 'insert': {
       const values = columns.map((column) => update.data[column]);
-      return {
-        params: [id, ...values, timestamp, {}].map((value) => toSql(value)),
-        sql: `
+      return [
+        {
+          params: [id, ...values, timestamp, {}].map((value) => toSql(value)),
+          sql: `
               INSERT OR IGNORE INTO "${tableName}"(
                 "id",
                 ${columns.map((column) => `"${column}"`).join(',')},
@@ -514,7 +534,30 @@ async function convertUpdateToStatement(
                 ?, 
                 ?
               )`
-      };
+        }
+      ];
+    }
+    case 'sql': {
+      const existingUpdatedAt = await tx
+        .query({
+          params: [id],
+          sql: `SELECT updatedAt FROM "${tableName}" WHERE "id" = ?`
+        })
+        .then((rows) => JSON.parse(rows[0]?.updatedAt ?? '{}') as Record<string, string>);
+      const columnsToUpdate = columns.filter((column) => {
+        const existingTimestamp = existingUpdatedAt[column];
+        return typeof existingTimestamp !== 'string' || existingTimestamp < timestamp;
+      });
+      return [
+        { params: update.params.map(toSql), sql: update.sql },
+        {
+          params: [
+            Object.fromEntries(columnsToUpdate.map((column) => [column, timestamp])),
+            id
+          ].map(toSql),
+          sql: `UPDATE "${tableName}" SET updatedAt = json_patch(updatedAt, ?) WHERE "id" = ?`
+        }
+      ];
     }
     case 'update': {
       const existingUpdatedAt = await tx
@@ -528,20 +571,22 @@ async function convertUpdateToStatement(
         return typeof existingTimestamp !== 'string' || existingTimestamp < timestamp;
       });
       if (columnsToUpdate.length === 0) return null;
-      return {
-        params: [
-          ...columnsToUpdate.map((column) => update.data[column]),
-          Object.fromEntries(columnsToUpdate.map((column) => [column, timestamp])),
-          id
-        ].map(toSql),
-        sql: `
+      return [
+        {
+          params: [
+            ...columnsToUpdate.map((column) => update.data[column]),
+            Object.fromEntries(columnsToUpdate.map((column) => [column, timestamp])),
+            id
+          ].map(toSql),
+          sql: `
           UPDATE "${tableName}"
           SET
             ${columnsToUpdate.map((column) => `"${column}" = ?`).join(',')},
             updatedAt = json_patch(updatedAt, ?)
           WHERE "id" = ?
         `
-      };
+        }
+      ];
     }
     case 'upsert': {
       const existingUpdatedAt = await tx
@@ -598,7 +643,7 @@ async function convertUpdateToStatement(
 
       const params = [...insertParams, ...updateParams];
 
-      return { params, sql: upsertSql };
+      return [{ params, sql: upsertSql }];
     }
   }
 }
@@ -642,9 +687,9 @@ async function processPendingEvents(
     .then((rows) => rows.map((row) => Object.assign(row, { data: JSON.parse(row.data) })));
 
   for (const event of pendingEvents) {
-    const statement = await convertUpdateToStatement(event, event.timestamp, schema, tx);
-    if (statement === null) continue;
-    await tx.query(statement);
+    const statements = await convertUpdateToStatement(event, event.timestamp, schema, tx);
+    if (statements === null) continue;
+    await tx.batch(() => statements);
   }
 
   if (pendingEvents.length > 0) {

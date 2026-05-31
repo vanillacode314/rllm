@@ -11,7 +11,7 @@ import TheSidebar from '~/components/TheSidebar';
 import { Button } from '~/components/ui/button';
 import { SidebarProvider } from '~/components/ui/sidebar';
 import { Toaster } from '~/components/ui/sonner';
-import { deleteDatabaseFile, logger, setupDb } from '~/db/client';
+import { deleteDatabaseFile, setupDb } from '~/db/client';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { initChatSettings } from '~/lib/chat/settings';
 import { MCPManager } from '~/lib/mcp/manager';
@@ -28,8 +28,8 @@ export const Route = createRootRouteWithContext()({
       await navigator.storage.persist();
     }
     await setupDb().unwrap();
-    await initChatSettings();
     console.debug('[Finished DB Setup]');
+    await initChatSettings();
     void initSocket().unwrap();
     void ProxyManager.initialize().finally(() => void MCPManager.initialize());
     void BackgroundTaskManager.init();
