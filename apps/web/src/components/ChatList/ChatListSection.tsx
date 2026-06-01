@@ -1,4 +1,3 @@
-import { createImmutable } from '@solid-primitives/immutable';
 import { useInfiniteQuery, useQuery } from '@tanstack/solid-query';
 import { useLocation } from '@tanstack/solid-router';
 import { createVirtualizer } from '@tanstack/solid-virtual';
@@ -10,6 +9,7 @@ import { SidebarGroupLabel, SidebarMenu } from '~/components/ui/sidebar';
 import { logger } from '~/db/client';
 import { queries } from '~/queries';
 import { isChatOpen } from '~/utils/chat';
+import { createDerivedStore } from '~/utils/stores';
 
 import { ChatListHeader } from './ChatListHeader';
 import { ChatListItem } from './ChatListItem';
@@ -25,7 +25,12 @@ export function ChatListSection(props: ChatListSectionProps) {
   const location = useLocation();
 
   const chatsQuery = useInfiniteQuery(() => queries.chats.all()._ctx.pagedMinimal());
-  const chats = createImmutable(() => (chatsQuery.isSuccess ? chatsQuery.data.pages.flat() : []));
+  const chats = createDerivedStore(
+    () => (chatsQuery.isSuccess ? chatsQuery.data.pages.flat() : []),
+    {
+      key: 'id'
+    }
+  );
   const totalCountQuery = useQuery(() => queries.chats.all()._ctx.count());
   const loadedCount = () => chats.length;
   const totalCount = () => totalCountQuery.data ?? 0;
