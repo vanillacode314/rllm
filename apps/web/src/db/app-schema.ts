@@ -44,8 +44,8 @@ const chats = sqliteTable('chats', {
   finished: integer({ mode: 'boolean' })
     .notNull()
     .default(sql`1`),
-  access_count: integer().notNull().default(0),
-  last_accessed_at: integer(),
+  accessCount: integer().notNull().default(0),
+  lastAccessedAt: integer(),
   messages: text({ mode: 'json' }).notNull().$type<JsonTree<TChatMessage>>(),
   settings: text({ mode: 'json' }).notNull().$type<TChatChat['settings']>(),
   updatedAt: updatedAt()

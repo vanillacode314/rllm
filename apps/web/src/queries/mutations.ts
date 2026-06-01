@@ -154,7 +154,7 @@ export const processMessage: TEventTransformer<TValidEvent> = async (event) => {
           operation: 'insert',
           table: tableName,
           id: event.data.id,
-          data: event.data,
+          data: event.type === 'createChat' ? { ...event.data, accessCount: 1 } : event.data,
           invalidate: [
             ['db', tableName, 'all'],
             ['db', tableName, 'byId', event.data.id]
@@ -188,8 +188,8 @@ export const processMessage: TEventTransformer<TValidEvent> = async (event) => {
           operation: 'sql',
           id,
           table: tableName,
-          sql: `UPDATE ${tableName} SET access_count = access_count + 1, last_accessed_at = ? WHERE id = ?`,
-          modifiesColumns: [tables.chats.access_count.name, tables.chats.last_accessed_at.name],
+          sql: `UPDATE ${tableName} SET accessCount = accessCount + 1, lastAccessedAt = ? WHERE id = ?`,
+          modifiesColumns: [tables.chats.accessCount.name, tables.chats.lastAccessedAt.name],
           params: [hlc.physicalTime, id],
           invalidate: [
             ['db', tableName, 'all'],
