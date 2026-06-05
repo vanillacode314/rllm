@@ -48,7 +48,9 @@ export function ChatListSection(props: ChatListSectionProps) {
       ._ctx.pagedMinimal({ query: filterState.query, tags: Array.from(filterState.tags) })
   );
   const chats = createDerivedStore(
-    () => (chatsQuery.isSuccess ? chatsQuery.data.pages.flat() : []),
+    () => [chatsQuery.isPending, chatsQuery.isSuccess ? chatsQuery.data.pages.flat() : []],
+    ([isPending, current], prev) =>
+      isPending && current.length === 0 && prev !== undefined ? prev : current,
     {
       key: 'id'
     }
