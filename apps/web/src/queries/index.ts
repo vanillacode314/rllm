@@ -139,7 +139,7 @@ const chats = {
           sql`score desc`,
           desc(tables.chats.lastAccessedAt),
           desc(tables.chats.createdAt),
-          desc(sql`score is null`)
+          sql`score is null`
         )
         .limit(limit)
         .offset(offset),
