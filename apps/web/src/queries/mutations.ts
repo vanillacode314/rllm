@@ -188,9 +188,21 @@ export const processMessage: TEventTransformer<TValidEvent> = async (event) => {
           operation: 'sql',
           id,
           table: tableName,
-          sql: `UPDATE ${tableName} SET accessCount = accessCount + 1, lastAccessedAt = ? WHERE id = ?`,
-          modifiesColumns: [tables.chats.accessCount.name, tables.chats.lastAccessedAt.name],
-          params: [hlc.physicalTime, id],
+          statements: {
+            accessCount: [
+              {
+                sql: `UPDATE ${tableName} SET accessCount = accessCount + 1 WHERE id = ?`,
+                params: [id],
+                executeEvenIfTimestampIsOlder: true
+              }
+            ],
+            lastAccessedAt: [
+              {
+                sql: `UPDATE ${tableName} SET lastAccessedAt = ? WHERE id = ?`,
+                params: [hlc.physicalTime, id]
+              }
+            ]
+          },
           invalidate: [
             ['db', tableName, 'all'],
             ['db', tableName, 'byId', id]

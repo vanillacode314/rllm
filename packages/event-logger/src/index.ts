@@ -24,10 +24,11 @@ export type TUpdate =
       creates: boolean;
       id: string;
       invalidate?: Array<string[]>;
-      modifiesColumns: string[];
       operation: 'sql';
-      params: unknown[];
-      sql: string;
+      statements: Record<
+        string,
+        Array<{ executeEvenIfTimestampIsOlder?: boolean; params: unknown[]; sql: string }>
+      >;
       table: string;
     }
   | {
@@ -70,6 +71,11 @@ interface Logger<T extends TBaseEvent> {
   setVersion: (version: string, tx?: TTransaction) => Promise<void>;
 }
 type MaybePromise<T> = Promise<T> | T;
+type QueryFn = <T extends Record<string, unknown>>(query: {
+  params: unknown[];
+  sql: string;
+}) => Promise<T[]>;
+
 type TBaseEvent = { data: unknown; timestamp: string; type: string; version: string };
 
 type TTransaction = Pick<Transaction, 'batch' | 'query'>;
@@ -94,6 +100,8 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
   });
   const query = <T extends Record<string, unknown>>(query: { params: unknown[]; sql: string }) =>
     db.batch(() => [query]).then(([result]) => result) as Promise<T[]>;
+
+  await migratePendingEventsStatements(query);
 
   async function getSchema(tx?: TTransaction) {
     const q = tx ? tx.query : query;
@@ -502,12 +510,11 @@ async function convertUpdateToStatement(
   if (!schema.has(update.table)) throw new Error(`Table ${update.table} not found in schema`);
   const columns =
     update.operation !== 'delete' ?
-      update.operation === 'sql' ?
-        update.modifiesColumns
-      : Object.keys(update.data).filter(
-          (column) =>
-            !['createdAt', 'id', 'updatedAt'].includes(column) && update.data[column] !== undefined
-        )
+      Object.keys(update.operation === 'sql' ? update.statements : update.data).filter(
+        (column) =>
+          !['createdAt', 'id', 'updatedAt'].includes(column) &&
+          (update.operation === 'sql' ? update.statements : update.data)[column] !== undefined
+      )
     : [];
 
   const id = update.id;
@@ -548,8 +555,29 @@ async function convertUpdateToStatement(
         const existingTimestamp = existingUpdatedAt[column];
         return typeof existingTimestamp !== 'string' || existingTimestamp < timestamp;
       });
+
+      const statementsToRun = [] as { params: unknown[]; sql: string }[];
+      for (const column in update.statements) {
+        if (column in columnsToUpdate) {
+          statementsToRun.push(
+            ...update.statements[column]!.map((statement) => ({
+              params: statement.params.map(toSql),
+              sql: statement.sql
+            }))
+          );
+          continue;
+        }
+        for (const statement of update.statements[column]!) {
+          if (statement.executeEvenIfTimestampIsOlder) {
+            statementsToRun.push({
+              params: statement.params.map(toSql),
+              sql: statement.sql
+            });
+          }
+        }
+      }
       return [
-        { params: update.params.map(toSql), sql: update.sql },
+        ...statementsToRun,
         {
           params: [
             Object.fromEntries(columnsToUpdate.map((column) => [column, timestamp])),
@@ -648,6 +676,24 @@ async function convertUpdateToStatement(
   }
 }
 
+async function migratePendingEventsStatements(query: QueryFn): Promise<void> {
+  const MIGRATION_KEY = '__event_logger_migration_v1_pendingEvents_statements';
+  const existing = await query({
+    params: [MIGRATION_KEY],
+    sql: 'SELECT value FROM metadata WHERE key = ?'
+  });
+  if (existing.length > 0) return;
+
+  await query({
+    params: [],
+    sql: "ALTER TABLE pendingEvents ADD COLUMN statements text NOT NULL DEFAULT '{}'"
+  });
+
+  await query({
+    params: [MIGRATION_KEY],
+    sql: `INSERT INTO metadata (key, value) VALUES (?, 'done') ON CONFLICT(key) DO UPDATE SET value = 'done'`
+  });
+}
 function partitionArray<T, U extends T>(
   array: T[],
   predicate: (value: T) => value is U
@@ -677,18 +723,29 @@ async function processPendingEvents(
     .query<{
       data: string;
       id: string;
-      operation: 'delete' | 'insert' | 'update' | 'upsert';
+      operation: 'delete' | 'insert' | 'sql' | 'update' | 'upsert';
+      statements: string;
       table: string;
       timestamp: string;
     }>({
       params: [id, tableName],
-      sql: `SELECT id, "table", timestamp, data, operation FROM pendingEvents WHERE id = ? AND "table" = ? ORDER BY timestamp ASC`
+      sql: `SELECT id, "table", timestamp, data, operation, statements FROM pendingEvents WHERE id = ? AND "table" = ? ORDER BY timestamp ASC`
     })
-    .then((rows) => rows.map((row) => Object.assign(row, { data: JSON.parse(row.data) })));
+    .then((rows) =>
+      rows.map((row) =>
+        Object.assign(row, { data: JSON.parse(row.data), statements: JSON.parse(row.statements) })
+      )
+    );
 
   for (const event of pendingEvents) {
-    const statements = await convertUpdateToStatement(event, event.timestamp, schema, tx);
+    const statements = await convertUpdateToStatement(
+      event as TUpdate,
+      event.timestamp,
+      schema,
+      tx
+    );
     if (statements === null) continue;
+    if (statements.length === 0) continue;
     await tx.batch(() => statements);
   }
 
@@ -699,14 +756,23 @@ async function processPendingEvents(
     });
   }
 }
+
 async function storePendingEvent(
   update: TUpdate,
   timestamp: string,
   tx: TTransaction
 ): Promise<void> {
   const data = 'data' in update ? update.data : {};
+  const statements = update.operation === 'sql' ? JSON.stringify(update.statements) : '{}';
   await tx.query({
-    params: [update.id, update.table, timestamp, JSON.stringify(data), update.operation],
-    sql: `INSERT OR IGNORE INTO pendingEvents (id, "table", timestamp, data, operation) VALUES (?, ?, ?, ?, ?)`
+    params: [
+      update.id,
+      update.table,
+      timestamp,
+      JSON.stringify(data),
+      update.operation,
+      statements
+    ],
+    sql: `INSERT OR IGNORE INTO pendingEvents (id, "table", timestamp, data, operation, statements) VALUES (?, ?, ?, ?, ?, ?)`
   });
 }
