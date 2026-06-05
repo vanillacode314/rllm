@@ -1,30 +1,52 @@
+import { ReactiveSet } from '@solid-primitives/set';
+import { createDebouncer } from '@tanstack/solid-pacer';
 import { useInfiniteQuery, useQuery } from '@tanstack/solid-query';
 import { useLocation } from '@tanstack/solid-router';
 import { createVirtualizer } from '@tanstack/solid-virtual';
 import { createEffect, createMemo, createSignal, For, Show } from 'solid-js';
+import { createStore } from 'solid-js/store';
+import { toast } from 'solid-sonner';
 
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
 import { usePromptDialog } from '~/components/modals/auto-import/PromptDialog';
+import { Badge } from '~/components/ui/badge';
 import { SidebarGroupLabel, SidebarMenu } from '~/components/ui/sidebar';
 import { logger } from '~/db/client';
 import { queries } from '~/queries';
 import { isChatOpen } from '~/utils/chat';
+import { produce } from '~/utils/immer';
 import { createDerivedStore } from '~/utils/stores';
+import { cn } from '~/utils/tailwind';
 
 import { ChatListHeader } from './ChatListHeader';
 import { ChatListItem } from './ChatListItem';
 
 export interface ChatListSectionProps {
+  class?: string;
   onClose: () => void;
   scrollRef?: HTMLElement | null;
   showGroupLabel?: boolean;
   sizePx?: number;
 }
 
+const [filterState, setFilterState] = createStore<{ query: string; tags: Set<string> }>({
+  query: '',
+  tags: new ReactiveSet()
+});
 export function ChatListSection(props: ChatListSectionProps) {
   const location = useLocation();
 
-  const chatsQuery = useInfiniteQuery(() => queries.chats.all()._ctx.pagedMinimal());
+  const updateQuery = createDebouncer(
+    (query: string) => {
+      setFilterState('query', query);
+    },
+    { wait: 100 }
+  );
+  const chatsQuery = useInfiniteQuery(() =>
+    queries.chats
+      .all()
+      ._ctx.pagedMinimal({ query: filterState.query, tags: Array.from(filterState.tags) })
+  );
   const chats = createDerivedStore(
     () => (chatsQuery.isSuccess ? chatsQuery.data.pages.flat() : []),
     {
@@ -98,7 +120,7 @@ export function ChatListSection(props: ChatListSectionProps) {
   registerInfiniteScrollDetector();
 
   return (
-    <div class="overflow-hidden flex flex-col">
+    <div class={cn('overflow-hidden flex flex-col', props.class)}>
       <Show when={props.showGroupLabel}>
         <SidebarGroupLabel class="pr-2 shrink-0 flex gap-1 items-center">
           <ChatListHeader
@@ -108,7 +130,66 @@ export function ChatListSection(props: ChatListSectionProps) {
           />
         </SidebarGroupLabel>
       </Show>
-
+      <div class="flex flex-col gap-2 border-input border rounded-md p-2 focus-within:ring-2 focus-within:ring-ring text-xs mb-2">
+        <input
+          aria-label="filter chats by tags or title"
+          class="outline-none"
+          onInput={(event) => updateQuery.maybeExecute(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              updateQuery.flush();
+              const value = filterState.query.trim().toLowerCase();
+              if (!value) return;
+              if (filterState.tags.has(value)) {
+                toast.info(`Tag "${value}" already exists`);
+                return;
+              }
+              setFilterState((filterState) => {
+                filterState.tags.add(value);
+                return produce(filterState, (filterState) => {
+                  filterState.query = '';
+                });
+              });
+            }
+          }}
+          placeholder="filter chats by tags or title"
+          value={filterState.query}
+        ></input>
+        <Show when={filterState.tags.size > 0}>
+          <div class="flex flex-wrap gap-1">
+            <For each={Array.from(filterState.tags.values())}>
+              {(tag) => (
+                <Badge class="text-xs" variant="secondary">
+                  <span>{tag}</span>
+                  <button
+                    class="ml-1 flex gap-1 items-center"
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      filterState.tags.delete(tag);
+                    }}
+                  >
+                    <span class="sr-only">Remove Tag {tag}</span>
+                    <span class="icon-[heroicons--x-mark-16-solid]" />
+                  </button>
+                </Badge>
+              )}
+            </For>
+            <Badge class="text-xs" variant="outline">
+              <button
+                class="flex gap-1 items-center"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  setFilterState('tags', new ReactiveSet());
+                }}
+              >
+                <span>clear all</span>
+                <span class="icon-[heroicons--x-mark-16-solid]" />
+              </button>
+            </Badge>
+          </div>
+        </Show>
+      </div>
       <SidebarMenu class="overflow-y-auto pr-2" ref={setLocalScrollRef}>
         <div style={{ height: `${totalSize()}px`, position: 'relative' }}>
           <For each={virtualItems()}>

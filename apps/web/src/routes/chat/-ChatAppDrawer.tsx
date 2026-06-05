@@ -39,6 +39,7 @@ export function ChatAppDrawer(props: AppDrawerComponentProps) {
   return (
     <div class="flex flex-col gap-4">
       <ChatSettingsControls
+        class="p-4 pb-0"
         onApplyPreset={(preset) => {
           updateLocalSettings((settings) => {
             Object.assign(settings, preset.settings);
@@ -79,9 +80,9 @@ export function ChatAppDrawer(props: AppDrawerComponentProps) {
         })}
       />
       <Separator />
-      <QuickActionsSection onClose={props.close} />
+      <QuickActionsSection class="px-4" onClose={props.close} />
       <Separator />
-      <ChatListSection onClose={props.close} showGroupLabel sizePx={720} />
+      <ChatListSection class="p-4 pt-0" onClose={props.close} showGroupLabel sizePx={720} />
     </div>
   );
 }

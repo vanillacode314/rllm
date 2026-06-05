@@ -33,18 +33,21 @@ export function AppDrawer() {
       open={state.open}
       side="bottom"
     >
-      <DrawerContent class="p-4 flex flex-col gap-4">
-        <DrawerClose as={Button<'button'>} variant="outline">
-          <span class="icon-[heroicons--x-mark-16-solid]" />
-          <span>Close</span>
-        </DrawerClose>
+      <DrawerContent class="flex flex-col">
+        <div class="p-4 pb-0 grid">
+          <DrawerClose as={Button<'button'>} variant="outline">
+            <span class="icon-[heroicons--x-mark-16-solid]" />
+            <span>Close</span>
+          </DrawerClose>
+        </div>
         <div class="max-h-[60vh] overflow-y-auto" ref={setScrollRef}>
           <Show
             fallback={
               <div class="space-y-4">
-                <QuickActionsSection onClose={() => setState('open', false)} />
+                <QuickActionsSection class="p-4 pb-0" onClose={() => setState('open', false)} />
                 <Separator />
                 <ChatListSection
+                  class="p-4 pt-0"
                   onClose={() => setState('open', false)}
                   showGroupLabel
                   sizePx={720}

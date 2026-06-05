@@ -10,6 +10,7 @@ import { createPreset, type TChatPreset } from '~/lib/chat/presets';
 import { type TChatSettings } from '~/lib/chat/settings';
 import { MCPManager } from '~/lib/mcp/manager';
 import { queries } from '~/queries';
+import { cn } from '~/utils/tailwind';
 
 import ModelSelector from './ModelSelector';
 import PresetSelector from './PresetSelector';
@@ -23,6 +24,7 @@ import { SwitchControl, SwitchLabel, Switch as SwitchPrimitive, SwitchThumb } fr
 import { TextField, TextFieldInput, TextFieldLabel, TextFieldTextArea } from './ui/text-field';
 
 export type ChatSettingsControlsProps = {
+  class?: string;
   onApplyPreset: (preset: TChatPreset) => void;
   onIncludeDateTimeChange?: (checked: boolean) => void;
   onModelChange?: (model: TModel) => void;
@@ -49,7 +51,7 @@ export function ChatSettingsControls(props: ChatSettingsControlsProps) {
   const mcpClients = () => MCPManager.getAllClients();
 
   return (
-    <div class="flex flex-col gap-6">
+    <div class={cn('flex flex-col gap-6', props.class)}>
       <div class="flex flex-col gap-2">
         <Label class="text-muted-foreground text-xs flex gap-1 items-center">
           <span class="icon-[heroicons--cog-8-tooth-16-solid]" />

@@ -1,5 +1,5 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/solid-query';
-import { count, desc, eq, sql } from 'drizzle-orm';
+import { and, count, desc, eq, exists, inArray, like, sql } from 'drizzle-orm';
 
 import type { TProvider } from '~/db/app-schema';
 
@@ -103,7 +103,7 @@ const chats = {
         })
         .from(tables.chats)
         .orderBy(desc(tables.chats.createdAt)),
-    getPagedMinimalChats: (limit: number, offset: number) =>
+    getPagedMinimalChats: (limit: number, offset: number, query?: string, tags?: string[]) =>
       db
         .select({
           finished: tables.chats.finished,
@@ -116,6 +116,25 @@ const chats = {
             )
         })
         .from(tables.chats)
+        .where(
+          and(
+            like(sql`LOWER(${tables.chats.title})`, `%${query?.toLowerCase()}%`).if(
+              query && query.trim().length > 0
+            ),
+            exists(
+              db
+                .select({ value: sql`1` })
+                .from(sql`json_each(${tables.chats.tags})`)
+                .where(
+                  inArray(
+                    sql`LOWER(json_each.value)`,
+                    tags?.filter((tag) => tag.trim().length > 0).map((tag) => tag.toLowerCase()) ??
+                      []
+                  )
+                )
+            ).if(tags && tags.filter((tag) => tag.trim().length > 0).length > 0)
+          )
+        )
         .orderBy(
           sql`score desc`,
           desc(tables.chats.lastAccessedAt),
@@ -156,11 +175,25 @@ const chats = {
               queryKey: [...chats.queries.base(), 'all', 'minimal'],
               queryFn: () => chats.fetchers.getMinimalChats()
             }),
-            pagedMinimal: (pageSize: number = 30) =>
+            pagedMinimal: ({
+              pageSize = 30,
+              query,
+              tags
+            }: {
+              pageSize?: number;
+              query?: string;
+              tags?: string[];
+            } = {}) =>
               infiniteQueryOptions({
-                queryKey: [...chats.queries.base(), 'all', 'minimal', 'paged', { pageSize }],
+                queryKey: [
+                  ...chats.queries.base(),
+                  'all',
+                  'minimal',
+                  'paged',
+                  { pageSize, query, tags }
+                ],
                 queryFn: ({ pageParam }) =>
-                  chats.fetchers.getPagedMinimalChats(pageSize, pageParam),
+                  chats.fetchers.getPagedMinimalChats(pageSize, pageParam, query, tags),
                 initialPageParam: 0,
                 getNextPageParam: (lastPage, _allPages, lastPageParam) =>
                   lastPage.length < pageSize ? undefined : lastPageParam + pageSize

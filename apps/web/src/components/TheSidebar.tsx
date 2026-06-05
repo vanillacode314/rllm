@@ -35,8 +35,12 @@ export function TheSidebar() {
           <QuickActionsSection onClose={() => sidebar.setOpenMobile(false)}></QuickActionsSection>
         </SidebarGroup>
 
-        <SidebarGroup class="overflow-hidden min-h-0">
-          <ChatListSection onClose={() => sidebar.setOpenMobile(false)} showGroupLabel />
+        <SidebarGroup class="overflow-hidden min-h-0 p-0">
+          <ChatListSection
+            class="p-2"
+            onClose={() => sidebar.setOpenMobile(false)}
+            showGroupLabel
+          />
         </SidebarGroup>
         <Show when={notifications.length > 0}>
           <span class="grow" />

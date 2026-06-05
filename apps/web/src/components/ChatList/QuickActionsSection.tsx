@@ -1,14 +1,10 @@
 import { Link } from '@tanstack/solid-router';
 import { For } from 'solid-js';
 
-import {
-  SidebarGroup,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem
-} from '~/components/ui/sidebar';
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '~/components/ui/sidebar';
 
 export interface QuickActionsSectionProps {
+  class?: string;
   onClose: () => void;
 }
 
@@ -32,7 +28,7 @@ const links = [
 
 export function QuickActionsSection(props: QuickActionsSectionProps) {
   return (
-    <SidebarMenu>
+    <SidebarMenu class={props.class}>
       <For each={links}>
         {(item) => (
           <SidebarMenuItem>
