@@ -558,22 +558,14 @@ async function convertUpdateToStatement(
 
       const statementsToRun = [] as { params: unknown[]; sql: string }[];
       for (const column in update.statements) {
-        if (column in columnsToUpdate) {
-          statementsToRun.push(
-            ...update.statements[column]!.map((statement) => ({
-              params: statement.params.map(toSql),
-              sql: statement.sql
-            }))
-          );
-          continue;
-        }
         for (const statement of update.statements[column]!) {
-          if (statement.executeEvenIfTimestampIsOlder) {
-            statementsToRun.push({
-              params: statement.params.map(toSql),
-              sql: statement.sql
-            });
-          }
+          const shouldRun =
+            statement.executeEvenIfTimestampIsOlder || columnsToUpdate.includes(column);
+          if (!shouldRun) continue;
+          statementsToRun.push({
+            params: statement.params.map(toSql),
+            sql: statement.sql
+          });
         }
       }
       return [
