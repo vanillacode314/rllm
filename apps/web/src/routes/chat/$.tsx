@@ -380,10 +380,16 @@ function ChatPageComponent() {
 
     const $chat = chat();
     if (loaderData().isNewChat) {
-      await logger.dispatch({
-        type: 'createChat',
-        data: { ...$chat, settings: chatSettings().unwrap(), messages: messages().toJSON() }
-      });
+      await logger.dispatch(
+        {
+          type: 'createChat',
+          data: { ...$chat, settings: chatSettings().unwrap(), messages: messages().toJSON() }
+        },
+        {
+          type: 'incrementChatAccessCount',
+          data: { id: $chat.id }
+        }
+      );
       await navigate({
         to: '/chat/$',
         params: { _splat: slugify($chat.title) },
