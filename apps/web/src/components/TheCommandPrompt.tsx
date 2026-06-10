@@ -14,7 +14,6 @@ import { SETTINGS_PAGES } from '~/constants/settings';
 import { logger } from '~/db/client';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { updateChatSettings } from '~/lib/chat/settings';
-import { ProxyManager } from '~/lib/proxy';
 import { queries } from '~/queries';
 import { slugify } from '~/utils/string';
 
@@ -85,7 +84,7 @@ function TheCommandPrompt() {
   });
   const router = useRouter();
 
-  const providers = useQuery(() => ({ ...queries.providers.all(), enabled: mode() === 'models' }));
+  const providers = useQuery(() => queries.providers.all());
   const adapters = createMemo(() =>
     (providers.isSuccess ? providers.data : []).map((provider) => ({
       adapter: new OpenAIAdapter(provider.baseUrl, provider.token),
@@ -94,12 +93,12 @@ function TheCommandPrompt() {
   );
   const models = useQuery(() => ({
     queryKey: ['models', 'all'],
-    queryFn: async ({ signal }) => {
+    queryFn: async () => {
       const models = await Promise.all(
         adapters().map(async ({ adapter, provider }) => {
           return {
             models: await adapter
-              .fetchAllModels(signal)
+              .fetchAllModels()
               .unwrapOrElse(() => provider.defaultModelIds.map((id) => ({ id }))),
             provider
           };
@@ -107,8 +106,7 @@ function TheCommandPrompt() {
       );
       return models;
     },
-    staleTime: 1000 * 60 * 30,
-    enabled: adapters().length > 0
+    staleTime: 0
   }));
 
   const chatsQuery = useQuery(() => ({ ...queries.chats.all(), enabled: mode() === 'chats' }));

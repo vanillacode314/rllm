@@ -14,7 +14,6 @@ export function handleCompletion(opts: {
   adapter: TAdapter;
   messages: TMessage[];
   model: string;
-  onAbort?: () => void;
   onChunk?: (chunks: TLLMMessageChunk[]) => void;
   reasoningEffort?: 'high' | 'low' | 'medium' | 'minimal' | 'none' | 'xhigh';
   signal?: AbortSignal;
@@ -23,16 +22,7 @@ export function handleCompletion(opts: {
 }): AsyncResult<void, Error> {
   return tryBlock(
     async function* () {
-      const {
-        onAbort,
-        adapter,
-        reasoningEffort = 'medium',
-        signal,
-        model,
-        onChunk,
-        system,
-        tools
-      } = opts;
+      const { adapter, reasoningEffort = 'medium', signal, model, onChunk, system, tools } = opts;
       let messages = structuredClone(opts.messages);
 
       const producedChunks = [] as TLLMMessageChunk[];
@@ -40,7 +30,6 @@ export function handleCompletion(opts: {
 
       const controller = new AbortController();
       if (signal) signal.addEventListener('abort', () => controller.abort());
-      if (onAbort) controller.signal.addEventListener('abort', onAbort);
       while (!controller.signal.aborted) {
         const generator = adapter.generateCompletion({
           messages,
@@ -50,7 +39,9 @@ export function handleCompletion(opts: {
           system,
           tools
         });
+        if (controller.signal.aborted) return;
         let result = await generator.next();
+        if (controller.signal.aborted) return;
 
         while (!result.done) {
           const { content, reasoning, tools } = result.value;

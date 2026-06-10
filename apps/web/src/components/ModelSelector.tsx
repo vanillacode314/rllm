@@ -36,7 +36,7 @@ export function ModelSelector(props: {
   const modelsQuery = useQuery(() => ({
     enabled: adapter() !== null && props.selectedProvider !== null,
     queryKey: ['providers', props.selectedProvider?.id, 'models', 'all'],
-    queryFn: ({ signal }) => adapter()!.fetchAllModels(signal).unwrapOrElse(defaultModels),
+    queryFn: () => adapter()!.fetchAllModels().unwrapOrElse(defaultModels),
     staleTime: 5000
   }));
 

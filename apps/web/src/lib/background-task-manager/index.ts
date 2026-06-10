@@ -105,26 +105,25 @@ export class BackgroundTaskManager {
     if (!item) return;
     this.running += 1;
     item.status = 'pending';
-    try {
-      console.debug(`[Running Background Task]`, item.task.serialize());
-      await new Promise<void>((res) => {
-        const schedule = this.getScheduler(item.task.priority);
-        schedule(async () => {
-          await item.task.handler(item.signal);
-          res();
-        });
-      });
-      console.debug(`[Finished Background Task]`, item.task.serialize());
-      item.promise.resolve();
-    } catch {
-      item.promise.reject();
-      console.debug(`[Aborted Background Task]`, item.task.serialize());
-    } finally {
-      this.items.delete(item);
-      await this.serialize();
-      this.running -= 1;
-      this.runTask();
-    }
+    console.debug(`[Running Background Task]`, item.task.serialize());
+    const schedule = this.getScheduler(item.task.priority);
+    schedule(() =>
+      Promise.try(item.task.handler, item.signal)
+        .then(() => {
+          console.debug(`[Finished Background Task]`, item.task.serialize());
+          item.promise.resolve();
+        })
+        .catch(() => {
+          console.debug(`[Aborted Background Task]`, item.task.serialize());
+          item.promise.reject();
+        })
+        .finally(async () => {
+          this.items.delete(item);
+          await this.serialize();
+          this.running -= 1;
+          this.runTask();
+        })
+    );
   }
 
   private static async serialize() {

@@ -1,6 +1,6 @@
 import type { Accessor } from 'solid-js';
 
-import { debounce } from '@tanstack/solid-pacer';
+import { createDebouncer } from '@tanstack/solid-pacer';
 import { createMemo, from } from 'solid-js';
 import { unwrap } from 'solid-js/store';
 import { Option } from 'ts-result-option';
@@ -32,14 +32,16 @@ import { makeTool } from './utils';
 export class ChatGenerationManager {
   private static chats = new Map<
     string,
-    { chat: TChat; controller: AbortController; done: boolean; path: number[] }
+    { chat: TChat; controller: AbortController; path: number[] }
   >();
   private static pendingSubscribers = new Map<string, Set<(isPending: boolean) => void>>();
   private static subscribers = new Map<string, Set<(chat: TChat, path: number[]) => void>>();
 
   static abortChat(id: string): void {
-    this.chats.get(id)?.controller.abort();
-    this.removeChat(id);
+    const $chat = this.chats.get(id);
+    if (!$chat) return;
+    $chat?.controller.abort();
+    finalizeChat($chat.chat, $chat.path);
   }
 
   static createIsPending(id: Accessor<string>): Accessor<boolean> {
@@ -276,13 +278,21 @@ export class ChatGenerationManager {
       );
     }
 
-    const $chat = this.addChat(id, chat, controller, newPath);
+    this.addChat(id, chat, controller, newPath);
     const prompts = [] as string[];
     if (chat.settings.includeDateTimeInSystemPrompt)
       prompts.push(`Current date and time: ${this.formatCurrentDateTime()}`);
     if (chat.settings.systemPrompt) prompts.push(chat.settings.systemPrompt);
     const system = prompts.join('\n\n');
 
+    const debouncedOnChunk = createDebouncer(
+      async (chunks) => {
+        if (chunks.length === 0) return;
+        Object.assign(message.chunks, chunks);
+        this.emitUpdate(id);
+      },
+      { wait: 16 }
+    );
     const promise = handleCompletion({
       system,
       messages,
@@ -290,16 +300,7 @@ export class ChatGenerationManager {
       model: chat.settings.modelId,
       tools: tools.toUndefined(),
       reasoningEffort: chat.settings.reasoning,
-      onChunk: debounce(
-        async (chunks) => {
-          if (chunks.length === 0) return;
-          Object.assign(message.chunks, chunks);
-          this.emitUpdate(id);
-          if ($chat.done) this.removeChat(id);
-        },
-        { wait: 16 }
-      ),
-      onAbort: () => finalizeChat(chat, newPath),
+      onChunk: debouncedOnChunk.maybeExecute,
       signal: controller.signal
     })
       .match(
@@ -313,8 +314,9 @@ export class ChatGenerationManager {
         }
       )
       .finally(() => {
+        debouncedOnChunk.cancel();
         this.emitUpdate(id);
-        $chat.done = true;
+        this.removeChat(id);
       });
     return { newPath, chat, controller, promise };
   }
@@ -329,11 +331,9 @@ export class ChatGenerationManager {
   }
 
   private static addChat(id: string, chat: TChat, controller: AbortController, path: number[]) {
-    const $chat = { chat, controller, path, done: false };
-    this.chats.set(id, $chat);
+    this.chats.set(id, { chat, controller, path });
     this.emitPendingUpdate(id);
     this.emitUpdate(id);
-    return $chat;
   }
 
   private static emitPendingUpdate(id: string) {
