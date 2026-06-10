@@ -341,9 +341,14 @@ export class OpenAIAdapter implements TAdapter {
 
     if (reasoningEffort) {
       requestBody.reasoning_effort = reasoningEffort;
-      // NOTE: google doesn't allow extra params in json body
-      if (!this.baseUrl.startsWith('https://generativelanguage.googleapis.com/v1beta/openai')) {
+      // NOTE: google and groq don't allow extra params in json body
+      if (
+        !this.baseUrl.startsWith('https://generativelanguage.googleapis.com/v1beta/openai') &&
+        !this.baseUrl.startsWith('https://api.groq.com/openai/v1')
+      ) {
+        // openrouter api
         requestBody.reasoning = { effort: reasoningEffort };
+        // llama server api
         requestBody.chat_template_kwargs = { enable_thinking: reasoningEffort !== 'none' };
       }
     }
