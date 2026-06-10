@@ -153,6 +153,8 @@ export function handleCompletion(opts: {
   );
 }
 
+// NOTE: cannot do parallel tool calls, since most mcp servers currently have
+// bugs in them that stall all requests other than the first when making parallel request
 function executeToolCalls(
   tool_calls: Array<TLLMMessageChunk & { type: 'tool_call' }>,
   tools: TTool[],
@@ -161,7 +163,7 @@ function executeToolCalls(
 ) {
   return AsyncResult.from(
     async () => {
-      const promises = tool_calls.map(async (tool_call) => {
+      for (const tool_call of tool_calls) {
         if (signal?.aborted) throw new Error('Aborted');
         await Option.fromUndefined(tools.find((tool) => tool.name === tool_call.tool.name))
           .okOrElse(
@@ -206,19 +208,6 @@ function executeToolCalls(
             }
           )
           .finally(() => onUpdate());
-      });
-      const results = await Promise.allSettled(promises);
-      for (let i = 0; i < results.length; i++) {
-        const result = results[i];
-        const tool_call = tool_calls[i];
-        if (result.status !== 'rejected') continue;
-        tool_call.content = formatError(
-          result.reason instanceof Error ?
-            result.reason
-          : new Error('Failed to execute tool', { cause: result.reason })
-        );
-        tool_call.success = false;
-        onUpdate();
       }
     },
     (e) => new Error('Error while executing tool calls', { cause: e })
