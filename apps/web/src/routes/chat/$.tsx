@@ -60,6 +60,7 @@ import {
   setMessages,
   setPrompt
 } from './-state';
+import { INCREMENT_ACCESS_COUNT_THRESHOLD_MILLISECONDS } from './constants';
 
 console.error('FIX OPTIMIZE STORAGE');
 
@@ -167,8 +168,6 @@ function ChatPageComponent() {
     setChatSettings(Option.Some(chatSettingsSchema.parse(loaderData().chatSettings)));
   });
   onMount(async () => {
-    const INCREMENT_THRESHOLD_MILLISECONDS = 1000 * 60 * 60;
-
     const { chat, isNewChat } = loaderData();
     const id = searchParams().id;
 
@@ -177,7 +176,7 @@ function ChatPageComponent() {
     const lastAccessedAt = chat.lastAccessedAt;
     if (
       typeof lastAccessedAt === 'number' &&
-      Date.now() - lastAccessedAt < INCREMENT_THRESHOLD_MILLISECONDS
+      Date.now() - lastAccessedAt < INCREMENT_ACCESS_COUNT_THRESHOLD_MILLISECONDS
     )
       return;
     await logger.dispatch({
