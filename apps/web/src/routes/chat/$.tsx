@@ -139,8 +139,7 @@ export const Route = createFileRoute('/chat/$')({
       chat,
       isNewChat,
       id: chat.id,
-      chatSettings: chat.settings,
-      lastAccessedAt: chat.last_accessed_at
+      chatSettings: chat.settings
     };
   }
 });
@@ -169,10 +168,13 @@ function ChatPageComponent() {
   });
   onMount(async () => {
     const INCREMENT_THRESHOLD_MILLISECONDS = 1000 * 60 * 60;
+
+    const { chat, isNewChat } = loaderData();
     const id = searchParams().id;
-    if (!id) return;
-    if (loaderData().isNewChat) return;
-    const lastAccessedAt = loaderData().lastAccessedAt;
+
+    if (!id || isNewChat || !chat) return;
+
+    const lastAccessedAt = chat.lastAccessedAt;
     if (
       typeof lastAccessedAt === 'number' &&
       Date.now() - lastAccessedAt < INCREMENT_THRESHOLD_MILLISECONDS
