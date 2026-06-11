@@ -1,4 +1,4 @@
-FROM nixos/nix AS base
+FROM ghcr.io/lix-project/lix:latest AS base
 RUN echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf;
 COPY . /app
 WORKDIR /app
