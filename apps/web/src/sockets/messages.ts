@@ -110,6 +110,33 @@ const initSocket = () =>
               console.debug('[WS] Connected');
             });
 
+            const batchHasEventWithTimestampUpdate = asyncBatch<string>(
+              async (timestamps) => {
+                const tree = await logger.getMerkleTree();
+                for (const timestamp of timestamps) {
+                  const yes =
+                    tree.getIndexByMeta(timestamp, (a, b) =>
+                      a === b ? 0
+                      : a < b ? -1
+                      : 1
+                    ) > -1;
+                  ws.send(
+                    toBinary(
+                      PeerPB.SyncWireMessageSchema,
+                      create(PeerPB.SyncWireMessageSchema, {
+                        accountId: $account.id,
+                        clientId,
+                        payload: {
+                          case: 'hasEventWithTimestampUpdate',
+                          value: { timestamp, yes }
+                        }
+                      })
+                    )
+                  );
+                }
+              },
+              { maxSize: 100, wait: 5000 }
+            );
             const batchTimestampForSending = asyncBatch<string>(
               async (timestamps) => {
                 const events = await db
@@ -315,26 +342,7 @@ const initSocket = () =>
                     }
                     case 'hasEventWithTimestampQuery': {
                       const { timestamp } = payload.value;
-                      const tree = await logger.getMerkleTree();
-                      const yes =
-                        tree.getIndexByMeta(timestamp, (a, b) =>
-                          a === b ? 0
-                          : a < b ? -1
-                          : 1
-                        ) > -1;
-                      ws.send(
-                        toBinary(
-                          PeerPB.SyncWireMessageSchema,
-                          create(PeerPB.SyncWireMessageSchema, {
-                            accountId: $account.id,
-                            clientId,
-                            payload: {
-                              case: 'hasEventWithTimestampUpdate',
-                              value: { timestamp, yes }
-                            }
-                          })
-                        )
-                      );
+                      batchHasEventWithTimestampUpdate(timestamp);
                       break;
                     }
                     case 'hasEventWithTimestampUpdate': {
