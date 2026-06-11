@@ -25,6 +25,38 @@ class ConnectionManager {
       wait: 1000
     }
   );
+  sendHasEventWithTimestampUpdateBatcher = new Batcher<string>(
+    async (timestamps) => {
+      const tree = await getMerkleTree(this.accountId);
+      for (const timestamp of timestamps) {
+        const yes =
+          tree.getIndexByMeta(timestamp, (a, b) =>
+            a === b ? 0
+            : a < b ? -1
+            : 1
+          ) > -1;
+        console.debug('[WS HasEventQueryBatch]', {
+          accountId: this.accountId,
+          found: yes,
+          timestamp
+        });
+        this.ws.sendBinary(
+          toBinary(
+            PeerPB.SyncWireMessageSchema,
+            create(PeerPB.SyncWireMessageSchema, {
+              accountId: this.accountId,
+              clientId: this.clientId,
+              payload: {
+                case: 'hasEventWithTimestampUpdate',
+                value: { timestamp, yes }
+              }
+            })
+          )
+        );
+      }
+    },
+    { maxSize: 100, wait: 5000 }
+  );
   sendTimestampBatcher = new Batcher<string>(
     async (timestamps) => {
       timestamps = unique(timestamps);
@@ -68,6 +100,7 @@ class ConnectionManager {
     if (!manager) return;
     ConnectionManager.MANAGERS.delete(id);
     manager.sendTimestampBatcher.cancel();
+    manager.sendHasEventWithTimestampUpdateBatcher.cancel();
     manager.recomputeMerkleTreeDebouncer.flush();
   }
   static getManager(id: string) {
@@ -111,8 +144,10 @@ class ConnectionManager {
       })
     );
   }
-
   recomputeMerkleTree = () => this.recomputeMerkleTreeDebouncer.maybeExecute();
+
+  sendHasEventWithTimestampUpdate = (timestamp: string) =>
+    this.sendHasEventWithTimestampUpdateBatcher.addItem(timestamp);
 
   sendTimestamp = (timestamp: string) => {
     console.debug('[WS Batcher] Adding timestamp', { accountId: this.accountId, timestamp });
@@ -310,27 +345,8 @@ export const socketPlugin = new Elysia({ serve: { idleTimeout: 120 } }).ws('ws',
       }
       case 'hasEventWithTimestampQuery': {
         const { timestamp } = payload.value;
-        const tree = await getMerkleTree(accountId);
-        const yes =
-          tree.getIndexByMeta(timestamp, (a, b) =>
-            a === b ? 0
-            : a < b ? -1
-            : 1
-          ) > -1;
-        console.debug('[WS HasEventQuery]', { accountId, found: yes, timestamp });
-        ws.sendBinary(
-          toBinary(
-            PeerPB.SyncWireMessageSchema,
-            create(PeerPB.SyncWireMessageSchema, {
-              accountId,
-              clientId: clock.clientId,
-              payload: {
-                case: 'hasEventWithTimestampUpdate',
-                value: { timestamp, yes }
-              }
-            })
-          )
-        );
+        console.debug('[WS HasEventQuery]', { accountId, timestamp });
+        manager.sendHasEventWithTimestampUpdate(timestamp);
         break;
       }
       case 'hasEventWithTimestampUpdate': {
