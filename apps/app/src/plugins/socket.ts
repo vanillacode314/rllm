@@ -1,7 +1,8 @@
 import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
-import { asyncBatch } from '@tanstack/pacer';
+import { Batcher, Debouncer } from '@tanstack/pacer';
 import { and, eq, inArray } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
+import { BufferSource } from 'elysia/ws/bun';
 import * as PeerPB from 'proto/peers/v1/peer_pb';
 
 import { db } from '~/db/client';
@@ -13,12 +14,102 @@ import { getLocalClock } from '~/utils/clock';
 
 const ZERO_DIGEST = new Uint8Array(0);
 
+class ConnectionManager {
+  static MANAGERS = new Map<string, ConnectionManager>();
+  recomputeMerkleTreeDebouncer = new Debouncer(() => recomputeMerkleTree(this.accountId), {
+    wait: 1000
+  });
+  sendTimestampBatcher = new Batcher<string>(
+    async (timestamps) => {
+      timestamps = unique(timestamps);
+      const events = await db
+        .select({
+          data: schema.messages.data,
+          signature: schema.messages.signature,
+          timestamp: schema.messages.timestamp
+        })
+        .from(schema.messages)
+        .where(
+          and(
+            eq(schema.messages.accountId, this.accountId),
+            inArray(schema.messages.timestamp, timestamps)
+          )
+        );
+      if (events.length === 0) {
+        console.warn('Timestamps requested but events not found', timestamps);
+        return;
+      }
+      this.ws.sendBinary(
+        this.createEventBatch(events.map((event) => create(PeerPB.PeerEventSchema, event)))
+      );
+    },
+    { maxSize: 30, wait: 5000 }
+  );
+  constructor(
+    private accountId: string,
+    private clientId: string,
+    private ws: { sendBinary: (data: BufferSource, compress?: boolean) => void }
+  ) {}
+  static deleteManager(id: string) {
+    const manager = ConnectionManager.MANAGERS.get(id);
+    if (!manager) return;
+    ConnectionManager.MANAGERS.delete(id);
+    manager.sendTimestampBatcher.cancel();
+    manager.recomputeMerkleTreeDebouncer.flush();
+  }
+  static getManager(id: string) {
+    return ConnectionManager.MANAGERS.get(id);
+  }
+  static async initManager(
+    accountId: string,
+    ws: { id: string; sendBinary: (data: BufferSource, compress?: boolean) => void }
+  ) {
+    const clock = await getLocalClock();
+    const manager = new ConnectionManager(accountId, clock.clientId, ws);
+    ConnectionManager.MANAGERS.set(ws.id, manager);
+    return manager;
+  }
+  createDigestQuery(merkleDepth: number, paths: number[][]) {
+    return toBinary(
+      PeerPB.SyncWireMessageSchema,
+      create(PeerPB.SyncWireMessageSchema, {
+        accountId: this.accountId,
+        clientId: this.clientId,
+        payload: {
+          case: 'digestQuery',
+          value: {
+            merkleDepth,
+            paths: paths.map((path) => create(PeerPB.TreePathSchema, { segments: path }))
+          }
+        }
+      })
+    );
+  }
+  createEventBatch(events: PeerPB.PeerEvent[]) {
+    return toBinary(
+      PeerPB.SyncWireMessageSchema,
+      create(PeerPB.SyncWireMessageSchema, {
+        accountId: this.accountId,
+        clientId: this.clientId,
+        payload: {
+          case: 'eventBatch',
+          value: { events }
+        }
+      })
+    );
+  }
+
+  recomputeMerkleTree = () => this.recomputeMerkleTreeDebouncer.maybeExecute();
+
+  sendTimestamp = (timestamp: string) => this.sendTimestampBatcher.addItem(timestamp);
+}
 function isZeroDigest(digest: Uint8Array) {
   return (
     digest.length === ZERO_DIGEST.length &&
     digest.every((value, index) => value === ZERO_DIGEST[index])
   );
 }
+
 function unique<T>(array: Array<T>): Array<T> {
   return Array.from(new Set(array));
 }
@@ -36,7 +127,7 @@ export const socketPlugin = new Elysia({ serve: { idleTimeout: 120 } }).ws('ws',
         t.Object({
           case: t.Literal('digestQuery'),
           value: t.Object({
-            merkleDepth: t.Integer(),
+            merkleDepth: t.Integer({ maximum: 64, minimum: 0 }),
             paths: t.Array(t.Object({ segments: t.Array(t.Number()) }))
           })
         }),
@@ -81,68 +172,16 @@ export const socketPlugin = new Elysia({ serve: { idleTimeout: 120 } }).ws('ws',
     { additionalProperties: true }
   ),
 
+  async close(ws) {
+    ConnectionManager.deleteManager(ws.id);
+  },
   async message(ws, body) {
+    const manager = ConnectionManager.getManager(ws.id);
+    if (!manager) throw new Error('ConnectionManager not found');
     const clock = await getLocalClock();
     const { accountId, payload } = body;
+    if (accountId !== ws.data.query.accountId) return;
     let version: null | string = null;
-
-    const batchTimestampsToSend = asyncBatch<string>(
-      async (timestamps) => {
-        timestamps = unique(timestamps);
-        const events = await db
-          .select({
-            data: schema.messages.data,
-            signature: schema.messages.signature,
-            timestamp: schema.messages.timestamp
-          })
-          .from(schema.messages)
-          .where(
-            and(
-              eq(schema.messages.accountId, accountId),
-              inArray(schema.messages.timestamp, timestamps)
-            )
-          );
-        if (events.length === 0) {
-          console.warn('Timestamps requested but events not found', timestamps);
-          return;
-        }
-        ws.sendBinary(
-          createEventBatch(events.map((event) => create(PeerPB.PeerEventSchema, event)))
-        );
-      },
-      { maxSize: 30, wait: 5000 }
-    );
-
-    function createDigestQuery(merkleDepth: number, paths: number[][]) {
-      return toBinary(
-        PeerPB.SyncWireMessageSchema,
-        create(PeerPB.SyncWireMessageSchema, {
-          accountId,
-          clientId: clock.clientId,
-          payload: {
-            case: 'digestQuery',
-            value: {
-              merkleDepth,
-              paths: paths.map((path) => create(PeerPB.TreePathSchema, { segments: path }))
-            }
-          }
-        })
-      );
-    }
-
-    function createEventBatch(events: PeerPB.PeerEvent[]) {
-      return toBinary(
-        PeerPB.SyncWireMessageSchema,
-        create(PeerPB.SyncWireMessageSchema, {
-          accountId,
-          clientId: clock.clientId,
-          payload: {
-            case: 'eventBatch',
-            value: { events }
-          }
-        })
-      );
-    }
 
     switch (payload.case) {
       case 'digestQuery': {
@@ -204,7 +243,7 @@ export const socketPlugin = new Elysia({ serve: { idleTimeout: 120 } }).ws('ws',
               continue;
             }
             if (isZeroDigest(theirDigest)) {
-              batchTimestampsToSend(timestamp);
+              manager.sendTimestamp(timestamp);
               continue;
             }
             ws.sendBinary(
@@ -222,7 +261,7 @@ export const socketPlugin = new Elysia({ serve: { idleTimeout: 120 } }).ws('ws',
             );
           } else {
             ws.sendBinary(
-              createDigestQuery(
+              manager.createDigestQuery(
                 tree.maxDepth,
                 Array.from({ length: tree.arity }).map((_, i) => [...path, i])
               )
@@ -234,7 +273,7 @@ export const socketPlugin = new Elysia({ serve: { idleTimeout: 120 } }).ws('ws',
       case 'handshake': {
         ({ version } = payload.value);
         const tree = await getMerkleTree(accountId);
-        ws.sendBinary(createDigestQuery(tree.maxDepth, [[]]));
+        ws.sendBinary(manager.createDigestQuery(tree.maxDepth, [[]]));
         break;
       }
       case 'hasEventWithTimestampQuery': {
@@ -264,14 +303,14 @@ export const socketPlugin = new Elysia({ serve: { idleTimeout: 120 } }).ws('ws',
       case 'hasEventWithTimestampUpdate': {
         const { timestamp, yes } = payload.value;
         if (yes) return;
-        batchTimestampsToSend(timestamp);
+        manager.sendTimestamp(timestamp);
         break;
       }
       case 'eventBatch': {
         await db.transaction(async (tx) => {
           for (const { data, signature, timestamp } of payload.value.events) {
             const verified = verifyData(data, signature, accountId);
-            if (!verified) return;
+            if (!verified) continue;
             const event = await receiveMessage(
               {
                 accountId,
@@ -285,16 +324,19 @@ export const socketPlugin = new Elysia({ serve: { idleTimeout: 120 } }).ws('ws',
             if (event)
               ws.publishBinary(
                 `new_events_${accountId}`,
-                createEventBatch([create(PeerPB.PeerEventSchema, { data, signature, timestamp })])
+                manager.createEventBatch([
+                  create(PeerPB.PeerEventSchema, { data, signature, timestamp })
+                ])
               );
           }
         });
-        void recomputeMerkleTree(accountId).catch(console.error);
+        void manager.recomputeMerkleTree();
       }
     }
   },
   async open(ws) {
     const { accountId } = ws.data.query;
+    await ConnectionManager.initManager(accountId, ws);
     const clock = await getLocalClock();
     ws.subscribe(`new_events_${accountId}`);
     ws.sendBinary(
