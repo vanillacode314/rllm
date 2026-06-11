@@ -110,30 +110,52 @@ const initSocket = () =>
               console.debug('[WS] Connected');
             });
 
+            const batchHasEventWithTimestampQuery = asyncBatch<string>(
+              async (timestamps) => {
+                ws.send(
+                  toBinary(
+                    PeerPB.SyncWireMessageSchema,
+                    create(PeerPB.SyncWireMessageSchema, {
+                      accountId: $account.id,
+                      clientId,
+                      payload: {
+                        case: 'hasEventWithTimestampQuery',
+                        value: { timestamps }
+                      }
+                    })
+                  )
+                );
+              },
+              { maxSize: 100, wait: 5000 }
+            );
             const batchHasEventWithTimestampUpdate = asyncBatch<string>(
               async (timestamps) => {
                 const tree = await logger.getMerkleTree();
-                for (const timestamp of timestamps) {
-                  const yes =
-                    tree.getIndexByMeta(timestamp, (a, b) =>
-                      a === b ? 0
-                      : a < b ? -1
-                      : 1
-                    ) > -1;
-                  ws.send(
-                    toBinary(
-                      PeerPB.SyncWireMessageSchema,
-                      create(PeerPB.SyncWireMessageSchema, {
-                        accountId: $account.id,
-                        clientId,
-                        payload: {
-                          case: 'hasEventWithTimestampUpdate',
-                          value: { timestamp, yes }
+                ws.send(
+                  toBinary(
+                    PeerPB.SyncWireMessageSchema,
+                    create(PeerPB.SyncWireMessageSchema, {
+                      accountId: $account.id,
+                      clientId,
+                      payload: {
+                        case: 'hasEventWithTimestampUpdates',
+                        value: {
+                          updates: timestamps.map((timestamp) =>
+                            create(PeerPB.HasEventWithTimestampUpdateSchema, {
+                              timestamp,
+                              yes:
+                                tree.getIndexByMeta(timestamp, (a, b) =>
+                                  a === b ? 0
+                                  : a < b ? -1
+                                  : 1
+                                ) > -1
+                            })
+                          )
                         }
-                      })
-                    )
-                  );
-                }
+                      }
+                    })
+                  )
+                );
               },
               { maxSize: 100, wait: 5000 }
             );
@@ -268,19 +290,7 @@ const initSocket = () =>
                             batchTimestampForSending(timestamp);
                             continue;
                           }
-                          ws.send(
-                            toBinary(
-                              PeerPB.SyncWireMessageSchema,
-                              create(PeerPB.SyncWireMessageSchema, {
-                                accountId: $account.id,
-                                clientId,
-                                payload: {
-                                  case: 'hasEventWithTimestampQuery',
-                                  value: { timestamp }
-                                }
-                              })
-                            )
-                          );
+                          batchHasEventWithTimestampQuery(timestamp);
                         } else {
                           ws.send(
                             createDigestQuery(
@@ -341,14 +351,16 @@ const initSocket = () =>
                       break;
                     }
                     case 'hasEventWithTimestampQuery': {
-                      const { timestamp } = payload.value;
-                      batchHasEventWithTimestampUpdate(timestamp);
+                      const { timestamps } = payload.value;
+                      for (const timestamp of timestamps)
+                        batchHasEventWithTimestampUpdate(timestamp);
                       break;
                     }
-                    case 'hasEventWithTimestampUpdate': {
-                      const { timestamp, yes } = payload.value;
-                      if (yes) return;
-                      batchTimestampForSending(timestamp);
+                    case 'hasEventWithTimestampUpdates': {
+                      const { updates } = payload.value;
+                      for (const { timestamp, yes } of updates) {
+                        if (!yes) batchTimestampForSending(timestamp);
+                      }
                       break;
                     }
                   }

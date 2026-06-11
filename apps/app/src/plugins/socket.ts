@@ -25,35 +25,54 @@ class ConnectionManager {
       wait: 1000
     }
   );
+  sendHasEventWithTimestampQueryBatcher = new Batcher<string>(
+    async (timestamps) => {
+      this.ws.sendBinary(
+        toBinary(
+          PeerPB.SyncWireMessageSchema,
+          create(PeerPB.SyncWireMessageSchema, {
+            accountId: this.accountId,
+            clientId: this.clientId,
+            payload: {
+              case: 'hasEventWithTimestampQuery',
+              value: { timestamps: unique(timestamps) }
+            }
+          })
+        )
+      );
+    },
+    { maxSize: 100, wait: 5000 }
+  );
   sendHasEventWithTimestampUpdateBatcher = new Batcher<string>(
     async (timestamps) => {
       const tree = await getMerkleTree(this.accountId);
-      for (const timestamp of timestamps) {
-        const yes =
+      const updates = timestamps.map((timestamp) => ({
+        timestamp,
+        yes:
           tree.getIndexByMeta(timestamp, (a, b) =>
             a === b ? 0
             : a < b ? -1
             : 1
-          ) > -1;
-        console.debug('[WS HasEventQueryBatch]', {
-          accountId: this.accountId,
-          found: yes,
-          timestamp
-        });
-        this.ws.sendBinary(
-          toBinary(
-            PeerPB.SyncWireMessageSchema,
-            create(PeerPB.SyncWireMessageSchema, {
-              accountId: this.accountId,
-              clientId: this.clientId,
-              payload: {
-                case: 'hasEventWithTimestampUpdate',
-                value: { timestamp, yes }
+          ) > -1
+      }));
+      console.debug('[WS HasEventQueryBatch]', { accountId: this.accountId, updates });
+      this.ws.sendBinary(
+        toBinary(
+          PeerPB.SyncWireMessageSchema,
+          create(PeerPB.SyncWireMessageSchema, {
+            accountId: this.accountId,
+            clientId: this.clientId,
+            payload: {
+              case: 'hasEventWithTimestampUpdates',
+              value: {
+                updates: updates.map((update) =>
+                  create(PeerPB.HasEventWithTimestampUpdateSchema, update)
+                )
               }
-            })
-          )
-        );
-      }
+            }
+          })
+        )
+      );
     },
     { maxSize: 100, wait: 5000 }
   );
@@ -145,10 +164,10 @@ class ConnectionManager {
     );
   }
   recomputeMerkleTree = () => this.recomputeMerkleTreeDebouncer.maybeExecute();
-
+  sendHasEventWithTimestampQuery = (timestamp: string) =>
+    this.sendHasEventWithTimestampQueryBatcher.addItem(timestamp);
   sendHasEventWithTimestampUpdate = (timestamp: string) =>
     this.sendHasEventWithTimestampUpdateBatcher.addItem(timestamp);
-
   sendTimestamp = (timestamp: string) => {
     console.debug('[WS Batcher] Adding timestamp', { accountId: this.accountId, timestamp });
     return this.sendTimestampBatcher.addItem(timestamp);
@@ -179,7 +198,7 @@ export const socketPlugin = new Elysia({ serve: { idleTimeout: 120 } }).ws('ws',
           case: t.Literal('digestQuery'),
           value: t.Object({
             merkleDepth: t.Integer({ maximum: 64, minimum: 0 }),
-            paths: t.Array(t.Object({ segments: t.Array(t.Number()) }))
+            paths: t.Array(t.Object({ segments: t.Array(t.Integer()) }))
           })
         }),
         t.Object({
@@ -188,7 +207,7 @@ export const socketPlugin = new Elysia({ serve: { idleTimeout: 120 } }).ws('ws',
             digests: t.Array(
               t.Object({
                 digest: t.Uint8Array(),
-                path: t.Array(t.Number())
+                path: t.Array(t.Integer())
               })
             ),
             merkleDepth: t.Integer()
@@ -208,11 +227,13 @@ export const socketPlugin = new Elysia({ serve: { idleTimeout: 120 } }).ws('ws',
         }),
         t.Object({
           case: t.Literal('hasEventWithTimestampQuery'),
-          value: t.Object({ timestamp: t.String() })
+          value: t.Object({ timestamps: t.Array(t.String()) })
         }),
         t.Object({
-          case: t.Literal('hasEventWithTimestampUpdate'),
-          value: t.Object({ timestamp: t.String(), yes: t.Boolean() })
+          case: t.Literal('hasEventWithTimestampUpdates'),
+          value: t.Object({
+            updates: t.Array(t.Object({ timestamp: t.String(), yes: t.Boolean() }))
+          })
         }),
         t.Object({
           case: t.Undefined(),
@@ -228,12 +249,10 @@ export const socketPlugin = new Elysia({ serve: { idleTimeout: 120 } }).ws('ws',
     ConnectionManager.deleteManager(ws.id);
   },
   async message(ws, body) {
-    let manager = ConnectionManager.getManager(ws.id);
+    const manager = ConnectionManager.getManager(ws.id);
     if (!manager) {
-      manager = ConnectionManager.console.error('[WS Error] ConnectionManager not found', {
-        wsId: ws.id
-      });
-      throw new Error('ConnectionManager not found');
+      console.error('[WS Error] ConnectionManager not found', { wsId: ws.id });
+      return;
     }
     const clock = await getLocalClock();
     const { accountId, payload } = body;
@@ -312,19 +331,7 @@ export const socketPlugin = new Elysia({ serve: { idleTimeout: 120 } }).ws('ws',
               manager.sendTimestamp(timestamp);
               continue;
             }
-            ws.sendBinary(
-              toBinary(
-                PeerPB.SyncWireMessageSchema,
-                create(PeerPB.SyncWireMessageSchema, {
-                  accountId,
-                  clientId: clock.clientId,
-                  payload: {
-                    case: 'hasEventWithTimestampQuery',
-                    value: { timestamp }
-                  }
-                })
-              )
-            );
+            manager.sendHasEventWithTimestampQuery(timestamp);
           } else {
             ws.sendBinary(
               manager.createDigestQuery(
@@ -344,16 +351,17 @@ export const socketPlugin = new Elysia({ serve: { idleTimeout: 120 } }).ws('ws',
         break;
       }
       case 'hasEventWithTimestampQuery': {
-        const { timestamp } = payload.value;
-        console.debug('[WS HasEventQuery]', { accountId, timestamp });
-        manager.sendHasEventWithTimestampUpdate(timestamp);
+        const { timestamps } = payload.value;
+        console.debug('[WS HasEventQuery]', { accountId, timestamps });
+        for (const timestamp of timestamps) manager.sendHasEventWithTimestampUpdate(timestamp);
         break;
       }
-      case 'hasEventWithTimestampUpdate': {
-        const { timestamp, yes } = payload.value;
-        console.debug('[WS HasEventUpdate]', { accountId, timestamp, yes });
-        if (yes) return;
-        manager.sendTimestamp(timestamp);
+      case 'hasEventWithTimestampUpdates': {
+        const { updates } = payload.value;
+        console.debug('[WS HasEventUpdate]', { accountId, updates });
+        for (const { timestamp, yes } of updates) {
+          if (!yes) manager.sendTimestamp(timestamp);
+        }
         break;
       }
       case 'eventBatch': {
@@ -406,6 +414,7 @@ export const socketPlugin = new Elysia({ serve: { idleTimeout: 120 } }).ws('ws',
     console.debug('[WS Open] Client connected', { accountId, wsId: ws.id });
   },
   parse: (_ws, message) => {
+    if (!(message instanceof Buffer)) throw new Error('Invalid message type');
     return fromBinary(PeerPB.SyncWireMessageSchema, new Uint8Array(message));
   },
   query: t.Object({ accountId: t.String() })
