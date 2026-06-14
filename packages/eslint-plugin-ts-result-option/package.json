@@ -17,15 +17,15 @@
     "dev": "tsdown --watch src"
   },
   "devDependencies": {
-    "tsdown": "^0.15.9"
+    "tsdown": "^0.22.2"
   },
   "dependencies": {
-    "@typescript-eslint/parser": "^8.46.2",
-    "@typescript-eslint/types": "^8.46.2",
-    "@typescript-eslint/utils": "^8.46.2",
-    "eslint": "^9.38.0",
+    "@typescript-eslint/parser": "^8.61.0",
+    "@typescript-eslint/types": "^8.61.0",
+    "@typescript-eslint/utils": "^8.61.0",
+    "eslint": "^10.5.0",
     "tsutils": "^3.21.0",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.2"
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.0"
   }
 }

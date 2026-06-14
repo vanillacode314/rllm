@@ -1,7 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
       "~/*": ["./src/*"]
     },
@@ -15,7 +14,7 @@
     "declarationMap": true,
     "declaration": true,
     "emitDeclarationOnly": true,
-    "lib": ["ESNext"],
+    "lib": ["ESNext", "DOM"],
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",

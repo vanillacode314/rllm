@@ -36,13 +36,13 @@
   "dependencies": {
     "hlc": "workspace:*",
     "merkle-tree": "workspace:*",
-    "sqlocal": "^0.17.0"
+    "sqlocal": "^0.18.0"
   },
   "devDependencies": {
-    "@types/node": "^25.2.0",
-    "eslint": "^9.39.2",
-    "prettier": "^3.8.1",
-    "tsdown": "^0.20.1",
-    "typescript": "^5.9.3"
+    "@types/node": "^25.9.3",
+    "eslint": "^10.5.0",
+    "prettier": "^3.8.4",
+    "tsdown": "^0.22.2",
+    "typescript": "^6.0.3"
   }
 }
