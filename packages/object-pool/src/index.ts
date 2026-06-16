@@ -1,17 +1,44 @@
+interface PromiseWithResolvers<T> {
+  promise: Promise<T>;
+  reject: (reason?: any) => void;
+  resolve: (value: T) => void;
+}
+
 /**
  * A generic object pool that reuses objects to minimize object creation overhead.
  * It supports a fixed capacity, a factory for creating new objects,
  * and a garbage collection mechanism for unused objects.
  */
 export class ObjectPool<T extends object> {
-  private pool = new Set<T>();
+  /**
+   * Returns the current number of available objects in the pool.
+   */
+  get available(): number {
+    return this.pool.size;
+  }
+  /**
+   * Returns the number of pending requests waiting for an object.
+   */
+  get pending(): number {
+    return this.queuedTasks.size;
+  }
+  /**
+   * Returns the current total number of objects (both available and in use).
+   */
+  get total(): number {
+    return this.size;
+  }
+  private destroyed = false;
   private readonly factory: () => T;
-  private queuedTasks = new Set<PromiseWithResolvers<T>>();
-  private size: number = 0;
   private readonly gcTime: number = 1000 * 60 * 5;
   private gcTimers = new Map<T, ReturnType<typeof setTimeout>>();
-  private destroyed = false;
   private owned = new WeakSet<T>();
+
+  private pool = new Set<T>();
+
+  private queuedTasks = new Set<PromiseWithResolvers<T>>();
+
+  private size: number = 0;
 
   /**
    * Creates an instance of ObjectPool.
@@ -31,6 +58,43 @@ export class ObjectPool<T extends object> {
 
     this.factory = factory;
     this.gcTime = gcTime ?? this.gcTime;
+  }
+
+  /**
+   * Destroys the pool, clearing all objects and rejecting any pending requests.
+   * Once destroyed, the pool cannot be used again.
+   */
+  destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
+
+    this.destroyed = true;
+
+    // Reject all pending tasks
+    this.queuedTasks.forEach((task) => {
+      task.reject(new Error('Pool destroyed'));
+    });
+    this.queuedTasks.clear();
+
+    // Clear all timers
+    this.gcTimers.forEach((timer) => clearTimeout(timer));
+    this.gcTimers.clear();
+
+    // Clear the pool
+    this.pool.clear();
+    this.size = 0;
+  }
+
+  /**
+   * Drains all objects from the pool without destroying them.
+   * Useful for testing or resetting the pool state.
+   */
+  drain(): void {
+    this.pool.clear();
+    this.gcTimers.forEach((timer) => clearTimeout(timer));
+    this.gcTimers.clear();
+    this.size = 0;
   }
 
   /**
@@ -120,64 +184,6 @@ export class ObjectPool<T extends object> {
     }
   }
 
-  /**
-   * Drains all objects from the pool without destroying them.
-   * Useful for testing or resetting the pool state.
-   */
-  drain(): void {
-    this.pool.clear();
-    this.gcTimers.forEach((timer) => clearTimeout(timer));
-    this.gcTimers.clear();
-    this.size = 0;
-  }
-
-  /**
-   * Destroys the pool, clearing all objects and rejecting any pending requests.
-   * Once destroyed, the pool cannot be used again.
-   */
-  destroy(): void {
-    if (this.destroyed) {
-      return;
-    }
-
-    this.destroyed = true;
-
-    // Reject all pending tasks
-    this.queuedTasks.forEach((task) => {
-      task.reject(new Error('Pool destroyed'));
-    });
-    this.queuedTasks.clear();
-
-    // Clear all timers
-    this.gcTimers.forEach((timer) => clearTimeout(timer));
-    this.gcTimers.clear();
-
-    // Clear the pool
-    this.pool.clear();
-    this.size = 0;
-  }
-
-  /**
-   * Returns the current number of available objects in the pool.
-   */
-  get available(): number {
-    return this.pool.size;
-  }
-
-  /**
-   * Returns the current total number of objects (both available and in use).
-   */
-  get total(): number {
-    return this.size;
-  }
-
-  /**
-   * Returns the number of pending requests waiting for an object.
-   */
-  get pending(): number {
-    return this.queuedTasks.size;
-  }
-
   private cancelGCTimer(obj: T): void {
     const timer = this.gcTimers.get(obj);
     if (timer) {
@@ -199,10 +205,4 @@ export class ObjectPool<T extends object> {
 
     this.gcTimers.set(obj, timer);
   }
-}
-
-interface PromiseWithResolvers<T> {
-  promise: Promise<T>;
-  resolve: (value: T) => void;
-  reject: (reason?: any) => void;
 }

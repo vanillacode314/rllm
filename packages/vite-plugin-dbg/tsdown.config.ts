@@ -1,4 +1,4 @@
-import { defineConfig } from 'tsdown'
+import { defineConfig } from 'tsdown';
 
 export default defineConfig((options) => ({
   clean: !options.watch,
@@ -8,5 +8,5 @@ export default defineConfig((options) => ({
   unbundle: true,
   minify: false,
   platform: 'node',
-  sourcemap: true,
-}))
+  sourcemap: true
+}));

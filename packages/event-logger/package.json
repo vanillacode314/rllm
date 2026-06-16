@@ -30,8 +30,8 @@
   "scripts": {
     "build": "tsdown --out-dir ./dist",
     "dev": "npm run build -- --watch src",
-    "lint": "eslint --fix src",
-    "format": "prettier --write src"
+    "lint": "oxlint --fix",
+    "format": "oxfmt"
   },
   "dependencies": {
     "hlc": "workspace:*",
@@ -39,9 +39,10 @@
     "sqlocal": "^0.18.0"
   },
   "devDependencies": {
+    "@rthings/config": "workspace:*",
     "@types/node": "^25.9.3",
-    "eslint": "^10.5.0",
-    "prettier": "^3.8.4",
+    "oxfmt": "^0.55.0",
+    "oxlint": "^1.70.0",
     "tsdown": "^0.22.2",
     "typescript": "^6.0.3"
   }

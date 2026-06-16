@@ -149,8 +149,8 @@ class Result<T, E> {
     return this._tag === 'Ok' ? Result.Ok(op(this._value as T)) : (this as unknown as Result<U, E>);
   }
   mapErr<F>(op: (e: E) => F): Result<T, F> {
-    return this._tag === 'Err' ?
-        Result.Err(op(this._error as E))
+    return this._tag === 'Err'
+      ? Result.Err(op(this._error as E))
       : (this as unknown as Result<T, F>);
   }
   /** If the result is Ok, returns `op(value)`, otherwise returns the supplied default. */

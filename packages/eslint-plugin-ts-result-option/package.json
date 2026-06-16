@@ -14,16 +14,19 @@
   },
   "scripts": {
     "build": "tsdown",
-    "dev": "tsdown --watch src"
+    "dev": "tsdown --watch src",
+    "format": "oxfmt",
+    "lint": "oxlint --fix"
   },
   "devDependencies": {
+    "oxfmt": "^0.55.0",
+    "oxlint": "^1.70.0",
     "tsdown": "^0.22.2"
   },
   "dependencies": {
     "@typescript-eslint/parser": "^8.61.0",
     "@typescript-eslint/types": "^8.61.0",
     "@typescript-eslint/utils": "^8.61.0",
-    "eslint": "^10.5.0",
     "tsutils": "^3.21.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.61.0"

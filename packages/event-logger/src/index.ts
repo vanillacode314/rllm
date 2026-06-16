@@ -1,3 +1,4 @@
+// oxlint-disable no-await-in-loop
 import { HLC } from 'hlc';
 import { MerkleTree, stringHasher } from 'merkle-tree';
 import { type ClientConfig, SQLocal, type Transaction } from 'sqlocal';
@@ -505,13 +506,13 @@ async function convertUpdateToStatement(
   const tableName = update.table;
   if (!schema.has(update.table)) throw new Error(`Table ${update.table} not found in schema`);
   const columns =
-    update.operation !== 'delete' ?
-      Object.keys(update.operation === 'sql' ? update.statements : update.data).filter(
-        (column) =>
-          !['createdAt', 'id', 'updatedAt'].includes(column) &&
-          (update.operation === 'sql' ? update.statements : update.data)[column] !== undefined
-      )
-    : [];
+    update.operation !== 'delete'
+      ? Object.keys(update.operation === 'sql' ? update.statements : update.data).filter(
+          (column) =>
+            !['createdAt', 'id', 'updatedAt'].includes(column) &&
+            (update.operation === 'sql' ? update.statements : update.data)[column] !== undefined
+        )
+      : [];
 
   const id = update.id;
 

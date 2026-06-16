@@ -1,8 +1,8 @@
-import type { Plugin } from "vite";
+import type { Plugin } from 'vite';
 
-import path from "node:path";
+import path from 'node:path';
 
-import { transformSource } from "./utils";
+import { transformSource } from './utils';
 
 export interface VitePluginDbgPluginOptions {
   /** Enable the macro (default: true). Set to false in prod builds. */
@@ -18,9 +18,7 @@ export interface VitePluginDbgPluginOptions {
  * It is completely **framework‑agnostic** – you can drop it into any Vite
  * project (React, Vue, Svelte, Solid, plain JS, etc.).
  */
-export default function VitePluginDbg(
-  opts: VitePluginDbgPluginOptions = {},
-): Plugin {
+export default function VitePluginDbg(opts: VitePluginDbgPluginOptions = {}): Plugin {
   const { enabled = true, include = /\.(js|ts|jsx|tsx|mjs|cjs|vue)$/ } = opts;
 
   // If a custom logger is supplied, we replace the generated `console.error`
@@ -30,8 +28,8 @@ export default function VitePluginDbg(
   // You can extend `buildDbgIife` to inject a different identifier if you wish.
 
   return {
-    enforce: "pre",
-    name: "vite-plugin-dbg$",
+    enforce: 'pre',
+    name: 'vite-plugin-dbg$',
 
     async transform(code, id) {
       if (!enabled) return null;
@@ -43,8 +41,8 @@ export default function VitePluginDbg(
 
       return {
         code: transformed,
-        map,
+        map
       };
-    },
+    }
   };
 }

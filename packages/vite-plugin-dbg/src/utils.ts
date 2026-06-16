@@ -1,10 +1,10 @@
-import _generate from "@babel/generator";
-import * as t from "@babel/types";
+import _generate from '@babel/generator';
+import * as t from '@babel/types';
 const generate = _generate.default;
-import { NodePath } from "@babel/traverse";
-import _traverse, { type Visitor } from "@babel/traverse";
+import { NodePath } from '@babel/traverse';
+import _traverse, { type Visitor } from '@babel/traverse';
 const traverse = _traverse.default;
-import * as parser from "@babel/parser";
+import * as parser from '@babel/parser';
 
 /* -------------------------------------------------------------------------
  *  Helper – does any node in the tree contain an AwaitExpression?
@@ -21,9 +21,9 @@ function containsAwait(node: t.Node): boolean {
       const child = cur[key];
       if (Array.isArray(child)) {
         for (const c of child) {
-          if (c && typeof (c as any).type === "string") stack.push(c as t.Node);
+          if (c && typeof (c as any).type === 'string') stack.push(c as t.Node);
         }
-      } else if (child && typeof (child as any).type === "string") {
+      } else if (child && typeof (child as any).type === 'string') {
         stack.push(child as t.Node);
       }
     }
@@ -39,37 +39,32 @@ function containsAwait(node: t.Node): boolean {
  */
 export function buildDbgIife(
   path: NodePath<t.CallExpression>,
-  filePath: string,
+  filePath: string
 ): { expr: t.CallExpression; async: boolean } {
   const { node } = path;
 
   // -----------------------------------------------------------------
   // 1️⃣  Raw source for each argument
   // -----------------------------------------------------------------
-  const argSources = node.arguments.map(
-    (arg) => generate(arg, { comments: false }).code,
-  );
+  const argSources = node.arguments.map((arg) => generate(arg, { comments: false }).code);
 
   // -----------------------------------------------------------------
   // 2️⃣  Temporary identifier for the evaluated value(s)
   // -----------------------------------------------------------------
-  const tmpId = path.scope.generateUidIdentifier("dbgVal");
+  const tmpId = path.scope.generateUidIdentifier('dbgVal');
 
   // -----------------------------------------------------------------
   // 3️⃣  console.error('[file:line] <source> =', <tmp>)
   // -----------------------------------------------------------------
   const line = node.loc?.start.line ?? 0;
   const location = `${filePath}:${line}`;
-  const sourceText = argSources.join(", ");
+  const sourceText = argSources.join(', ');
 
   const consoleCall = t.expressionStatement(
-    t.callExpression(
-      t.memberExpression(t.identifier("console"), t.identifier("error")),
-      [
-        t.stringLiteral(`[${location}] ${sourceText} =`),
-        t.identifier(tmpId.name),
-      ],
-    ),
+    t.callExpression(t.memberExpression(t.identifier('console'), t.identifier('error')), [
+      t.stringLiteral(`[${location}] ${sourceText} =`),
+      t.identifier(tmpId.name)
+    ])
   );
 
   // -----------------------------------------------------------------
@@ -79,18 +74,15 @@ export function buildDbgIife(
 
   if (node.arguments.length === 1) {
     body.push(
-      t.variableDeclaration("const", [
-        t.variableDeclarator(tmpId, node.arguments[0] as t.Expression),
-      ]),
+      t.variableDeclaration('const', [
+        t.variableDeclarator(tmpId, node.arguments[0] as t.Expression)
+      ])
     );
   } else {
     body.push(
-      t.variableDeclaration("const", [
-        t.variableDeclarator(
-          tmpId,
-          t.arrayExpression(node.arguments as t.Expression[]),
-        ),
-      ]),
+      t.variableDeclaration('const', [
+        t.variableDeclarator(tmpId, t.arrayExpression(node.arguments as t.Expression[]))
+      ])
     );
   }
 
@@ -106,10 +98,8 @@ export function buildDbgIife(
   // 6️⃣  IIFE (async when required)
   // -----------------------------------------------------------------
   const iife = t.callExpression(
-    t.parenthesizedExpression(
-      t.arrowFunctionExpression([], t.blockStatement(body), needsAsync),
-    ),
-    [],
+    t.parenthesizedExpression(t.arrowFunctionExpression([], t.blockStatement(body), needsAsync)),
+    []
   );
 
   return { expr: iife, async: needsAsync };
@@ -125,7 +115,7 @@ export function buildDbgIife(
 export function transformSource(
   code: string,
   id: string,
-  enabled = true,
+  enabled = true
 ): { code: string; map: any } {
   if (!enabled) {
     return { code, map: null };
@@ -136,15 +126,15 @@ export function transformSource(
   // ---------------------------------------------------------
   const ast = parser.parse(code, {
     plugins: [
-      "typescript",
-      "jsx",
-      "classProperties",
-      "decorators-legacy",
-      "dynamicImport",
-      "optionalChaining",
-      "nullishCoalescingOperator",
+      'typescript',
+      'jsx',
+      'classProperties',
+      'decorators-legacy',
+      'dynamicImport',
+      'optionalChaining',
+      'nullishCoalescingOperator'
     ],
-    sourceType: "module",
+    sourceType: 'module'
   });
 
   // ---------------------------------------------------------
@@ -152,11 +142,8 @@ export function transformSource(
   // ---------------------------------------------------------
   const visitor: Visitor = {
     CallExpression(path) {
-      if (t.isIdentifier(path.node.callee, { name: "dbg$" })) {
-        const { expr: iife, async: iifeIsAsync } = buildDbgIife(
-          path as any,
-          id,
-        );
+      if (t.isIdentifier(path.node.callee, { name: 'dbg$' })) {
+        const { expr: iife, async: iifeIsAsync } = buildDbgIife(path as any, id);
 
         // If the generated IIFE is async we must await it so that the surrounding
         // expression receives the *value* and not a Promise.
@@ -164,7 +151,7 @@ export function transformSource(
 
         path.replaceWith(replacement);
       }
-    },
+    }
   };
   traverse(ast, visitor);
 
@@ -177,9 +164,9 @@ export function transformSource(
       comments: true,
       retainLines: true,
       sourceFileName: id,
-      sourceMaps: true,
+      sourceMaps: true
     },
-    code,
+    code
   );
 
   return { code: output.code, map: output.map };

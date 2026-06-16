@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
+    "rootDir": "./src",
     "target": "esnext",
     "moduleDetection": "force",
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "types": ["node"],
     "strict": true,

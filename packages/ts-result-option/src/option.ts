@@ -395,13 +395,7 @@ class Option<T> {
    * @param optb – The other option to compare with.
    */
   xor(optb: Option<T>): Option<T> {
-    return (
-      this._isSome !== optb._isSome ?
-        this._isSome ?
-          this
-        : optb
-      : Option.None()
-    );
+    return this._isSome !== optb._isSome ? (this._isSome ? this : optb) : Option.None();
   }
 
   /**

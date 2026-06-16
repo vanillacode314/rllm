@@ -3,13 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { Node, Tree } from '~/utils/tree';
 
 // ---------------------------------------------------------------------------
-// Helper for creating sample nodes
-// ---------------------------------------------------------------------------
-function createLeaf(value: number): Node<number> {
-  return new Node(value);
-}
-
-// ---------------------------------------------------------------------------
 // Node
 // ---------------------------------------------------------------------------
 describe('Node', () => {

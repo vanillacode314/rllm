@@ -143,9 +143,9 @@ class AsyncResult<T, E> {
   mapErr<F>(op: (error: E) => MaybePromise<F>): AsyncResult<T, F> {
     return new AsyncResult(
       this.resultPromise.then(async (r) =>
-        r.isErr() ?
-          Result.Err(await Promise.resolve(op(r.unwrapErr())))
-        : (r as unknown as Result<T, F>)
+        r.isErr()
+          ? Result.Err(await Promise.resolve(op(r.unwrapErr())))
+          : (r as unknown as Result<T, F>)
       )
     );
   }
@@ -167,9 +167,7 @@ class AsyncResult<T, E> {
   or<F>(res: MaybeAsyncResult<T, F>): AsyncResult<T, F> {
     return new AsyncResult(
       this.resultPromise.then((r) =>
-        r.isOk() ? (r as unknown as Result<T, F>)
-        : Result.isResult(res) ? res
-        : res.resultPromise
+        r.isOk() ? (r as unknown as Result<T, F>) : Result.isResult(res) ? res : res.resultPromise
       )
     );
   }

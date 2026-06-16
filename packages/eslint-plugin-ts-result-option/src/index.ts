@@ -1,34 +1,34 @@
-import fs from 'node:fs'
-import path from 'node:path'
+import fs from 'node:fs';
+import path from 'node:path';
 
 const pkg = JSON.parse(
-  fs.readFileSync(path.join(import.meta.dirname, '../package.json'), 'utf8'),
-) as typeof import('../package.json')
+  fs.readFileSync(path.join(import.meta.dirname, '../package.json'), 'utf8')
+) as typeof import('../package.json');
 
-import { rule as mustUseResult } from './rules/must-use-result'
+import { rule as mustUseResult } from './rules/must-use-result';
 
-const namespace = pkg.name.replace(/^eslint-plugin-/, '')
+const namespace = pkg.name.replace(/^eslint-plugin-/, '');
 const plugin = {
-  meta: {
-    name: pkg.name,
-    version: pkg.version,
-    namespace,
-  },
   configs: {
     get recommended() {
-      return recommended
-    },
+      return recommended;
+    }
   },
-  rules: { 'must-use-result': mustUseResult },
-}
+  meta: {
+    name: pkg.name,
+    namespace,
+    version: pkg.version
+  },
+  rules: { 'must-use-result': mustUseResult }
+};
 
 const recommended = {
   plugins: {
-    [namespace]: plugin,
+    [namespace]: plugin
   },
   rules: {
-    'ts-result-option/must-use-result': 'error',
-  },
-}
+    'ts-result-option/must-use-result': 'error'
+  }
+};
 
-export default plugin
+export default plugin;

@@ -29,8 +29,9 @@ function safeParseJson<T = unknown>(
     reviver?: (this: unknown, key: string, value: unknown) => unknown;
     validate?: (value: unknown) => T;
   } = {}
-): typeof config.validate extends undefined ? Result<unknown, ParseError>
-: Result<T, ParseError | ValidationError> {
+): typeof config.validate extends undefined
+  ? Result<unknown, ParseError>
+  : Result<T, ParseError | ValidationError> {
   const { reviver } = config;
   const json = parse(value, reviver);
   if (json.isErr() || config.validate === undefined) return json;

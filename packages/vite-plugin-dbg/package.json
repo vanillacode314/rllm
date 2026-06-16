@@ -29,8 +29,8 @@
   "scripts": {
     "build": "tsdown --out-dir ./dist",
     "dev": "npm run build -- --watch src",
-    "lint": "eslint --fix src",
-    "format": "prettier --write src"
+    "lint": "oxlint --fix",
+    "format": "oxfmt"
   },
   "dependencies": {
     "@babel/core": "^7.28.4",
@@ -41,8 +41,8 @@
   },
   "devDependencies": {
     "@types/node": "^24.9.1",
-    "eslint": "^9.38.0",
-    "prettier": "^3.6.2",
+    "oxfmt": "^0.55.0",
+    "oxlint": "^1.70.0",
     "tsdown": "^0.15.9",
     "typescript": "^5.9.3"
   }

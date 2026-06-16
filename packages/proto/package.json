@@ -15,11 +15,13 @@
     "build": "npm run proto:generate && tsdown --out-dir ./dist",
     "proto:generate": "buf generate",
     "dev": "npm run build -- --watch src",
-    "lint": "eslint --fix src",
-    "format": "echo no formatting necessary"
+    "lint": "oxlint --fix",
+    "format": "buf format --write"
   },
   "devDependencies": {
-    "@types/bun": "^1.3.14"
+    "@types/bun": "^1.3.14",
+    "oxfmt": "^0.55.0",
+    "oxlint": "^1.70.0"
   },
   "peerDependencies": {
     "typescript": "^6.0.3"
