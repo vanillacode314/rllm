@@ -347,7 +347,10 @@ function LLMReasoningChunk(props: {
   return (
     <Collapsible class="space-y-1.5" onOpenChange={(value) => setOpen(value)} open={open()}>
       <CollapsibleTrigger class="text-sm opacity-90 flex w-full items-center gap-2">
-        <span class="font-mono text-xs tracking-wider uppercase">Reasoning</span>
+        <span class="font-mono text-xs tracking-wider uppercase flex gap-1 items-baseline">
+          <span class="icon-[heroicons--light-bulb] text-xs" />
+          <span>Reasoning</span>
+        </span>
         <Show
           fallback={
             <span
@@ -427,8 +430,9 @@ function LLMToolCallChunk(props: {
   return (
     <Collapsible class="space-y-1.5" onOpenChange={setOpen} open={open()}>
       <CollapsibleTrigger class="text-sm opacity-90 flex w-full items-center gap-2">
-        <span class="font-mono text-xs tracking-wider uppercase">
-          Tool Call <span class="normal-case">({props.chunk.tool.name})</span>
+        <span class="font-mono text-xs tracking-wider uppercase flex items-baseline gap-1">
+          <span class="icon-[heroicons--wrench-screwdriver] text-xs" />
+          <span class="normal-case">{props.chunk.tool.name}</span>
         </span>
         <Switch>
           <Match when={props.chunk.success === null}>
