@@ -3,7 +3,7 @@ import { toast } from 'solid-sonner';
 
 import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
-import { db, deleteDatabaseFile, getDatabaseInfo, logger } from '~/db/client';
+import { db, deleteDatabaseFile, getDatabaseSize, logger } from '~/db/client';
 import * as schema from '~/db/schema';
 import { setAccount } from '~/signals/account';
 import { getFile } from '~/utils/files';
@@ -12,8 +12,8 @@ import { round } from '~/utils/math';
 export const Route = createFileRoute('/settings/data')({
   component: SettingsStorageComponent,
   async loader() {
-    const info = await getDatabaseInfo();
-    return { size: info.databaseSizeBytes ?? null };
+    const size = await getDatabaseSize();
+    return { size: size ?? null };
   }
 });
 

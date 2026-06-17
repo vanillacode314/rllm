@@ -4,7 +4,7 @@ import type { Transaction } from 'sqlocal';
 import { getTableColumns, sql, type SQL } from 'drizzle-orm';
 import { AsyncResult, Result } from 'ts-result-option';
 
-import { beginTransaction, db } from '~/db/client';
+import { db, logger } from '~/db/client';
 
 const buildConflictUpdateColumns = <T extends SQLiteTable, Q extends keyof T['_']['columns']>(
   table: T,
@@ -49,21 +49,15 @@ function tableToObject<T extends object>(rows: never[][], columns: (keyof T)[]):
 const withTransaction: WithTransactionFn = (fn) =>
   AsyncResult.from(
     async () => {
-      const tx = await beginTransaction();
-      try {
+      return logger.db.transaction(async (tx) => {
         const result = await fn(tx);
         if (Result.isResult(result)) {
           if (result.isErr()) {
-            await tx.rollback();
-            return result;
+            throw result.unwrapErr();
           }
         }
-        await tx.commit();
         return result;
-      } catch (e) {
-        await tx.rollback();
-        throw e;
-      }
+      });
     },
     (e) => new Error('Failed to run transaction', { cause: e })
   );

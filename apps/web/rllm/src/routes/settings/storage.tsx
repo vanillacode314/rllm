@@ -12,7 +12,7 @@ import * as z from 'zod/mini';
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
-import { db, getDatabaseInfo, logger } from '~/db/client';
+import { db, getDatabaseSize, logger } from '~/db/client';
 import { tables } from '~/db/schema';
 import { account } from '~/signals/account';
 import { env } from '~/utils/env';
@@ -27,16 +27,18 @@ import { encryptionWorkerPool } from '~/workers/encryption';
 export const Route = createFileRoute('/settings/storage')({
   component: SettingsStorageComponent,
   async loader() {
-    const info = await getDatabaseInfo();
-    await queryClient.ensureQueryData({
-      queryFn: () =>
-        db
-          .select({ count: count() })
-          .from(tables.events)
-          .then((res) => res[0].count),
-      queryKey: ['db', 'messages', 'count']
-    });
-    return { size: info.databaseSizeBytes ?? null };
+    const [size] = await Promise.all([
+      getDatabaseSize(),
+      queryClient.ensureQueryData({
+        queryFn: () =>
+          db
+            .select({ count: count() })
+            .from(tables.events)
+            .then((res) => res[0].count),
+        queryKey: ['db', 'messages', 'count']
+      })
+    ]);
+    return { size: size ?? null };
   }
 });
 

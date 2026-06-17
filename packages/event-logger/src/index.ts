@@ -1,10 +1,9 @@
 // oxlint-disable no-await-in-loop
 import { HLC } from 'hlc';
 import { MerkleTree, stringHasher } from 'merkle-tree';
-import { type ClientConfig, SQLocal, type Transaction } from 'sqlocal';
 
 export type TConfig<TEvent extends Omit<TBaseEvent, 'timestamp' | 'version'>> = {
-  config: ClientConfig;
+  db: TSqlDB;
   eventToUpdates: TEventTransformer<TEvent>;
   invalidate?: (
     items: Array<{
@@ -17,9 +16,22 @@ export type TConfig<TEvent extends Omit<TBaseEvent, 'timestamp' | 'version'>> = 
 
 export type TEventTransformer<TEvent = TBaseEvent> = (
   event: NoInfer<TEvent & { timestamp: string; version: string }>,
-  tx: TTransaction
+  tx: TSqlRunner
 ) => MaybePromise<TUpdate[]>;
 
+export interface TSqlDB extends TSqlRunner {
+  transaction<T>(callback: (tx: TSqlRunner) => Promise<T>): Promise<T>;
+}
+
+export interface TSqlRunner {
+  batch(statements: TStatement[]): Promise<void>;
+  query<T extends Record<string, unknown>>(statement: TStatement): Promise<T[]>;
+}
+
+export type TStatement = {
+  params: unknown[];
+  sql: string;
+};
 export type TUpdate =
   | {
       creates: boolean;
@@ -45,9 +57,10 @@ export type TUpdate =
       operation: 'delete';
       table: string;
     };
+
 interface Logger<T extends TBaseEvent> {
-  clearMetadata: (key: string, tx?: TTransaction) => Promise<void>;
-  db: SQLocal;
+  clearMetadata: (key: string, tx?: TSqlRunner) => Promise<void>;
+  db: TSqlDB;
   dispatch: (
     ...events: Array<
       Omit<T, 'timestamp' | 'version'> & { dontLog?: boolean; timestamp?: string; version?: string }
@@ -67,55 +80,45 @@ interface Logger<T extends TBaseEvent> {
     handler: (data: TData, timestamp: string, version: string, type: string) => void,
     opts?: { remote?: boolean; self?: boolean }
   ) => () => void;
-  receive: (events: Array<T>, tx?: TTransaction) => Promise<() => Promise<void>>;
+  receive: (events: Array<T>, tx?: TSqlRunner) => Promise<() => Promise<void>>;
   setMetadata: (key: string, value: string) => Promise<void>;
-  setVersion: (version: string, tx?: TTransaction) => Promise<void>;
+  setVersion: (version: string, tx?: TSqlRunner) => Promise<void>;
+  sql: typeof sql;
 }
+
 type MaybePromise<T> = Promise<T> | T;
-type QueryFn = <T extends Record<string, unknown>>(query: {
-  params: unknown[];
-  sql: string;
-}) => Promise<T[]>;
 
 type TBaseEvent = { data: unknown; timestamp: string; type: string; version: string };
 
-type TTransaction = Pick<Transaction, 'batch' | 'query'>;
-
 export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timestamp' | 'version'>>({
-  config,
+  db,
   eventToUpdates,
   invalidate,
   validateEvent
 }: TConfig<TEvent>): Promise<Logger<TEvent & { timestamp: string; version: string }>> {
   const newClock = HLC.generate();
-  const db = new SQLocal({
-    ...config,
-    onInit: (sql) => [
-      sql`PRAGMA journal_mode=MEMORY;`,
-      sql`CREATE TABLE IF NOT EXISTS \`metadata\` ( \`key\` text PRIMARY KEY NOT NULL, \`value\` text NOT NULL);`,
-      sql`INSERT OR IGNORE INTO \`metadata\` (\`key\`, \`value\`) VALUES ('clock', ${newClock.toString()}), ('clientId', ${newClock.clientId});`,
-      sql`CREATE TABLE IF NOT EXISTS \`events\` (\`timestamp\` text PRIMARY KEY NOT NULL, \`type\` text NOT NULL, \`data\` text NOT NULL, \`version\` text NOT NULL);`,
-      sql`CREATE TABLE IF NOT EXISTS \`pendingEvents\` (\`id\` text NOT NULL, \`table\` text NOT NULL, \`timestamp\` text NOT NULL, \`data\` text NOT NULL, \`operation\` text NOT NULL, PRIMARY KEY (\`id\`, \`table\`, \`timestamp\`));`,
-      ...(config.onInit?.(sql) ?? [])
-    ]
-  });
-  const query = <T extends Record<string, unknown>>(query: { params: unknown[]; sql: string }) =>
-    db.batch(() => [query]).then(([result]) => result) as Promise<T[]>;
+  await db.batch([
+    sql`CREATE TABLE IF NOT EXISTS \`metadata\` ( \`key\` text PRIMARY KEY NOT NULL, \`value\` text NOT NULL);`,
+    sql`INSERT OR IGNORE INTO \`metadata\` (\`key\`, \`value\`) VALUES ('clock', ${newClock.toString()}), ('clientId', ${newClock.clientId});`,
+    sql`CREATE TABLE IF NOT EXISTS \`events\` (\`timestamp\` text PRIMARY KEY NOT NULL, \`type\` text NOT NULL, \`data\` text NOT NULL, \`version\` text NOT NULL);`,
+    sql`CREATE TABLE IF NOT EXISTS \`pendingEvents\` (\`id\` text NOT NULL, \`table\` text NOT NULL, \`timestamp\` text NOT NULL, \`data\` text NOT NULL, \`operation\` text NOT NULL, PRIMARY KEY (\`id\`, \`table\`, \`timestamp\`));`
+  ]);
 
-  await migratePendingEventsStatements(query);
+  await migratePendingEventsStatements(db);
 
-  async function getSchema(tx?: TTransaction) {
-    const q = tx ? tx.query : query;
-    const tbls = await q({
-      params: [],
-      sql: "SELECT name FROM sqlite_master WHERE type = 'table';"
-    }).then((rows) => rows.map((row) => row.name));
+  async function getSchema(tx: TSqlRunner = db) {
+    const tbls = await tx
+      .query<{ name: string }>({
+        params: [],
+        sql: "SELECT name FROM sqlite_master WHERE type = 'table';"
+      })
+      .then((rows) => rows.map((row) => row.name));
     const schema = new Map(
       await Promise.all(
         tbls.map(async (tbl) => {
-          const cols = await q({ params: [], sql: `PRAGMA table_info("${tbl}");` }).then((rows) =>
-            rows.map((row) => row.name)
-          );
+          const cols = await tx
+            .query<{ name: string }>({ params: [], sql: `PRAGMA table_info("${tbl}");` })
+            .then((rows) => rows.map((row) => row.name));
           return [tbl as string, new Set(cols as string[])] as const;
         })
       )
@@ -133,7 +136,7 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
   >();
 
   const logger = {
-    applyUpdates: async (updates: TUpdate[], timestamp: string, tx: TTransaction) => {
+    applyUpdates: async (updates: TUpdate[], timestamp: string, tx: TSqlRunner) => {
       if (updates.length === 0) return;
       const schema = await getSchema(tx);
       for (const update of updates) {
@@ -141,7 +144,7 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         if (statements === null) continue;
         try {
           if (update.operation === 'insert' || (update.operation === 'sql' && update.creates)) {
-            await tx.batch(() => statements);
+            await tx.batch(statements);
             await processPendingEvents(update.id, update.table, tx, schema);
           } else if (
             update.operation === 'update' ||
@@ -152,23 +155,20 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
             if (!exists) {
               await storePendingEvent(update, timestamp, tx);
             } else {
-              await tx.batch(() => statements);
+              await tx.batch(statements);
             }
           } else {
-            await tx.batch(() => statements);
+            await tx.batch(statements);
           }
         } catch (error) {
           console.debug(`Failed to apply update`, statements, update);
+          console.error(error);
           throw new Error(`Failed to apply update`, { cause: error });
         }
       }
     },
-    clearMetadata: async (key: string, tx?: TTransaction) => {
-      const q = tx ? tx.query : query;
-      await q({
-        params: [key],
-        sql: `DELETE FROM metadata WHERE key = ?`
-      });
+    clearMetadata: async (key: string, tx: TSqlRunner = db) => {
+      await tx.query(sql`DELETE FROM metadata WHERE key = ${key}`);
     },
     dispatch: async (...events: Array<TEvent & { dontLog?: boolean }>) => {
       if (events.length === 0) return;
@@ -259,25 +259,21 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         }))
       );
     },
-    getClientId: async (tx?: TTransaction): Promise<string> => {
-      const _query = tx ? tx.query : query;
-      return await _query<{ value: string }>({
-        params: [],
-        sql: "SELECT value FROM metadata WHERE key = 'clientId'"
-      }).then((rows) => rows[0]!.value);
+    getClientId: async (tx: TSqlRunner = db): Promise<string> => {
+      return await tx
+        .query<{ value: string }>(sql`SELECT value FROM metadata WHERE key = 'clientId'`)
+        .then((rows) => rows[0]!.value);
     },
-    getClock: async (tx?: TTransaction): Promise<HLC> => {
-      const _query = tx ? tx.query : query;
+    getClock: async (tx: TSqlRunner = db): Promise<HLC> => {
       return HLC.fromString(
-        await _query<{ value: string }>({
-          params: [],
-          sql: "SELECT value FROM metadata WHERE key = 'clock'"
-        }).then((rows) => {
-          return rows[0]!.value;
-        })
+        await tx
+          .query<{ value: string }>(sql`SELECT value FROM metadata WHERE key = 'clock'`)
+          .then((rows) => {
+            return rows[0]!.value;
+          })
       );
     },
-    async getMerkleTree(tx?: TTransaction): Promise<MerkleTree<string, string>> {
+    async getMerkleTree(tx: TSqlRunner = db): Promise<MerkleTree<string, string>> {
       const jsonTree = await logger.getMetadata('merkle-tree', tx);
       if (!jsonTree) return new MerkleTree(16, stringHasher);
 
@@ -287,19 +283,15 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         return this.recomputeMerkleTree(tx);
       }
     },
-    getMetadata: async (key: string, tx?: TTransaction) => {
-      const _query = tx ? tx.query : query;
-      return await _query<{ value: string }>({
-        params: [key],
-        sql: 'SELECT value FROM metadata WHERE key = ?'
-      }).then((rows) => rows[0]?.value ?? null);
+    getMetadata: async (key: string, tx: TSqlRunner = db) => {
+      return await tx
+        .query<{ value: string }>(sql`SELECT value FROM metadata WHERE key = ${key}`)
+        .then((rows) => rows[0]?.value ?? null);
     },
-    getVersion: async (tx?: TTransaction) => {
-      const _query = tx ? tx.query : query;
-      return await _query<{ value: string }>({
-        params: [],
-        sql: "SELECT value FROM metadata WHERE key = 'version'"
-      }).then((rows) => rows[0]?.value);
+    getVersion: async (tx: TSqlRunner = db) => {
+      return await tx
+        .query<{ value: string }>(sql`SELECT value FROM metadata WHERE key = 'version'`)
+        .then((rows) => rows[0]?.value);
     },
     on(
       type: '*' | TEvent['type'],
@@ -324,12 +316,12 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         subscribers.delete(subscriber);
       };
     },
-    async persistMerkleTree(tree: MerkleTree<string, string>, tx?: TTransaction) {
+    async persistMerkleTree(tree: MerkleTree<string, string>, tx: TSqlRunner) {
       await logger.setMetadata('merkle-tree', tree.toString(), tx);
     },
     receive: async (
       events: Array<TEvent & { timestamp: string; version: string }>,
-      tx?: TTransaction
+      tx: TSqlRunner = db
     ): Promise<() => Promise<void>> => {
       if (!tx) return await db.transaction((tx) => logger.receive(events, tx));
       const version = await logger.getVersion(tx);
@@ -355,7 +347,12 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         event: TEvent & { timestamp: string; version: string };
         updates: TUpdate[];
       }> = [];
-      const loggedEvents = await tx.query({
+      const loggedEvents = await tx.query<{
+        data: string;
+        timestamp: string;
+        type: string;
+        version: string;
+      }>({
         params: events
           .values()
           .flatMap((event) => [event.timestamp, event.type, event.data, event.version])
@@ -404,13 +401,12 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
           }))
         );
     },
-    async recomputeMerkleTree(tx?: TTransaction) {
+    async recomputeMerkleTree(tx: TSqlRunner = db) {
       const tree = new MerkleTree<string, string>(16, stringHasher);
       let hasNext = true;
       let after: null | string = null;
-      const q = tx ? tx.query : query;
       while (hasNext) {
-        const events: Array<{ timestamp: string }> = await q<{ timestamp: string }>({
+        const events: Array<{ timestamp: string }> = await tx.query<{ timestamp: string }>({
           params: after ? [after] : [],
           sql: `SELECT timestamp FROM events ${after ? 'WHERE timestamp > ?' : ''} ORDER BY timestamp ASC LIMIT 1000`
         });
@@ -422,30 +418,23 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
       await logger.persistMerkleTree(tree, tx);
       return tree;
     },
-    async resetMerkleTree(tx?: TTransaction) {
+    async resetMerkleTree(tx: TSqlRunner = db) {
       logger.clearMetadata('merkle-tree', tx);
     },
-    setClock: async (clock: HLC, tx: TTransaction) => {
-      await tx.query({
-        params: [clock.toString()],
-        sql: `UPDATE metadata SET value = ? WHERE key = 'clock'`
-      });
+    setClock: async (clock: HLC, tx: TSqlRunner) => {
+      await tx.query(sql`UPDATE metadata SET value = ${clock.toString()} WHERE key = 'clock'`);
     },
-    setMetadata: async (key: string, value: string, tx?: TTransaction) => {
+    setMetadata: async (key: string, value: string, tx: TSqlRunner = db) => {
       if (['clientId', 'clock', 'version'].includes(key))
         throw new Error(`not allowed to manually set metadata key: ${key}`);
-      const q = tx ? tx.query : query;
-      await q({
-        params: [key, value, value],
-        sql: `INSERT INTO metadata (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = ?`
-      });
+      await tx.query(
+        sql`INSERT INTO metadata (key, value) VALUES (${key}, ${value}) ON CONFLICT(key) DO UPDATE SET value = ${value}`
+      );
     },
-    setVersion: async (version: string, tx?: TTransaction) => {
-      const q = tx ? tx.query : query;
-      await q({
-        params: [version, version],
-        sql: `INSERT INTO metadata (key, value) VALUES ('version', ?) ON CONFLICT(key) DO UPDATE SET value = ?`
-      });
+    setVersion: async (version: string, tx: TSqlRunner = db) => {
+      await tx.query(
+        sql`INSERT INTO metadata (key, value) VALUES ('version', ${version}) ON CONFLICT(key) DO UPDATE SET value = ${version}`
+      );
     }
   };
 
@@ -463,7 +452,8 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
     on: logger.on,
     receive: logger.receive,
     setMetadata: logger.setMetadata,
-    setVersion: logger.setVersion
+    setVersion: logger.setVersion,
+    sql
   };
 }
 
@@ -486,7 +476,7 @@ const toSql = (value: unknown) => {
 async function checkRecordExists(
   tableName: string,
   id: string,
-  tx: TTransaction,
+  tx: TSqlRunner,
   schema: Map<string, Set<string>>
 ): Promise<boolean> {
   if (!schema.has(tableName)) return false;
@@ -501,7 +491,7 @@ async function convertUpdateToStatement(
   update: TUpdate,
   timestamp: string,
   schema: Map<string, Set<string>>,
-  tx: TTransaction
+  tx: TSqlRunner
 ): Promise<null | { params: unknown[]; sql: string }[]> {
   const tableName = update.table;
   if (!schema.has(update.table)) throw new Error(`Table ${update.table} not found in schema`);
@@ -543,7 +533,7 @@ async function convertUpdateToStatement(
     }
     case 'sql': {
       const existingUpdatedAt = await tx
-        .query({
+        .query<{ updatedAt: string }>({
           params: [id],
           sql: `SELECT updatedAt FROM "${tableName}" WHERE "id" = ?`
         })
@@ -578,7 +568,7 @@ async function convertUpdateToStatement(
     }
     case 'update': {
       const existingUpdatedAt = await tx
-        .query({
+        .query<{ updatedAt: string }>({
           params: [id],
           sql: `SELECT updatedAt FROM "${tableName}" WHERE "id" = ?`
         })
@@ -607,7 +597,7 @@ async function convertUpdateToStatement(
     }
     case 'upsert': {
       const existingUpdatedAt = await tx
-        .query({
+        .query<{ updatedAt: string }>({
           params: [id],
           sql: `SELECT updatedAt FROM "${tableName}" WHERE "id" = ?`
         })
@@ -665,24 +655,19 @@ async function convertUpdateToStatement(
   }
 }
 
-async function migratePendingEventsStatements(query: QueryFn): Promise<void> {
+async function migratePendingEventsStatements(db: TSqlDB): Promise<void> {
   const MIGRATION_KEY = '__event_logger_migration_v1_pendingEvents_statements';
-  const existing = await query({
+  const existing = await db.query<{ value: string }>({
     params: [MIGRATION_KEY],
     sql: 'SELECT value FROM metadata WHERE key = ?'
   });
   if (existing.length > 0) return;
-
-  await query({
-    params: [],
-    sql: "ALTER TABLE pendingEvents ADD COLUMN statements text NOT NULL DEFAULT '{}'"
-  });
-
-  await query({
-    params: [MIGRATION_KEY],
-    sql: `INSERT INTO metadata (key, value) VALUES (?, 'done') ON CONFLICT(key) DO UPDATE SET value = 'done'`
-  });
+  await db.batch([
+    sql`ALTER TABLE pendingEvents ADD COLUMN statements text NOT NULL DEFAULT '{}'`,
+    sql`INSERT INTO metadata (key, value) VALUES (${MIGRATION_KEY}, 'done') ON CONFLICT(key) DO UPDATE SET value = 'done'`
+  ]);
 }
+
 function partitionArray<T, U extends T>(
   array: T[],
   predicate: (value: T) => value is U
@@ -705,7 +690,7 @@ function partitionArray<T>(array: T[], predicate: (value: T) => boolean): [T[], 
 async function processPendingEvents(
   id: string,
   tableName: string,
-  tx: TTransaction,
+  tx: TSqlRunner,
   schema: Map<string, Set<string>>
 ): Promise<void> {
   const pendingEvents = await tx
@@ -735,7 +720,7 @@ async function processPendingEvents(
     );
     if (statements === null) continue;
     if (statements.length === 0) continue;
-    await tx.batch(() => statements);
+    await tx.batch(statements);
   }
 
   if (pendingEvents.length > 0) {
@@ -746,10 +731,17 @@ async function processPendingEvents(
   }
 }
 
+function sql(strings: TemplateStringsArray, ...values: unknown[]): TStatement {
+  return {
+    params: values.map(toSql),
+    sql: strings.reduce((sql, part, i) => sql + part + (i < values.length ? '?' : ''), '')
+  };
+}
+
 async function storePendingEvent(
   update: TUpdate,
   timestamp: string,
-  tx: TTransaction
+  tx: TSqlRunner
 ): Promise<void> {
   const data = 'data' in update ? update.data : {};
   const statements = update.operation === 'sql' ? JSON.stringify(update.statements) : '{}';

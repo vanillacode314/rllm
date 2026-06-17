@@ -1,6 +1,8 @@
 import { hashKey } from '@tanstack/solid-query';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
-import { createEventLogger } from 'event-logger';
+import { createEventLogger, type TSqlDB, type TStatement } from 'event-logger';
+import { fromSQLocal } from 'event-logger/sqlocal';
+import { SQLocal } from 'sqlocal';
 import { SQLocalDrizzle } from 'sqlocal/drizzle';
 import { AsyncResult } from 'ts-result-option';
 
@@ -10,26 +12,41 @@ import { queryClient } from '~/utils/query-client';
 import migrations from './migrations.json';
 import { tables } from './schema';
 
-const {
-  batch,
-  batchDriver,
-  beginTransaction,
-  deleteDatabaseFile,
-  driver,
-  getDatabaseFile,
-  getDatabaseInfo,
-  transaction
-} = new SQLocalDrizzle({
-  databasePath: 'rllm.db',
-  onInit: (sql) => [
-    sql`PRAGMA journal_mode=MEMORY;`,
-    sql`CREATE TABLE IF NOT EXISTS \`metadata\` ( \`key\` text PRIMARY KEY NOT NULL, \`value\` text NOT NULL);`
-  ]
-  // verbose: import.meta.env.DEV
-});
+export const DATABASE_PATH = 'rllm.db';
+
+async function loadSQLocalDb() {
+  console.debug('[DB] Loading SQLocal Instance');
+  const { batchDriver, deleteDatabaseFile, driver, getDatabaseInfo } = new SQLocalDrizzle({
+    databasePath: DATABASE_PATH,
+    onInit: (sql) => [sql`PRAGMA journal_mode=MEMORY;`]
+    // verbose: import.meta.env.DEV
+  });
+  console.debug('[DB] SQLocal Instance Info', await getDatabaseInfo());
+  const drizzleDb = drizzle(driver, batchDriver, {
+    schema: tables
+    //logger: {
+    //	logQuery(query, params) {
+    //		console.trace(query, params);
+    //	}
+    //}
+  });
+  const loggerDb = fromSQLocal(
+    new SQLocal({
+      databasePath: DATABASE_PATH,
+      onInit: (sql) => [sql`PRAGMA journal_mode=MEMORY;`]
+    })
+  );
+  async function getDatabaseSize() {
+    const info = await getDatabaseInfo();
+    return info.databaseSizeBytes;
+  }
+  return { deleteDatabaseFile, drizzleDb, getDatabaseSize, loggerDb };
+}
+
+const { deleteDatabaseFile, drizzleDb: db, getDatabaseSize, loggerDb } = await loadSQLocalDb();
 
 export const logger = await createEventLogger<TValidEvent>({
-  config: { databasePath: 'rllm.db' },
+  db: loggerDb,
   eventToUpdates: processMessage,
   invalidate: async (items) => {
     const uniqueKeys = new Map<string, string[]>();
@@ -39,7 +56,6 @@ export const logger = await createEventLogger<TValidEvent>({
         if (!uniqueKeys.has(hash)) uniqueKeys.set(hash, key);
       }
     }
-
     await Promise.all(
       uniqueKeys.values().map((key) => queryClient.invalidateQueries({ queryKey: key }))
     );
@@ -47,19 +63,9 @@ export const logger = await createEventLogger<TValidEvent>({
   validateEvent: (event) => validEventSchema.parse(event)
 });
 
-const db = drizzle(driver, batchDriver, {
-  schema: tables
-  //logger: {
-  //	logQuery(query, params) {
-  //		console.trace(query, params);
-  //	}
-  //}
-});
-
 const setupDb = () =>
   AsyncResult.from<void, Error>(
     async function () {
-      console.debug('[Database Info]', await getDatabaseInfo());
       const currentVersion = await logger.getVersion();
 
       for (const version of Object.keys(migrations).toSorted()) {
@@ -68,13 +74,12 @@ const setupDb = () =>
         const statements = migrations[version as keyof typeof migrations];
         // oxlint-disable-next-line no-await-in-loop
         await logger.db.transaction(async (tx) => {
-          for (const statement of statements) {
-            // oxlint-disable-next-line no-await-in-loop
-            await tx.query({
+          await tx.batch(
+            statements.map((statement) => ({
               params: [],
               sql: statement
-            });
-          }
+            }))
+          );
           await logger.setVersion(version, tx);
         });
         console.debug(`Migration ${version} applied`);
@@ -83,22 +88,15 @@ const setupDb = () =>
       console.debug(
         '[DB Metadata]',
         Object.fromEntries(
-          (await logger.db.sql<{ key: string; value: string }>`SELECT * FROM metadata;`).map(
-            ({ key, value }) => [key, value]
-          )
+          (
+            await logger.db.query<{ key: string; value: string }>(
+              logger.sql`SELECT * FROM metadata;`
+            )
+          ).map(({ key, value }) => [key, value])
         )
       );
     },
     (e) => new Error('Failed to setup database', { cause: e })
   );
 
-export {
-  batch,
-  beginTransaction,
-  db,
-  deleteDatabaseFile,
-  getDatabaseFile,
-  getDatabaseInfo,
-  setupDb,
-  transaction
-};
+export { db, deleteDatabaseFile, getDatabaseSize, setupDb };
