@@ -87,8 +87,8 @@ export const generateTitleAndTags = (config: {
           }
         ],
         model,
-        onChunk: async (chunks) => {
-          if (chunks.length === 0) return;
+        onUpdate: async ({ chunks }) => {
+          if (!chunks || chunks.length === 0) return;
           const chunk = chunks.at(-1)!;
           if (chunk.type !== 'text') return;
           output = chunk.content;
@@ -153,8 +153,8 @@ export const summarizeChat = (config: {
           }
         ],
         model,
-        onChunk: async (chunks) => {
-          if (chunks.length === 0) return;
+        onUpdate: async ({ chunks }) => {
+          if (!chunks || chunks.length === 0) return;
           const chunk = chunks.at(-1)!;
           if (chunk.type !== 'text') return;
           output = chunk.content;

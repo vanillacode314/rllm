@@ -55,7 +55,15 @@ export const messageSchema = z.discriminatedUnion('type', [
     finished: z.boolean(),
     model: z.string(),
     provider: z.string(),
-    type: z.literal('llm')
+    type: z.literal('llm'),
+    usage: z.optional(
+      z.object({
+        cached_tokens: z.optional(z.number()),
+        completion_tokens: z.optional(z.number()),
+        prompt_tokens: z.optional(z.number()),
+        reasoning_tokens: z.optional(z.number())
+      })
+    )
   }),
   z.object({
     chunks: z.array(userMessageChunkSchema),

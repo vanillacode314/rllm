@@ -29,5 +29,16 @@ export type TChatCompletionLastChunk =
       finish_reason: 'error';
     }
   | {
-      finish_reason: 'stop' | 'tool_calls';
+      finish_reason: 'stop';
+      usage?: TCompletionLastChunkUsage;
+    }
+  | {
+      finish_reason: 'tool_calls';
     };
+
+export type TCompletionLastChunkUsage = {
+  cached_tokens?: number;
+  completion_tokens?: number;
+  prompt_tokens?: number;
+  reasoning_tokens?: number;
+};

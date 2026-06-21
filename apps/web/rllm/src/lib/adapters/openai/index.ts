@@ -8,7 +8,8 @@ import * as z from 'zod/mini';
 import type {
   TAdapter,
   TChatCompletionChunk,
-  TChatCompletionLastChunk
+  TChatCompletionLastChunk,
+  TCompletionLastChunkUsage
 } from '~/lib/adapters/types';
 import type { TMessage } from '~/types/chat';
 
@@ -105,9 +106,13 @@ export class OpenAIAdapter implements TAdapter {
     }
 
     let lastToolCallId = Option.None<string>();
+    let finish_reason = Option.None<TChatCompletionLastChunk['finish_reason']>();
+    let error = Option.None<unknown>();
+    let usage = Option.None<TCompletionLastChunkUsage>();
     for await (const [completion, _abort] of this.processOpenAIAPIChatCompletionsStream(
       response.body
     )) {
+      error = Option.Some(completion);
       if (completion.isOkAnd((completion) => completion.error.isSome())) {
         return {
           error: new Error(completion.unwrap().error.unwrap().message),
@@ -118,6 +123,19 @@ export class OpenAIAdapter implements TAdapter {
         .unwrap()
         .choices.map((choices) => choices[0])
         .toNull();
+      usage = completion
+        .ok()
+        .andThen((completion) => completion.usage)
+        .map((usage) => ({
+          cached_tokens: usage.prompt_tokens_details
+            .andThen((details) => details.cached_tokens)
+            .toUndefined(),
+          completion_tokens: usage.completion_tokens.toUndefined(),
+          prompt_tokens: usage.prompt_tokens.toUndefined(),
+          reasoning_tokens: usage.completion_tokens_details
+            .andThen((details) => details.reasoning_tokens)
+            .toUndefined()
+        }));
       if (!choice) continue;
       const delta = choice.delta;
       if (delta.isSome()) {
@@ -130,20 +148,25 @@ export class OpenAIAdapter implements TAdapter {
           .or(lastToolCallId);
         yield { content, reasoning, tools };
       }
-      if (choice.finish_reason.isNone()) continue;
-      switch (choice.finish_reason.unwrap()) {
-        case 'error': {
-          return { error: completion, finish_reason: 'error' };
-        }
-        case 'stop': {
-          return { finish_reason: 'stop' };
-        }
-        case 'tool_calls': {
-          return { finish_reason: 'tool_calls' };
-        }
+      finish_reason = choice.finish_reason;
+    }
+    if (finish_reason.isNone()) throw new Error('No finish reason');
+    if (!['error', 'stop', 'tool_calls'].includes(finish_reason.unwrap()))
+      throw new Error(`Unexpected finish reason: ${finish_reason.unwrap()}`);
+    switch (finish_reason.unwrap()) {
+      case 'error': {
+        return { error, finish_reason: 'error' };
+      }
+      case 'stop': {
+        return {
+          finish_reason: 'stop',
+          usage: usage.toUndefined()
+        };
+      }
+      case 'tool_calls': {
+        return { finish_reason: 'tool_calls' };
       }
     }
-    throw new Error('No finish reason');
   }
 
   processContentDelta(delta: TOpenAIChatCompletionResponseChunkDelta) {
@@ -337,7 +360,12 @@ export class OpenAIAdapter implements TAdapter {
       throw new Error('No messages to send');
     }
 
-    const requestBody: Record<string, unknown> = { messages: serverMessages, model, stream: true };
+    const requestBody: Record<string, unknown> = {
+      messages: serverMessages,
+      model,
+      stream: true,
+      stream_options: { include_usage: true }
+    };
 
     if (reasoningEffort) {
       requestBody.reasoning_effort = reasoningEffort;

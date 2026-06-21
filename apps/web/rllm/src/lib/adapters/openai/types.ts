@@ -107,6 +107,22 @@ const openaiChatCompletionResponseChunkSchema = z.object({
       code: z.number(),
       message: z.string()
     })
+  ),
+  usage: asOption(
+    z.object({
+      completion_tokens: asOption(z.int().check(z.minimum(0))),
+      completion_tokens_details: asOption(
+        z.object({
+          reasoning_tokens: asOption(z.int().check(z.minimum(0)))
+        })
+      ),
+      prompt_tokens: asOption(z.int().check(z.minimum(0))),
+      prompt_tokens_details: asOption(
+        z.object({
+          cached_tokens: asOption(z.int().check(z.minimum(0)))
+        })
+      )
+    })
   )
 });
 type TOpenAIChatCompletionResponseChunk = z.infer<typeof openaiChatCompletionResponseChunkSchema>;

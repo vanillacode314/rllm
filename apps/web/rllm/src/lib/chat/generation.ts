@@ -102,13 +102,13 @@ export class ChatGenerationManager {
       mcpTools.length > 0 ? Option.Some(mcpTools) : Option.None()
     );
 
-    const message = {
+    const message: TMessage = {
       chunks: [],
       finished: false,
       model: chat.settings.modelId,
       provider: provider.name,
       type: 'llm'
-    } satisfies TMessage;
+    };
     node.addChild(new TreeNode(message));
     chat.finished = false;
     const newPath = [...path, node.children.length - 1];
@@ -285,10 +285,16 @@ export class ChatGenerationManager {
     if (chat.settings.systemPrompt) prompts.push(chat.settings.systemPrompt);
     const system = prompts.join('\n\n');
 
-    const debouncedOnChunk = createDebouncer(
-      async (chunks) => {
-        if (chunks.length === 0) return;
-        Object.assign(message.chunks, chunks);
+    const debouncedOnUpdate = createDebouncer(
+      async ({ chunks, usage }) => {
+        if (chunks && chunks.length > 0) Object.assign(message.chunks, chunks);
+        if (usage) {
+          if (message.usage) {
+            Object.assign(message.usage, usage);
+          } else {
+            message.usage = usage;
+          }
+        }
         this.emitUpdate(id);
       },
       { wait: 16 }
@@ -297,7 +303,7 @@ export class ChatGenerationManager {
       adapter,
       messages,
       model: chat.settings.modelId,
-      onChunk: debouncedOnChunk.maybeExecute,
+      onUpdate: debouncedOnUpdate.maybeExecute,
       reasoningEffort: chat.settings.reasoning,
       signal: controller.signal,
       system,
@@ -305,16 +311,17 @@ export class ChatGenerationManager {
     })
       .match(
         () => {
+          debouncedOnUpdate.flush();
           finalizeChat(chat, newPath);
         },
         (error) => {
+          debouncedOnUpdate.cancel();
           if (controller.signal.aborted) return;
           finalizeChat(chat, newPath, formatError(error));
           console.error(error);
         }
       )
       .finally(() => {
-        debouncedOnChunk.cancel();
         this.emitUpdate(id);
         this.removeChat(id);
       });

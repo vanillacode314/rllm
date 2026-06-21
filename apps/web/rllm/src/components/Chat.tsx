@@ -26,15 +26,24 @@ import type { TLLMMessageChunk, TMessage, TUserMessageChunk } from '~/types/chat
 import { useAutoScroll } from '~/directives/auto-scroll';
 import { ChatGenerationManager } from '~/lib/chat/generation';
 import { queries } from '~/queries';
+import { formatAsKeyValuePair } from '~/utils/object';
+import { dedent } from '~/utils/string';
 import { cn } from '~/utils/tailwind';
 import { lowlightWorkerPool } from '~/workers/lowlight';
 
 import Markdown from './Markdown';
+import { useAlertDialog } from './modals/auto-import/AlertDialog';
 import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
 import { Button } from './ui/button';
 import { Callout, CalloutContent, CalloutTitle } from './ui/callout';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from './ui/dropdown-menu';
 import { TextField, TextFieldTextArea } from './ui/text-field';
 
 type Props = JSX.HTMLAttributes<HTMLDivElement> & {
@@ -182,6 +191,11 @@ export function Chat(props: Props): JSXElement {
   );
 }
 
+function formatTokenNumberToString(tokens: number): string {
+  if (tokens === 1) return '1 Token';
+  return `${tokens} Tokens`;
+}
+
 function LLMChat(props: {
   index: number;
   isPending: boolean;
@@ -195,6 +209,7 @@ function LLMChat(props: {
   const hasPrev = () => props.index > 0;
   const [open, setOpen] = createSignal(true);
   const confirmDialog = useConfirmDialog();
+  const alertDialog = useAlertDialog();
 
   return (
     <Card class="bg-transparent border-none shadow-none">
@@ -242,28 +257,6 @@ function LLMChat(props: {
               <span class="sr-only">Regenerate</span>
               <span class="icon-[heroicons--arrow-path]" />
             </Button>
-            <Show when={props.onDelete}>
-              <Button
-                class="size-6"
-                disabled={props.isPending}
-                onClick={async () => {
-                  if (
-                    !(await confirmDialog.confirm({
-                      description: 'Are you sure?',
-                      title: 'Delete'
-                    }))
-                  )
-                    return;
-                  props.onDelete!();
-                }}
-                size="icon"
-                type="button"
-                variant="ghost"
-              >
-                <span class="sr-only">Delete</span>
-                <span class="icon-[heroicons--trash]" />
-              </Button>
-            </Show>
             <Show when={hasPrev() || hasNext()}>
               <Button
                 class="size-6"
@@ -295,6 +288,70 @@ function LLMChat(props: {
                 <span class="icon-[heroicons--arrow-right]" />
               </Button>
             </Show>
+            <DropdownMenu>
+              <DropdownMenuTrigger as={Button} size="icon" variant="ghost">
+                <span class="icon-[heroicons--ellipsis-horizontal]" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <Show
+                  when={
+                    props.message.usage &&
+                    (props.message.usage.prompt_tokens !== undefined ||
+                      props.message.usage.completion_tokens !== undefined)
+                  }
+                >
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      alertDialog.alert({
+                        description: formatAsKeyValuePair(
+                          {
+                            Context: formatTokenNumberToString(
+                              props.message.usage!.prompt_tokens ?? 0
+                            ),
+                            // oxlint-disable-next-line perfectionist/sort-objects
+                            'Cached Context': formatTokenNumberToString(
+                              props.message.usage!.cached_tokens ?? 0
+                            ),
+                            'Total Generated': formatTokenNumberToString(
+                              props.message.usage!.completion_tokens ?? 0
+                            ),
+                            // oxlint-disable-next-line perfectionist/sort-objects
+                            'Reasoning Generated': formatTokenNumberToString(
+                              props.message.usage!.reasoning_tokens ?? 0
+                            ),
+                            'Total (Context + Generated)': formatTokenNumberToString(
+                              (props.message.usage!.completion_tokens ?? 0) +
+                                (props.message.usage!.prompt_tokens ?? 0)
+                            )
+                          },
+                          (value) => value !== '0 Tokens'
+                        ),
+                        title: 'Usage'
+                      });
+                    }}
+                  >
+                    Info
+                  </DropdownMenuItem>
+                </Show>
+                <Show when={props.onDelete}>
+                  <DropdownMenuItem
+                    // oxlint-disable-next-line solid/reactivity
+                    onSelect={async () => {
+                      if (
+                        !(await confirmDialog.confirm({
+                          description: 'Are you sure?',
+                          title: 'Delete'
+                        }))
+                      )
+                        return;
+                      props.onDelete!();
+                    }}
+                  >
+                    Delete
+                  </DropdownMenuItem>
+                </Show>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardHeader>
         <CollapsibleContent>
@@ -778,5 +835,4 @@ function UserTextChunk(props: {
     </div>
   );
 }
-
 export default Chat;

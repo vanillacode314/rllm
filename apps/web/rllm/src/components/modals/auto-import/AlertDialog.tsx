@@ -44,7 +44,9 @@ export function AlertDialog() {
           <DialogHeader>
             <DialogTitle>{options()?.title}</DialogTitle>
             {options()?.description && (
-              <DialogDescription>{options()?.description}</DialogDescription>
+              <DialogDescription class="whitespace-pre-wrap">
+                {options()?.description}
+              </DialogDescription>
             )}
           </DialogHeader>
           <DialogFooter>

@@ -14,7 +14,10 @@ export function handleCompletion(opts: {
   adapter: TAdapter;
   messages: TMessage[];
   model: string;
-  onChunk?: (chunks: TLLMMessageChunk[]) => void;
+  onUpdate?: (data: {
+    chunks?: TLLMMessageChunk[];
+    usage?: (TMessage & { type: 'llm' })['usage'];
+  }) => void;
   reasoningEffort?: 'high' | 'low' | 'medium' | 'minimal' | 'none' | 'xhigh';
   signal?: AbortSignal;
   system?: string;
@@ -22,7 +25,7 @@ export function handleCompletion(opts: {
 }): AsyncResult<void, Error> {
   return tryBlock(
     async function* () {
-      const { adapter, model, onChunk, reasoningEffort = 'medium', signal, system, tools } = opts;
+      const { adapter, model, onUpdate, reasoningEffort = 'medium', signal, system, tools } = opts;
       let messages = structuredClone(opts.messages);
 
       const producedChunks = [] as TLLMMessageChunk[];
@@ -104,7 +107,7 @@ export function handleCompletion(opts: {
               lastChunk.inspect((lastChunk) => (lastChunk.content += content.unwrap()));
             }
           }
-          onChunk?.(producedChunks);
+          onUpdate?.({ chunks: producedChunks });
           // oxlint-disable-next-line no-await-in-loop
           result = await generator.next();
         }
@@ -116,6 +119,8 @@ export function handleCompletion(opts: {
           }
           case 'stop': {
             controller.abort();
+            const usage = result.value.usage;
+            onUpdate?.({ chunks: producedChunks, usage });
             break;
           }
           case 'tool_calls': {
@@ -125,7 +130,7 @@ export function handleCompletion(opts: {
                 chunk.type === 'tool_call' && !executedToolCalls.has(chunk.id)
             );
             yield* executeToolCalls(tool_calls, tools, controller.signal, () =>
-              onChunk?.(producedChunks)
+              onUpdate?.({ chunks: producedChunks })
             );
             for (const tool_call of tool_calls) {
               executedToolCalls.add(tool_call.id);
