@@ -28,7 +28,7 @@ import type { TAttachment, TChat, TMessage, TUserMessageChunk } from '~/types/ch
 import { useAppDrawer } from '~/components/AppDrawer';
 import Chat from '~/components/Chat';
 import ThePromptBox from '~/components/ThePromptBox';
-import { SidebarTrigger, useSidebar } from '~/components/ui/sidebar';
+import { SidebarTrigger, useSidebar } from 'ui/sidebar';
 import { FALLBACK_CHAT_SETTINGS } from '~/constants/chat-settings';
 import { useNotifications } from '~/context/notifications';
 import { logger } from '~/db/client';

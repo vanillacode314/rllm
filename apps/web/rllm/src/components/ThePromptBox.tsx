@@ -7,21 +7,21 @@ import { logger } from '~/db/client';
 import { MCPManager } from '~/lib/mcp/manager';
 import { chatSettings } from '~/routes/chat/-state';
 import { getFile } from '~/utils/files';
-import { cn } from '~/utils/tailwind';
+import { cn } from 'ui/utils/tailwind';
 
 import { useAppDrawer } from './AppDrawer';
 import { ExpandableTextField } from './ExpandableTextField';
 import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
 import { setChatSettingsDrawerOpen } from './TheChatSettingsDrawer';
 import { setCommandPromptOpen } from './TheCommandPrompt';
-import { Badge } from './ui/badge';
-import { Button } from './ui/button';
+import { Badge } from 'ui/badge';
+import { Button } from 'ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger
-} from './ui/dropdown-menu';
+} from 'ui/dropdown-menu';
 
 type Props = Omit<JSX.HTMLAttributes<HTMLDivElement>, 'onInput'> & {
   attachments: TAttachment[];

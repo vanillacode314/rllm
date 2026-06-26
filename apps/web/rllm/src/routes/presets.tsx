@@ -1,20 +1,20 @@
 import { useQuery } from '@tanstack/solid-query';
 import { createFileRoute } from '@tanstack/solid-router';
 import { For, Show } from 'solid-js';
-
-import { AppDrawerFab } from '~/components/AppDrawer';
-import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
-import { setEditPresetModalOpen } from '~/components/modals/auto-import/EditPresetModal';
-import { setChatSettingsDrawerOpen } from '~/components/TheChatSettingsDrawer';
-import { Button } from '~/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
+import { Button } from 'ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from 'ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger
-} from '~/components/ui/dropdown-menu';
+} from 'ui/dropdown-menu';
+
+import { AppDrawerFab } from '~/components/AppDrawer';
+import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
+import { setEditPresetModalOpen } from '~/components/modals/auto-import/EditPresetModal';
+import { setChatSettingsDrawerOpen } from '~/components/TheChatSettingsDrawer';
 import { REASONING_VALUE_TO_LABEL_MAP } from '~/constants/chat-settings';
 import {
   deletePreset,

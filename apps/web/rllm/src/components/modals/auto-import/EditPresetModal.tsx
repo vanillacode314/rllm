@@ -7,7 +7,7 @@ import type { TChatSettings } from '~/lib/chat/settings';
 import ValidationErrors from '~/components/form/ValidationErrors';
 import ModelSelector from '~/components/ModelSelector';
 import ProviderSelector from '~/components/ProviderSelector';
-import { Button } from '~/components/ui/button';
+import { Button } from 'ui/button';
 import {
   Dialog,
   DialogContent,
@@ -15,22 +15,22 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from '~/components/ui/dialog';
-import { Label } from '~/components/ui/label';
+} from 'ui/dialog';
+import { Label } from 'ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue
-} from '~/components/ui/select';
-import { Switch, SwitchControl, SwitchLabel, SwitchThumb } from '~/components/ui/switch';
+} from 'ui/select';
+import { Switch, SwitchControl, SwitchLabel, SwitchThumb } from 'ui/switch';
 import {
   TextField,
   TextFieldInput,
   TextFieldLabel,
   TextFieldTextArea
-} from '~/components/ui/text-field';
+} from 'ui/text-field';
 import { REASONING_VALUE_TO_LABEL_MAP } from '~/constants/chat-settings';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { updatePreset } from '~/lib/chat/presets';

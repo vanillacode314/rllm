@@ -17,8 +17,7 @@ import {
   Switch,
   useContext
 } from 'solid-js';
-
-import { cn } from '~/utils/tailwind';
+import { cn } from 'ui/utils/tailwind';
 
 import type { ButtonProps } from './button';
 

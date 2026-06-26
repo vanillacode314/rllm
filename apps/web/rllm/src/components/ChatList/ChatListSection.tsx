@@ -9,14 +9,14 @@ import { toast } from 'solid-sonner';
 
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
 import { usePromptDialog } from '~/components/modals/auto-import/PromptDialog';
-import { Badge } from '~/components/ui/badge';
-import { SidebarGroupLabel, SidebarMenu } from '~/components/ui/sidebar';
+import { Badge } from 'ui/badge';
+import { SidebarGroupLabel, SidebarMenu } from 'ui/sidebar';
 import { logger } from '~/db/client';
 import { queries } from '~/queries';
 import { isChatOpen } from '~/utils/chat';
 import { produce } from '~/utils/immer';
 import { createDerivedStore } from '~/utils/stores';
-import { cn } from '~/utils/tailwind';
+import { cn } from 'ui/utils/tailwind';
 
 import { ChatListHeader } from './ChatListHeader';
 import { ChatListItem } from './ChatListItem';

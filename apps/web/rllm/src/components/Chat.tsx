@@ -28,23 +28,23 @@ import { ChatGenerationManager } from '~/lib/chat/generation';
 import { queries } from '~/queries';
 import { formatAsKeyValuePair } from '~/utils/object';
 import { dedent } from '~/utils/string';
-import { cn } from '~/utils/tailwind';
+import { cn } from 'ui/utils/tailwind';
 import { lowlightWorkerPool } from '~/workers/lowlight';
 
 import Markdown from './Markdown';
 import { useAlertDialog } from './modals/auto-import/AlertDialog';
 import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
-import { Button } from './ui/button';
-import { Callout, CalloutContent, CalloutTitle } from './ui/callout';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
+import { Button } from 'ui/button';
+import { Callout, CalloutContent, CalloutTitle } from 'ui/callout';
+import { Card, CardContent, CardHeader, CardTitle } from 'ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from 'ui/collapsible';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger
-} from './ui/dropdown-menu';
-import { TextField, TextFieldTextArea } from './ui/text-field';
+} from 'ui/dropdown-menu';
+import { TextField, TextFieldTextArea } from 'ui/text-field';
 
 type Props = JSX.HTMLAttributes<HTMLDivElement> & {
   chat: Omit<TChat, 'createdAt' | 'updatedAt'>;

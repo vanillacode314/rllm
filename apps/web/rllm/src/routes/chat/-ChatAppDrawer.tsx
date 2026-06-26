@@ -5,7 +5,7 @@ import type { AppDrawerComponentProps } from '~/components/AppDrawer';
 
 import { ChatListSection, QuickActionsSection } from '~/components/ChatList';
 import ChatSettingsControls from '~/components/ChatSettingsControls';
-import { Separator } from '~/components/ui/separator';
+import { Separator } from 'ui/separator';
 import { type TChatSettings, updateChatSettings } from '~/lib/chat/settings';
 import { produce } from '~/utils/immer';
 

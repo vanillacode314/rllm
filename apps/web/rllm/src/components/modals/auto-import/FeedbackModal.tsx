@@ -2,7 +2,7 @@ import { createMemo, For, Index, onCleanup, Show } from 'solid-js';
 import { createStore, produce } from 'solid-js/store';
 
 import ValidationErrors from '~/components/form/ValidationErrors';
-import { Button } from '~/components/ui/button';
+import { Button } from 'ui/button';
 import {
   Dialog,
   DialogContent,
@@ -10,9 +10,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from '~/components/ui/dialog';
-import { TextField, TextFieldInput, TextFieldTextArea } from '~/components/ui/text-field';
-import { cn } from '~/utils/tailwind';
+} from 'ui/dialog';
+import { TextField, TextFieldInput, TextFieldTextArea } from 'ui/text-field';
+import { cn } from 'ui/utils/tailwind';
 
 const toggleCheckbox = (questionId: string, option: string) => {
   setState(

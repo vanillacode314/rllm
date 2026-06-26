@@ -15,7 +15,7 @@ import {
   ComboboxItemLabel,
   ComboboxListbox,
   ComboboxTrigger
-} from './ui/combobox';
+} from 'ui/combobox';
 
 export function PresetSelector(props: {
   class?: string;

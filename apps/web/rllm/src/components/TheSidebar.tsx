@@ -13,7 +13,7 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
   useSidebar
-} from './ui/sidebar';
+} from 'ui/sidebar';
 
 export function TheSidebar() {
   const sidebar = useSidebar();

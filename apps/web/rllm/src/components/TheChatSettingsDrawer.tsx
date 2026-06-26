@@ -9,7 +9,7 @@ import { isMobile } from '~/signals';
 import { produce } from '~/utils/immer';
 
 import ChatSettingsControls from './ChatSettingsControls';
-import { Button } from './ui/button';
+import { Button } from 'ui/button';
 import {
   Drawer,
   DrawerClose,
@@ -18,7 +18,7 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle
-} from './ui/drawer';
+} from 'ui/drawer';
 
 const [chatSettingsDrawerOpen, setChatSettingsDrawerOpen] = createSignal(false);
 

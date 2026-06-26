@@ -3,8 +3,7 @@ import type { JSX, ValidComponent } from 'solid-js';
 
 import * as AccordionPrimitive from '@kobalte/core/accordion';
 import { splitProps } from 'solid-js';
-
-import { cn } from '~/utils/tailwind';
+import { cn } from 'ui/utils/tailwind';
 
 const Accordion = AccordionPrimitive.Root;
 

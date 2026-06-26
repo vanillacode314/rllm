@@ -4,14 +4,14 @@ import { For } from 'solid-js';
 
 import type { TChat } from '~/types/chat';
 
-import { Badge } from '~/components/ui/badge';
+import { Badge } from 'ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger
-} from '~/components/ui/dropdown-menu';
-import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '~/components/ui/sidebar';
+} from 'ui/dropdown-menu';
+import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from 'ui/sidebar';
 import { ChatGenerationManager } from '~/lib/chat/generation';
 
 export interface ChatListItemProps {

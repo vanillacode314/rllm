@@ -9,18 +9,18 @@ import { createPreset, type TChatPreset } from '~/lib/chat/presets';
 import { type TChatSettings } from '~/lib/chat/settings';
 import { MCPManager } from '~/lib/mcp/manager';
 import { queries } from '~/queries';
-import { cn } from '~/utils/tailwind';
+import { cn } from 'ui/utils/tailwind';
 
 import ModelSelector from './ModelSelector';
 import PresetSelector from './PresetSelector';
 import ProviderSelector from './ProviderSelector';
-import { Badge } from './ui/badge';
-import { Button } from './ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
-import { Label } from './ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { SwitchControl, SwitchLabel, Switch as SwitchPrimitive, SwitchThumb } from './ui/switch';
-import { TextField, TextFieldInput, TextFieldLabel, TextFieldTextArea } from './ui/text-field';
+import { Badge } from 'ui/badge';
+import { Button } from 'ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from 'ui/dialog';
+import { Label } from 'ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'ui/select';
+import { SwitchControl, SwitchLabel, Switch as SwitchPrimitive, SwitchThumb } from 'ui/switch';
+import { TextField, TextFieldInput, TextFieldLabel, TextFieldTextArea } from 'ui/text-field';
 
 export type ChatSettingsControlsProps = {
   class?: string;

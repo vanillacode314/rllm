@@ -4,8 +4,7 @@ import type { Component, ComponentProps, ParentProps, VoidProps } from 'solid-js
 import * as DialogPrimitive from '@kobalte/core/dialog';
 import * as CommandPrimitive from 'cmdk-solid';
 import { splitProps } from 'solid-js';
-
-import { cn } from '~/utils/tailwind';
+import { cn } from 'ui/utils/tailwind';
 
 import { Dialog, DialogOverlay, DialogPortal } from './dialog';
 

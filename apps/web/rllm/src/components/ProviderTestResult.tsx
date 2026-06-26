@@ -1,12 +1,11 @@
 import { createVirtualizer } from '@tanstack/solid-virtual';
 import { createMemo, createSignal, For, Show } from 'solid-js';
+import { Alert, AlertDescription, AlertTitle } from 'ui/alert';
+import { Badge } from 'ui/badge';
+import { Button } from 'ui/button';
+import { Card, CardContent, CardHeader } from 'ui/card';
 
 import type { TestProviderResult } from '~/lib/providers/utils';
-
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Badge } from './ui/badge';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader } from './ui/card';
 
 interface ProviderTestResultProps {
   onRetry: () => void;

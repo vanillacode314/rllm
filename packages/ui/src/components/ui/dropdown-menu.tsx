@@ -3,8 +3,7 @@ import type { Component, ComponentProps, JSX, ValidComponent } from 'solid-js';
 
 import * as DropdownMenuPrimitive from '@kobalte/core/dropdown-menu';
 import { splitProps } from 'solid-js';
-
-import { cn } from '~/utils/tailwind';
+import { cn } from 'ui/utils/tailwind';
 
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 const DropdownMenuPortal = DropdownMenuPrimitive.Portal;

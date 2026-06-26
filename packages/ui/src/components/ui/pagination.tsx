@@ -3,8 +3,7 @@ import type { JSX, ValidComponent } from 'solid-js';
 
 import * as PaginationPrimitive from '@kobalte/core/pagination';
 import { Show, splitProps } from 'solid-js';
-
-import { cn } from '~/utils/tailwind';
+import { cn } from 'ui/utils/tailwind';
 
 import { buttonVariants } from './button';
 

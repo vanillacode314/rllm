@@ -1,8 +1,8 @@
 import { useColorMode } from '@kobalte/core/color-mode';
 import { createFileRoute } from '@tanstack/solid-router';
 
-import { Button } from '~/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
+import { Button } from 'ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'ui/card';
 
 export const Route = createFileRoute('/settings/appearance')({
   component: SettingsAppearanceComponent

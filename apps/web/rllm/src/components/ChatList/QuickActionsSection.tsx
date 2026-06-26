@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/solid-router';
 import { For } from 'solid-js';
 
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '~/components/ui/sidebar';
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from 'ui/sidebar';
 
 export interface QuickActionsSectionProps {
   class?: string;

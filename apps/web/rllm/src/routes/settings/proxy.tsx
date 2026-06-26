@@ -4,7 +4,7 @@ import { toast } from 'solid-sonner';
 import * as z from 'zod/mini';
 
 import ValidationErrors from '~/components/form/ValidationErrors';
-import { Button } from '~/components/ui/button';
+import { Button } from 'ui/button';
 import {
   Card,
   CardContent,
@@ -12,8 +12,8 @@ import {
   CardFooter,
   CardHeader,
   CardTitle
-} from '~/components/ui/card';
-import { TextField, TextFieldInput, TextFieldLabel } from '~/components/ui/text-field';
+} from 'ui/card';
+import { TextField, TextFieldInput, TextFieldLabel } from 'ui/text-field';
 import { logger } from '~/db/client';
 import { ProxyManager } from '~/lib/proxy';
 import { queries } from '~/queries';

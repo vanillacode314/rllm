@@ -9,8 +9,7 @@ import type { Component, ComponentProps, JSX, ValidComponent } from 'solid-js';
 
 import DrawerPrimitive from '@corvu/drawer';
 import { splitProps } from 'solid-js';
-
-import { cn } from '~/utils/tailwind';
+import { cn } from 'ui/utils/tailwind';
 
 const Drawer = DrawerPrimitive;
 

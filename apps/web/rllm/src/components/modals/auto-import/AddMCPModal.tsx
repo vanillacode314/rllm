@@ -4,7 +4,7 @@ import * as z from 'zod/mini';
 
 import ValidationErrors from '~/components/form/ValidationErrors';
 import MCPTestResult from '~/components/MCPTestResult';
-import { Button } from '~/components/ui/button';
+import { Button } from 'ui/button';
 import {
   Dialog,
   DialogContent,
@@ -12,8 +12,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from '~/components/ui/dialog';
-import { TextField, TextFieldInput, TextFieldLabel } from '~/components/ui/text-field';
+} from 'ui/dialog';
+import { TextField, TextFieldInput, TextFieldLabel } from 'ui/text-field';
 import { logger } from '~/db/client';
 import { testMCPServer, type TestMCPServerResult } from '~/lib/mcp/utils';
 import { createForm, parseFormErrors } from '~/utils/form';

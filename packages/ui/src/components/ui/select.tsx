@@ -4,8 +4,7 @@ import type { JSX, ValidComponent } from 'solid-js';
 import * as SelectPrimitive from '@kobalte/core/select';
 import { cva } from 'class-variance-authority';
 import { splitProps } from 'solid-js';
-
-import { cn } from '~/utils/tailwind';
+import { cn } from 'ui/utils/tailwind';
 
 const Select = SelectPrimitive.Root;
 const SelectValue = SelectPrimitive.Value;

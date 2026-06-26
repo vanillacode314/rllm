@@ -13,7 +13,7 @@ import { useAlertDialog } from '~/components/modals/auto-import/AlertDialog';
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
 import { usePromptDialog } from '~/components/modals/auto-import/PromptDialog';
 import { setSaveMnemonicModalOpen } from '~/components/modals/auto-import/SaveMnemonicModal';
-import { Button } from '~/components/ui/button';
+import { Button } from 'ui/button';
 import {
   Card,
   CardContent,
@@ -21,8 +21,8 @@ import {
   CardFooter,
   CardHeader,
   CardTitle
-} from '~/components/ui/card';
-import { TextField, TextFieldInput, TextFieldLabel } from '~/components/ui/text-field';
+} from 'ui/card';
+import { TextField, TextFieldInput, TextFieldLabel } from 'ui/text-field';
 import { deleteDatabaseFile, logger } from '~/db/client';
 import { queries } from '~/queries';
 import { account, setAccount } from '~/signals/account';

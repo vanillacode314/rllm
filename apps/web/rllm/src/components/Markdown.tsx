@@ -20,11 +20,11 @@ import { unified } from 'unified';
 import { rehypePlugins, remarkPlugins } from '~/utils/markdown';
 import { randomFloat } from '~/utils/math';
 import { createLatestAsync } from '~/utils/signals';
-import { cn } from '~/utils/tailwind';
+import { cn } from 'ui/utils/tailwind';
 import { markdownWorkerPool } from '~/workers/markdown';
 
 import CopyButton from './CopyButton';
-import { Button } from './ui/button';
+import { Button } from 'ui/button';
 
 const createProcessor = (pending: Accessor<boolean>) =>
   unified()

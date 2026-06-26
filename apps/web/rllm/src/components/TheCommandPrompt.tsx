@@ -27,7 +27,7 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator
-} from './ui/command';
+} from 'ui/command';
 
 interface TItem {
   condition?: () => boolean;

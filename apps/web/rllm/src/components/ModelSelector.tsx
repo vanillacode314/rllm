@@ -17,7 +17,7 @@ import {
   ComboboxItemLabel,
   ComboboxListbox,
   ComboboxTrigger
-} from './ui/combobox';
+} from 'ui/combobox';
 
 export function ModelSelector(props: {
   adapter: null | TAdapter;

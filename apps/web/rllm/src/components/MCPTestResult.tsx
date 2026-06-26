@@ -3,9 +3,9 @@ import { createSignal, For, Show } from 'solid-js';
 import type { TestMCPServerResult } from '~/lib/mcp/utils';
 import type { TTool } from '~/types';
 
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Badge } from './ui/badge';
-import { Card, CardContent, CardHeader } from './ui/card';
+import { Alert, AlertDescription, AlertTitle } from 'ui/alert';
+import { Badge } from 'ui/badge';
+import { Card, CardContent, CardHeader } from 'ui/card';
 
 interface MCPTestResultProps {
   onRetry: () => void;

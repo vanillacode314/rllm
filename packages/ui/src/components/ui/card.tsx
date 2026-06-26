@@ -1,8 +1,7 @@
 import type { Component, ComponentProps } from 'solid-js';
 
 import { splitProps } from 'solid-js';
-
-import { cn } from '~/utils/tailwind';
+import { cn } from 'ui/utils/tailwind';
 
 const Card: Component<ComponentProps<'div'>> = (props) => {
   const [local, others] = splitProps(props, ['class']);

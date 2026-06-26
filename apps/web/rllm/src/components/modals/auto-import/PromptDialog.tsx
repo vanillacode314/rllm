@@ -1,6 +1,6 @@
 import { createSignal, onCleanup, Show } from 'solid-js';
 
-import { Button } from '~/components/ui/button';
+import { Button } from 'ui/button';
 import {
   Dialog,
   DialogContent,
@@ -8,8 +8,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from '~/components/ui/dialog';
-import { TextField, TextFieldInput, TextFieldLabel } from '~/components/ui/text-field';
+} from 'ui/dialog';
+import { TextField, TextFieldInput, TextFieldLabel } from 'ui/text-field';
 
 export type TPromptDialogOptions = {
   readonly cancelText?: string;

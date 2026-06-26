@@ -10,8 +10,8 @@ import { safeParseJson, tryBlock } from 'ts-result-option/utils';
 import * as z from 'zod/mini';
 
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
-import { Button } from '~/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
+import { Button } from 'ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'ui/card';
 import { db, getDatabaseSize, logger } from '~/db/client';
 import { tables } from '~/db/schema';
 import { account } from '~/signals/account';

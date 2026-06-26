@@ -4,8 +4,7 @@ import type { Component, ComponentProps, JSX, ValidComponent } from 'solid-js';
 import * as SheetPrimitive from '@kobalte/core/dialog';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { splitProps } from 'solid-js';
-
-import { cn } from '~/utils/tailwind';
+import { cn } from 'ui/utils/tailwind';
 
 const Sheet = SheetPrimitive.Root;
 const SheetTrigger = SheetPrimitive.Trigger;

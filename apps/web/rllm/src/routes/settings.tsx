@@ -14,9 +14,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue
-} from '~/components/ui/select';
-import { SidebarTrigger } from '~/components/ui/sidebar';
-import { Tabs, TabsList, TabsTrigger } from '~/components/ui/tabs';
+} from 'ui/select';
+import { SidebarTrigger } from 'ui/sidebar';
+import { Tabs, TabsList, TabsTrigger } from 'ui/tabs';
 import { SETTINGS_PAGES } from '~/constants/settings';
 
 const filteredPages = () => SETTINGS_PAGES.filter((page) => !page.condition || page.condition());

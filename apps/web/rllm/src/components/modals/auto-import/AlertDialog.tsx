@@ -1,6 +1,6 @@
 import { createSignal } from 'solid-js';
 
-import { Button } from '~/components/ui/button';
+import { Button } from 'ui/button';
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from '~/components/ui/dialog';
+} from 'ui/dialog';
 
 export type TAlertDialogOptions = {
   readonly buttonText?: string;

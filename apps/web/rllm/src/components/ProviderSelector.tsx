@@ -13,7 +13,7 @@ import {
   ComboboxItemIndicator,
   ComboboxItemLabel,
   ComboboxTrigger
-} from './ui/combobox';
+} from 'ui/combobox';
 
 export function ProviderSelector(props: {
   class?: string;

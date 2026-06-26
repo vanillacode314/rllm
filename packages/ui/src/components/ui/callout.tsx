@@ -3,8 +3,7 @@ import type { Component, ComponentProps } from 'solid-js';
 
 import { cva } from 'class-variance-authority';
 import { splitProps } from 'solid-js';
-
-import { cn } from '~/utils/tailwind';
+import { cn } from 'ui/utils/tailwind';
 
 const calloutVariants = cva('rounded-md border-l-4 p-2 pl-4', {
   defaultVariants: {

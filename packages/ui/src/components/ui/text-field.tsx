@@ -4,8 +4,7 @@ import type { ValidComponent } from 'solid-js';
 import * as TextFieldPrimitive from '@kobalte/core/text-field';
 import { cva } from 'class-variance-authority';
 import { mergeProps, splitProps } from 'solid-js';
-
-import { cn } from '~/utils/tailwind';
+import { cn } from 'ui/utils/tailwind';
 
 type TextFieldRootProps<T extends ValidComponent = 'div'> =
   TextFieldPrimitive.TextFieldRootProps<T> & {

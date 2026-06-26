@@ -3,15 +3,15 @@ import { createFileRoute, redirect } from '@tanstack/solid-router';
 import { createMemo, Show } from 'solid-js';
 
 import ModelSelector from '~/components/ModelSelector';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
-import { Label } from '~/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'ui/card';
+import { Label } from 'ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue
-} from '~/components/ui/select';
+} from 'ui/select';
 import { logger } from '~/db/client';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { queries } from '~/queries';

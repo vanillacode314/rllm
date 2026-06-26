@@ -3,8 +3,7 @@ import type { Component, ComponentProps, JSX, ValidComponent } from 'solid-js';
 
 import * as DialogPrimitive from '@kobalte/core/dialog';
 import { splitProps } from 'solid-js';
-
-import { cn } from '~/utils/tailwind';
+import { cn } from 'ui/utils/tailwind';
 
 const Dialog = DialogPrimitive.Root;
 const DialogTrigger = DialogPrimitive.Trigger;

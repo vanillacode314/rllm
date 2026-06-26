@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import { createSignal, For } from 'solid-js';
 
-import { Button } from '~/components/ui/button';
+import { Button } from 'ui/button';
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from '~/components/ui/dialog';
+} from 'ui/dialog';
 
 import { useAlertDialog } from './AlertDialog';
 

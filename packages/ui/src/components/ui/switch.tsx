@@ -3,8 +3,7 @@ import type { JSX, ValidComponent } from 'solid-js';
 
 import * as SwitchPrimitive from '@kobalte/core/switch';
 import { splitProps } from 'solid-js';
-
-import { cn } from '~/utils/tailwind';
+import { cn } from 'ui/utils/tailwind';
 
 const Switch = SwitchPrimitive.Root;
 const SwitchDescription = SwitchPrimitive.Description;
