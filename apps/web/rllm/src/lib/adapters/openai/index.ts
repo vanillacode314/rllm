@@ -238,7 +238,11 @@ export class OpenAIAdapter implements TAdapter {
     );
   }
 
-  transformMessageChunksToRequestMessages(messages: TMessage[]) {
+  transformMessageChunksToRequestMessages(
+    messages: TMessage[],
+    opts?: Partial<{ includeReasoningContent: boolean }>
+  ) {
+    const { includeReasoningContent = true } = opts;
     const retval = [] as TOpenAIChatCompletionRequest['messages'][];
     let currentChunk = null as null | TOpenAIChatCompletionRequest['messages'];
     const toolCallsChunks = [] as ((TMessage & { role: 'assistant' })['chunks'][number] & {
@@ -305,10 +309,12 @@ export class OpenAIAdapter implements TAdapter {
           role: 'assistant',
           tool_calls
         };
+        if (!includeReasoningContent) delete currentChunk['reasoning_content'];
         return;
       }
       if (content !== undefined) currentChunk.content = content;
-      if (reasoning_content !== undefined) currentChunk.reasoning_content = reasoning_content;
+      if (includeReasoningContent && reasoning_content !== undefined)
+        currentChunk.reasoning_content = reasoning_content;
       if (tool_calls !== undefined) currentChunk.tool_calls = tool_calls;
     }
     for (let i = 0; i < messages.length; i++) {
@@ -348,7 +354,9 @@ export class OpenAIAdapter implements TAdapter {
     tools?: TTool[];
   }) {
     const { messages, model, reasoningEffort, system, tools } = opts;
-    const serverMessages = this.transformMessageChunksToRequestMessages(messages);
+    const serverMessages = this.transformMessageChunksToRequestMessages(messages, {
+      includeReasoningContent: !this.baseUrl.startsWith('https://api.groq.com/openai/v1')
+    });
 
     if (system !== undefined && system.trim().length > 0)
       serverMessages.unshift({
