@@ -296,6 +296,7 @@ function Toolbar(props: {
             class="border-px rounded-r-md"
             onClick={() => props.onFeedbackEnabledChange(!props.feedbackEnabled)}
             size="icon"
+            title="Feedback mode (allows the AI to ask you questions using forms)"
             type="button"
             variant={props.feedbackEnabled ? 'default' : 'outline'}
           >
