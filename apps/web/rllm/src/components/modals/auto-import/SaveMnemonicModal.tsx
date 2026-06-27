@@ -40,8 +40,9 @@ export function SaveMnemonicModal() {
         <DialogHeader>
           <DialogTitle>Passphrase</DialogTitle>
           <DialogDescription>
-            Save this passphrase in a secure place. If you lose it, you will lose access to your
-            account. Anyone with this passphrase can access your account.
+            Save or write this passphrase in a secure place (like a password manager, a paper note
+            in a secure place, etc...). If you lose it, you will lose access to your account. Anyone
+            with this passphrase can access your account.
           </DialogDescription>
         </DialogHeader>
         <div class="grid gap-4 py-4">
