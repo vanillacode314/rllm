@@ -13,6 +13,8 @@ import { SidebarProvider } from 'ui/sidebar';
 import { Toaster } from 'ui/sonner';
 import { deleteDatabaseFile, setupDb } from '~/db/client';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
+import { ChatGenerationManager } from '~/lib/chat/generation';
+import { dbStorage, scratchpadStorage } from '~/lib/chat/generation/storages';
 import { initChatSettings } from '~/lib/chat/settings';
 import { MCPManager } from '~/lib/mcp/manager';
 import { ProxyManager } from '~/lib/proxy';
@@ -31,6 +33,8 @@ export const Route = createRootRouteWithContext()({
     void initSocket().unwrap();
     void ProxyManager.initialize().finally(() => void MCPManager.initialize());
     void BackgroundTaskManager.init();
+    ChatGenerationManager.registerStorage(dbStorage);
+    ChatGenerationManager.registerStorage(scratchpadStorage);
   }),
   component: RootComponent,
   errorComponent: ErrorComponent

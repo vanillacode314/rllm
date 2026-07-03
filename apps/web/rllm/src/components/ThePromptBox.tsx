@@ -5,7 +5,7 @@ import type { TAttachment } from '~/types/chat';
 
 import { logger } from '~/db/client';
 import { MCPManager } from '~/lib/mcp/manager';
-import { chatSettings } from '~/routes/chat/-state';
+import { chatSettings } from '~/routes/(chat)/-state';
 import { getFile } from '~/utils/files';
 import { cn } from 'ui/utils/tailwind';
 
@@ -37,10 +37,16 @@ type Props = Omit<JSX.HTMLAttributes<HTMLDivElement>, 'onInput'> & {
   onInput: (value: string) => void;
   onMessage: (value: string) => void;
   onRemoveAttachment: (id: string) => void;
+  onReset?: () => void;
+  onSave?: () => void;
   prompt: string;
+  scratchpad?: boolean;
 };
 export function PromptBox(props: Props) {
   const [local, others] = splitProps(props, [
+    'onReset',
+    'onSave',
+    'scratchpad',
     'class',
     'chatId',
     'inputRef',
@@ -87,7 +93,7 @@ export function PromptBox(props: Props) {
           <For each={local.attachments}>
             {(attachment) => (
               <li
-                class="grid grid-cols-[auto_1fr_auto] gap-2 items-center bg-primary/20 p-2 rounded-lg max-w-48 relative before:absolute before:inset-0 before:bg-primary/20  before:origin-left before:scale-x-[var(--progress)] before:transition-transform overflow-hidden"
+                class="grid grid-cols-[auto_1fr_auto] gap-2 items-center bg-primary/20 p-2 rounded-lg max-w-48 relative before:absolute before:inset-0 before:bg-primary/20  before:origin-left before:scale-x-(--progress) before:transition-transform overflow-hidden"
                 style={{
                   '--progress': attachment.progress
                 }}
@@ -127,7 +133,10 @@ export function PromptBox(props: Props) {
         onAttachment={props.onAttachment}
         onFeedbackEnabledChange={local.onFeedbackEnabledChange}
         onRemoveAttachment={props.onRemoveAttachment}
+        onReset={local.onReset}
+        onSave={local.onSave}
         onSubmit={() => props.onMessage(local.prompt)}
+        scratchpad={local.scratchpad}
       />
       <button
         class="md:hidden grid place-content-center py-1 px-2 bg-secondary/20 rounded-b"
@@ -148,7 +157,10 @@ function Toolbar(props: {
   onAttachment: (file: File) => void;
   onFeedbackEnabledChange: (enabled: boolean) => void;
   onRemoveAttachment: (id: string) => void;
+  onReset?: () => void;
+  onSave?: () => void;
   onSubmit: () => void;
+  scratchpad?: boolean;
 }) {
   const mcpClients = () => MCPManager.getAllClients();
   const modelId = () => chatSettings().mapOr('Invalid Settings', (settings) => settings.modelId);
@@ -162,31 +174,65 @@ function Toolbar(props: {
     return id.slice(index + 1);
   }
 
+  async function onDelete() {
+    if (
+      !(await confirmDialog.confirm({
+        description: 'Are you sure you want to delete this chat?',
+        title: 'Delete Chat'
+      }))
+    )
+      return;
+    await logger.dispatch({
+      data: { id: props.chatId! },
+      type: 'deleteChat'
+    });
+  }
+
+  async function onLoadAttachment(accept: string) {
+    const file = await getFile(accept);
+    if (file) props.onAttachment(file);
+  }
+
   return (
     <div class="flex gap-2 flex-col p-4">
       <div class="flex gap-2">
-        <Show when={!props.isNewChat}>
+        <Show when={props.scratchpad}>
           <Button
             class="shrink-0"
-            disabled={props.isPending}
-            onClick={async () => {
-              if (
-                !(await confirmDialog.confirm({
-                  description: 'Are you sure you want to delete this chat?',
-                  title: 'Delete Chat'
-                }))
-              )
-                return;
-              await logger.dispatch({
-                data: { id: props.chatId! },
-                type: 'deleteChat'
-              });
-            }}
+            disabled={props.isPending || props.isNewChat}
+            onClick={props.onReset}
             size="icon"
+            title="Reset chat"
             type="button"
             variant="outline"
           >
-            <span class="icon-[heroicons--trash] text-xl" />
+            <span class="icon-[heroicons--arrow-path]" />
+            <span class="sr-only">Reset chat</span>
+          </Button>
+          <Button
+            class="shrink-0"
+            disabled={props.isPending || props.isNewChat}
+            onClick={props.onSave}
+            size="icon"
+            title="Save chat"
+            type="button"
+            variant="outline"
+          >
+            <span class="icon-[heroicons--arrow-down-tray]" />
+            <span class="sr-only">Save chat</span>
+          </Button>
+        </Show>
+        <Show when={!props.isNewChat && !props.scratchpad}>
+          <Button
+            class="shrink-0"
+            disabled={props.isPending}
+            onClick={onDelete}
+            size="icon"
+            title="Delete chat"
+            type="button"
+            variant="outline"
+          >
+            <span class="icon-[heroicons--trash]" />
             <span class="sr-only">Delete chat</span>
           </Button>
         </Show>
@@ -274,19 +320,11 @@ function Toolbar(props: {
               <span class="sr-only">Attach File</span>
             </DropdownMenuTrigger>
             <DropdownMenuContent class="w-48">
-              <DropdownMenuItem
-                onSelect={async () => {
-                  const file = await getFile('image/*');
-                  if (file) props.onAttachment(file);
-                }}
-              >
+              <DropdownMenuItem onSelect={() => onLoadAttachment('image/*')}>
                 <span>Image</span>
               </DropdownMenuItem>
               <DropdownMenuItem
-                onSelect={async () => {
-                  const file = await getFile('application/epub+zip application/pdf');
-                  if (file) props.onAttachment(file);
-                }}
+                onSelect={() => onLoadAttachment('application/epub+zip application/pdf')}
               >
                 <span>PDF/Epub</span>
               </DropdownMenuItem>

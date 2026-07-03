@@ -98,6 +98,12 @@ export const validEventSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     data: z.object({
+      id: z.string()
+    }),
+    type: z.literal('deleteUserMetadata')
+  }),
+  z.object({
+    data: z.object({
       id: z.string(),
       name: z.string(),
       settings: z.looseObject({})
@@ -132,6 +138,7 @@ const userIntentToTable = new Map(
     deleteMcp: tables.mcps,
     deletePreset: tables.chatPresets,
     deleteProvider: tables.providers,
+    deleteUserMetadata: tables.userMetadata,
     incrementChatAccessCount: tables.chats,
     setUserMetadata: tables.userMetadata,
     updateChat: tables.chats,
@@ -206,6 +213,20 @@ export const processMessage: TEventTransformer<TValidEvent> = async (event) => {
               }
             ]
           },
+          table: tableName
+        }
+      ];
+    }
+    case 'deleteUserMetadata': {
+      const id = event.data.id;
+      return [
+        {
+          id,
+          invalidate: [
+            ['db', 'userMetadata', 'all'],
+            ['db', 'userMetadata', 'byId', id]
+          ],
+          operation: 'delete',
           table: tableName
         }
       ];

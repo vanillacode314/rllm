@@ -1,4 +1,5 @@
 import type { TChat, TMessage } from '~/types/chat';
+import type { TTree } from '~/utils/tree';
 
 import { formatError } from '~/utils/errors';
 
@@ -19,4 +20,10 @@ export function finalizeChat(chat: TChat, path: number[], error?: string) {
       chunk.content = formatError(new Error('Failed to execute tool'));
     }
   }
+}
+
+export function getLatestPath(messages: TTree<TMessage>, path: number[] = []): number[] {
+  if (messages.children.length === 0) return path;
+  path.push(messages.children.length - 1);
+  return getLatestPath(messages.children[messages.children.length - 1], path);
 }

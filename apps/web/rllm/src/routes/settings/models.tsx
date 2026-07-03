@@ -26,9 +26,7 @@ export const Route = createFileRoute('/settings/models')({
   loader: async () => {
     await Promise.all([
       queryClient.ensureQueryData(queries.userMetadata.byId('title-generation-provider-id')),
-      queryClient.ensureQueryData(queries.userMetadata.byId('default-provider-id')),
-      queryClient.ensureQueryData(queries.userMetadata.byId('title-generation-model-id')),
-      queryClient.ensureQueryData(queries.userMetadata.byId('default-model-id'))
+      queryClient.ensureQueryData(queries.userMetadata.byId('title-generation-model-id'))
     ]);
   }
 });
@@ -55,22 +53,6 @@ function SettingsModelComponent() {
   const titleGenerationModelId = useQuery(() =>
     queries.userMetadata.byId('title-generation-model-id')
   );
-
-  const defaultProviderId = useQuery(() => queries.userMetadata.byId('default-provider-id'));
-  const defaultProvider = useQuery(() => ({
-    enabled: defaultProviderId.isSuccess && defaultProviderId.data !== 'current-model',
-    ...queries.providers.byId(defaultProviderId.data ?? '')
-  }));
-
-  const defaultAdapter = createMemo(() => {
-    const token = defaultProvider.isSuccess ? defaultProvider.data.token : undefined;
-    if (!token) return null;
-    const url = defaultProvider.isSuccess ? defaultProvider.data!.baseUrl : undefined;
-    if (!url) return null;
-    return new OpenAIAdapter(url, token);
-  });
-
-  const defaultModelId = useQuery(() => queries.userMetadata.byId('default-model-id'));
 
   const options = createMemo(() => {
     const opts = [{ label: 'Current Model', value: 'current-model' }];
@@ -103,36 +85,6 @@ function SettingsModelComponent() {
     await logger.dispatch({
       data: {
         id: 'title-generation-model-id',
-        value: modelId
-      },
-      type: 'setUserMetadata'
-    });
-  }
-
-  async function updateDefaultProvider(providerId: string) {
-    const provider = providers.data?.find((p) => p.id === providerId);
-    await logger.dispatch(
-      {
-        data: {
-          id: 'default-provider-id',
-          value: providerId
-        },
-        type: 'setUserMetadata'
-      },
-      {
-        data: {
-          id: 'default-model-id',
-          value: provider?.defaultModelIds[0] ?? 'current-model'
-        },
-        type: 'setUserMetadata'
-      }
-    );
-  }
-
-  async function updateDefaultModel(modelId: string) {
-    await logger.dispatch({
-      data: {
-        id: 'default-model-id',
         value: modelId
       },
       type: 'setUserMetadata'
@@ -180,49 +132,6 @@ function SettingsModelComponent() {
                 onChange={(model) => updateTitleGenerationModel(model.id)}
                 selectedModelId={titleGenerationModelId.data ?? null}
                 selectedProvider={provider.data ?? null}
-              />
-            </div>
-          </Show>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Default Model &amp; Provider</CardTitle>
-          <CardDescription>Set the default model and provider for new chats.</CardDescription>
-        </CardHeader>
-        <CardContent class="flex flex-col gap-2">
-          <div class="flex gap-2 items-center">
-            <Label>Provider: </Label>
-            <Select
-              defaultValue={options().find((opt) => opt.value === defaultProviderId.data)}
-              itemComponent={(props) => (
-                <SelectItem item={props.item}>{props.item.rawValue.label}</SelectItem>
-              )}
-              onChange={(value) => {
-                if (!value) return;
-                updateDefaultProvider(value.value);
-              }}
-              options={options()}
-              optionTextValue="label"
-              optionValue="value"
-            >
-              <SelectTrigger aria-label="Default Provider">
-                <SelectValue<ReturnType<typeof options>[number]>>
-                  {(state) => state.selectedOption().label}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent />
-            </Select>
-          </div>
-          <Show when={defaultProvider.isSuccess && defaultProvider.data}>
-            <div class="flex gap-2 items-center">
-              <Label>Model: </Label>
-              <ModelSelector
-                adapter={defaultAdapter()}
-                onChange={(model) => updateDefaultModel(model.id)}
-                selectedModelId={defaultModelId.data ?? null}
-                selectedProvider={defaultProvider.data ?? null}
               />
             </div>
           </Show>

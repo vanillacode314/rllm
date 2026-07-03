@@ -22,7 +22,8 @@ import { Route as SettingsMcpRouteImport } from './routes/settings/mcp'
 import { Route as SettingsDataRouteImport } from './routes/settings/data'
 import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
 import { Route as SettingsAccountRouteImport } from './routes/settings/account'
-import { Route as ChatSplatRouteImport } from './routes/chat/$'
+import { Route as chatScratchpadRouteImport } from './routes/(chat)/scratchpad'
+import { Route as chatChatSplatRouteImport } from './routes/(chat)/chat/$'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -89,8 +90,13 @@ const SettingsAccountRoute = SettingsAccountRouteImport.update({
   path: '/account',
   getParentRoute: () => SettingsRoute,
 } as any)
-const ChatSplatRoute = ChatSplatRouteImport.update({
-  id: '/chat/$',
+const chatScratchpadRoute = chatScratchpadRouteImport.update({
+  id: '/(chat)/scratchpad',
+  path: '/scratchpad',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const chatChatSplatRoute = chatChatSplatRouteImport.update({
+  id: '/(chat)/chat/$',
   path: '/chat/$',
   getParentRoute: () => rootRouteImport,
 } as any)
@@ -100,7 +106,7 @@ export interface FileRoutesByFullPath {
   '/$': typeof SplatRoute
   '/presets': typeof PresetsRoute
   '/settings': typeof SettingsRouteWithChildren
-  '/chat/$': typeof ChatSplatRoute
+  '/scratchpad': typeof chatScratchpadRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/data': typeof SettingsDataRoute
@@ -110,12 +116,13 @@ export interface FileRoutesByFullPath {
   '/settings/proxy': typeof SettingsProxyRoute
   '/settings/storage': typeof SettingsStorageRoute
   '/settings/': typeof SettingsIndexRoute
+  '/chat/$': typeof chatChatSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/presets': typeof PresetsRoute
-  '/chat/$': typeof ChatSplatRoute
+  '/scratchpad': typeof chatScratchpadRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/data': typeof SettingsDataRoute
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/settings/proxy': typeof SettingsProxyRoute
   '/settings/storage': typeof SettingsStorageRoute
   '/settings': typeof SettingsIndexRoute
+  '/chat/$': typeof chatChatSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -132,7 +140,7 @@ export interface FileRoutesById {
   '/$': typeof SplatRoute
   '/presets': typeof PresetsRoute
   '/settings': typeof SettingsRouteWithChildren
-  '/chat/$': typeof ChatSplatRoute
+  '/(chat)/scratchpad': typeof chatScratchpadRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/data': typeof SettingsDataRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/settings/proxy': typeof SettingsProxyRoute
   '/settings/storage': typeof SettingsStorageRoute
   '/settings/': typeof SettingsIndexRoute
+  '/(chat)/chat/$': typeof chatChatSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -150,7 +159,7 @@ export interface FileRouteTypes {
     | '/$'
     | '/presets'
     | '/settings'
-    | '/chat/$'
+    | '/scratchpad'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/data'
@@ -160,12 +169,13 @@ export interface FileRouteTypes {
     | '/settings/proxy'
     | '/settings/storage'
     | '/settings/'
+    | '/chat/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/$'
     | '/presets'
-    | '/chat/$'
+    | '/scratchpad'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/data'
@@ -175,13 +185,14 @@ export interface FileRouteTypes {
     | '/settings/proxy'
     | '/settings/storage'
     | '/settings'
+    | '/chat/$'
   id:
     | '__root__'
     | '/'
     | '/$'
     | '/presets'
     | '/settings'
-    | '/chat/$'
+    | '/(chat)/scratchpad'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/data'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
     | '/settings/proxy'
     | '/settings/storage'
     | '/settings/'
+    | '/(chat)/chat/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -198,7 +210,8 @@ export interface RootRouteChildren {
   SplatRoute: typeof SplatRoute
   PresetsRoute: typeof PresetsRoute
   SettingsRoute: typeof SettingsRouteWithChildren
-  ChatSplatRoute: typeof ChatSplatRoute
+  chatScratchpadRoute: typeof chatScratchpadRoute
+  chatChatSplatRoute: typeof chatChatSplatRoute
 }
 
 declare module '@tanstack/solid-router' {
@@ -294,11 +307,18 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof SettingsAccountRouteImport
       parentRoute: typeof SettingsRoute
     }
-    '/chat/$': {
-      id: '/chat/$'
+    '/(chat)/scratchpad': {
+      id: '/(chat)/scratchpad'
+      path: '/scratchpad'
+      fullPath: '/scratchpad'
+      preLoaderRoute: typeof chatScratchpadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(chat)/chat/$': {
+      id: '/(chat)/chat/$'
       path: '/chat/$'
       fullPath: '/chat/$'
-      preLoaderRoute: typeof ChatSplatRouteImport
+      preLoaderRoute: typeof chatChatSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -337,7 +357,8 @@ const rootRouteChildren: RootRouteChildren = {
   SplatRoute: SplatRoute,
   PresetsRoute: PresetsRoute,
   SettingsRoute: SettingsRouteWithChildren,
-  ChatSplatRoute: ChatSplatRoute,
+  chatScratchpadRoute: chatScratchpadRoute,
+  chatChatSplatRoute: chatChatSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

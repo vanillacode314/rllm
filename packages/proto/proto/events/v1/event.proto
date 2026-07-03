@@ -25,6 +25,7 @@ message EventData {
     UpdatePresetEvent update_preset = 12;
     DeletePresetEvent delete_preset = 13;
     IncrementChatAccessCountEvent increment_chat_access_count = 14;
+    DeleteUserMetadataEvent delete_user_metadata = 15;
   }
 }
 
@@ -109,6 +110,10 @@ message DeleteChatEvent {
 message SetUserMetadataEvent {
   string id = 1;
   string value = 2;
+}
+
+message DeleteUserMetadataEvent {
+  string id = 1;
 }
 
 message SyncServerGetEventsResponsePayload {

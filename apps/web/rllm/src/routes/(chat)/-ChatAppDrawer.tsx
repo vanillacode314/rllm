@@ -1,11 +1,11 @@
 import { createWritableMemo } from '@solid-primitives/memo';
 import { useLocation } from '@tanstack/solid-router';
+import { Separator } from 'ui/separator';
 
 import type { AppDrawerComponentProps } from '~/components/AppDrawer';
 
 import { ChatListSection, QuickActionsSection } from '~/components/ChatList';
 import ChatSettingsControls from '~/components/ChatSettingsControls';
-import { Separator } from 'ui/separator';
 import { type TChatSettings, updateChatSettings } from '~/lib/chat/settings';
 import { produce } from '~/utils/immer';
 

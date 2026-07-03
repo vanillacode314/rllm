@@ -23,6 +23,11 @@ const links = [
     icon: 'icon-[heroicons--cog]',
     title: 'Settings',
     to: '/settings'
+  },
+  {
+    icon: 'icon-[heroicons--document]',
+    title: 'Scratchpad',
+    to: '/scratchpad'
   }
 ];
 

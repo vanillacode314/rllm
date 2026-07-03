@@ -1,6 +1,9 @@
 import { nanoid } from 'nanoid';
+import { Option } from 'ts-result-option';
+import { safeParseJson } from 'ts-result-option/utils';
 import { z } from 'zod/mini';
 
+import { chatsSchema } from '~/db/app-schema';
 import { logger } from '~/db/client';
 import { ChatGenerationManager } from '~/lib/chat/generation';
 import { generateTitleAndTags } from '~/lib/chat/utils';
@@ -30,6 +33,7 @@ const ValidTask = z.discriminatedUnion('type', [
     }),
     type: z.literal('generateTitleAndTags')
   }),
+  z.object({ type: z.literal('saveScratchpadChat') }),
   z.object({
     arguments: z.object({
       attachements: z.array(
@@ -39,16 +43,17 @@ const ValidTask = z.discriminatedUnion('type', [
             z.object({
               content: z.string(),
               embeddings: z.array(z.number()),
-              index: z.int().check(z.minimum(0))
+              index: z.int().check(z.minimum(0)),
+              progress: z.number().check(z.minimum(0), z.maximum(1))
             })
           ),
-          id: z.string(),
-          progress: z.number().check(z.minimum(0), z.maximum(1))
+          id: z.string()
         })
       ),
       chatId: z.string(),
       feedbackEnabled: z.boolean(),
-      path: z.array(z.number())
+      path: z.array(z.number()),
+      scratchpad: z._default(z.boolean(), false)
     }),
     type: z.literal('startLLMGeneration')
   })
@@ -94,13 +99,45 @@ export function createTask(task: TValidTask, priority: TTaskPriority = 'idle', i
         serialize: () => ({ id, priority, task }),
         type: task.type
       };
+    case 'saveScratchpadChat':
+      return {
+        async handler() {
+          const chat = Option.from(await fetchers.userMetadata.byId('scratchpad-chat')).andThen(
+            (chat) => safeParseJson(chat, { validate: chatsSchema.parse }).ok()
+          );
+          if (chat.isNone()) return;
+          await logger.dispatch(
+            {
+              data: chat.unwrap(),
+              type: 'createChat'
+            },
+            {
+              data: { id: 'scratchpad-chat' },
+              type: 'deleteUserMetadata'
+            }
+          );
+          BackgroundTaskManager.scheduleTask(
+            createTask({
+              arguments: chat
+                .map((chat) => ({
+                  chatId: chat.id,
+                  modelId: chat.settings.modelId,
+                  path: [0],
+                  providerId: chat.settings.providerId
+                }))
+                .unwrap(),
+              type: 'generateTitleAndTags'
+            })
+          );
+        },
+        id,
+        priority,
+        serialize: () => ({ id, priority, task }),
+        type: task.type
+      };
     case 'startLLMGeneration':
       return {
         async handler(signal) {
-          {
-            const chat = await fetchers.chats.byId(task.arguments.chatId);
-            if (!chat) return;
-          }
           const { chat, controller, newPath, promise } =
             await ChatGenerationManager.startGeneration(
               task.arguments.chatId,
@@ -109,28 +146,35 @@ export function createTask(task: TValidTask, priority: TTaskPriority = 'idle', i
               task.arguments.feedbackEnabled
             );
           signal.addEventListener('abort', () => controller.abort());
-          try {
-            await promise;
-          } finally {
-            await logger.dispatch({
-              data: { finished: true, id: chat.id, messages: chat.messages.toJSON() },
-              type: 'updateChat'
-            });
-            ChatGenerationManager.removeChat(task.arguments.chatId);
+          await promise;
 
-            if (chat.title === 'Untitled New Chat' && !ChatGenerationManager.isAborted(chat.id)) {
-              BackgroundTaskManager.scheduleTask(
-                createTask({
-                  arguments: {
-                    chatId: chat.id,
-                    modelId: chat.settings.modelId,
-                    path: newPath,
-                    providerId: chat.settings.providerId
-                  },
-                  type: 'generateTitleAndTags'
-                })
-              );
-            }
+          if (task.arguments.scratchpad) {
+            await logger.dispatch({
+              data: {
+                id: 'scratchpad-chat',
+                value: JSON.stringify(chat)
+              },
+              dontLog: true,
+              type: 'setUserMetadata'
+            });
+            return;
+          }
+          await logger.dispatch({
+            data: { finished: true, id: chat.id, messages: chat.messages.toJSON() },
+            type: 'updateChat'
+          });
+          if (chat.title === 'Untitled New Chat' && !ChatGenerationManager.isAborted(chat.id)) {
+            BackgroundTaskManager.scheduleTask(
+              createTask({
+                arguments: {
+                  chatId: chat.id,
+                  modelId: chat.settings.modelId,
+                  path: newPath,
+                  providerId: chat.settings.providerId
+                },
+                type: 'generateTitleAndTags'
+              })
+            );
           }
         },
         id,

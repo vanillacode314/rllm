@@ -1,14 +1,6 @@
 import { createWritableMemo } from '@solid-primitives/memo';
 import { useLocation } from '@tanstack/solid-router';
 import { createSignal, Show } from 'solid-js';
-
-import { type TChatPreset } from '~/lib/chat/presets';
-import { type TChatSettings, updateChatSettings } from '~/lib/chat/settings';
-import { chatSettings } from '~/routes/chat/-state';
-import { isMobile } from '~/signals';
-import { produce } from '~/utils/immer';
-
-import ChatSettingsControls from './ChatSettingsControls';
 import { Button } from 'ui/button';
 import {
   Drawer,
@@ -19,6 +11,14 @@ import {
   DrawerHeader,
   DrawerTitle
 } from 'ui/drawer';
+
+import { type TChatPreset } from '~/lib/chat/presets';
+import { type TChatSettings, updateChatSettings } from '~/lib/chat/settings';
+import { chatSettings } from '~/routes/(chat)/-state';
+import { isMobile } from '~/signals';
+import { produce } from '~/utils/immer';
+
+import ChatSettingsControls from './ChatSettingsControls';
 
 const [chatSettingsDrawerOpen, setChatSettingsDrawerOpen] = createSignal(false);
 

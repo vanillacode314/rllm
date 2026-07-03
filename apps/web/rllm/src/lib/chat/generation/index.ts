@@ -6,6 +6,7 @@ import { unwrap } from 'solid-js/store';
 import { Option } from 'ts-result-option';
 import * as z from 'zod/mini';
 
+import type { TProvider } from '~/db/app-schema';
 import type { TAttachment, TChat, TMessage } from '~/types/chat';
 
 import {
@@ -20,14 +21,17 @@ import {
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { MCPManager } from '~/lib/mcp/manager';
 import { fetchers } from '~/queries';
-import { finalizeChat } from '~/routes/chat/-utils';
+import { finalizeChat } from '~/routes/(chat)/-utils';
 import { getMessagesForPath } from '~/utils/chat';
 import { formatError } from '~/utils/errors';
+import { produce } from '~/utils/immer';
 import { Tree, TreeNode } from '~/utils/tree';
 import * as rag from '~/workers/rag';
 
-import { handleCompletion } from '.';
-import { makeTool } from './utils';
+import type { ChatGenerationStorage } from './storages';
+
+import { handleCompletion } from '..';
+import { makeTool } from '../utils';
 
 export class ChatGenerationManager {
   private static chats = new Map<
@@ -35,6 +39,7 @@ export class ChatGenerationManager {
     { chat: TChat; controller: AbortController; path: number[] }
   >();
   private static pendingSubscribers = new Map<string, Set<(isPending: boolean) => void>>();
+  private static storages = [] as ChatGenerationStorage[];
   private static subscribers = new Map<string, Set<(chat: TChat, path: number[]) => void>>();
 
   static abortChat(id: string): void {
@@ -55,6 +60,23 @@ export class ChatGenerationManager {
   static getChat(id: string): TChat | undefined {
     return this.chats.get(id)?.chat;
   }
+  static async getChatFromStorage(
+    id: string
+  ): Promise<Option<{ chat: TChat; provider: TProvider }>> {
+    let chat = Option.None<TChat>();
+    let provider = Option.None<TProvider>();
+    for (const storage of this.storages) {
+      // oxlint-disable-next-line no-await-in-loop
+      let jsonChat;
+      ({ chat: jsonChat, provider } = await storage.getChat(id));
+      if (jsonChat.isSome()) {
+        chat = jsonChat.map((c) => ({ ...c, messages: Tree.fromJSON(c.messages) }));
+        break;
+      }
+    }
+    if (chat.and(provider).isNone()) return Option.None();
+    return Option.Some({ chat: chat.unwrap(), provider: provider.unwrap() });
+  }
   static isAborted(id: string): boolean {
     return this.chats.get(id)?.controller.signal.aborted ?? false;
   }
@@ -69,6 +91,10 @@ export class ChatGenerationManager {
       subscribers.delete(handler);
     };
   }
+  static registerStorage(storage: ChatGenerationStorage) {
+    this.storages.push(storage);
+  }
+
   static removeChat(id: string) {
     if (!this.chats.has(id)) return;
     this.chats.delete(id);
@@ -84,18 +110,15 @@ export class ChatGenerationManager {
     chat: TChat;
     controller: AbortController;
     newPath: number[];
-    promise: Promise<unknown>;
+    promise: Promise<void>;
   }> {
     const controller = new AbortController();
-    const chat = await fetchers.chats.byId(id).then((chat) => ({
-      ...chat,
-      messages: Tree.fromJSON(chat.messages)
-    }));
+    const { chat, provider } = (await this.getChatFromStorage(id)).expect(
+      `Chat ${id} not found in storage`
+    );
     const node = chat.messages
       .traverse(path)
       .expect(`should be able to traverse to node at ${JSON.stringify(path)}`);
-    const provider = await fetchers.providers.byId(chat.settings.providerId);
-    if (!provider) throw new Error(`Provider (${chat.settings.providerId}) not found`);
     const adapter = new OpenAIAdapter(provider.baseUrl, provider.token);
 
     let tools = await MCPManager.getAllTools().then((mcpTools) =>
