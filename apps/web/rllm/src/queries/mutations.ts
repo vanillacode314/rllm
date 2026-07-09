@@ -172,7 +172,8 @@ export const processMessage: TEventTransformer<TValidEvent> = async (event) => {
     case 'deleteChat':
     case 'deleteMcp':
     case 'deletePreset':
-    case 'deleteProvider': {
+    case 'deleteProvider':
+    case 'deleteUserMetadata': {
       const id = event.data.id;
       return [
         {
@@ -213,20 +214,6 @@ export const processMessage: TEventTransformer<TValidEvent> = async (event) => {
               }
             ]
           },
-          table: tableName
-        }
-      ];
-    }
-    case 'deleteUserMetadata': {
-      const id = event.data.id;
-      return [
-        {
-          id,
-          invalidate: [
-            ['db', 'userMetadata', 'all'],
-            ['db', 'userMetadata', 'byId', id]
-          ],
-          operation: 'delete',
           table: tableName
         }
       ];

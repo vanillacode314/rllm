@@ -1,9 +1,5 @@
 import { nanoid } from 'nanoid';
 import { createSignal, Show } from 'solid-js';
-import * as z from 'zod/mini';
-
-import ValidationErrors from '~/components/form/ValidationErrors';
-import MCPTestResult from '~/components/MCPTestResult';
 import { Button } from 'ui/button';
 import {
   Dialog,
@@ -14,6 +10,10 @@ import {
   DialogTitle
 } from 'ui/dialog';
 import { TextField, TextFieldInput, TextFieldLabel } from 'ui/text-field';
+import * as z from 'zod/mini';
+
+import ValidationErrors from '~/components/form/ValidationErrors';
+import MCPTestResult from '~/components/MCPTestResult';
 import { logger } from '~/db/client';
 import { testMCPServer, type TestMCPServerResult } from '~/lib/mcp/utils';
 import { createForm, parseFormErrors } from '~/utils/form';

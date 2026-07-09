@@ -3,10 +3,8 @@ import type { PolymorphicProps } from '@kobalte/core';
 import * as TextFieldPrimitive from '@kobalte/core/text-field';
 import { createEventListenerMap } from '@solid-primitives/event-listener';
 import { createEffect, type JSXElement, splitProps, untrack, type ValidComponent } from 'solid-js';
-
-import { cn } from 'ui/utils/tailwind';
-
 import { TextField, TextFieldTextArea } from 'ui/text-field';
+import { cn } from 'ui/utils/tailwind';
 
 type TextFieldTextAreaProps<T extends ValidComponent = 'textarea'> =
   TextFieldPrimitive.TextFieldTextAreaProps<T> & {

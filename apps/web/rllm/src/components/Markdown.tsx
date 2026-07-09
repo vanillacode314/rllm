@@ -15,16 +15,16 @@ import {
   Switch
 } from 'solid-js';
 import { Fragment, jsx, jsxs } from 'solid-js/h/jsx-runtime';
+import { Button } from 'ui/button';
+import { cn } from 'ui/utils/tailwind';
 import { unified } from 'unified';
 
 import { rehypePlugins, remarkPlugins } from '~/utils/markdown';
 import { randomFloat } from '~/utils/math';
 import { createLatestAsync } from '~/utils/signals';
-import { cn } from 'ui/utils/tailwind';
 import { markdownWorkerPool } from '~/workers/markdown';
 
 import CopyButton from './CopyButton';
-import { Button } from 'ui/button';
 
 const createProcessor = (pending: Accessor<boolean>) =>
   unified()

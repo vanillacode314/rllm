@@ -6,17 +6,11 @@ import {
   useNavigate
 } from '@tanstack/solid-router';
 import { createMemo, For, Show } from 'solid-js';
-
-import { AppDrawerFab } from '~/components/AppDrawer';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from 'ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'ui/select';
 import { SidebarTrigger } from 'ui/sidebar';
 import { Tabs, TabsList, TabsTrigger } from 'ui/tabs';
+
+import { AppDrawerFab } from '~/components/AppDrawer';
 import { SETTINGS_PAGES } from '~/constants/settings';
 
 const filteredPages = () => SETTINGS_PAGES.filter((page) => !page.condition || page.condition());

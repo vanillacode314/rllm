@@ -1,12 +1,6 @@
 import { useQuery } from '@tanstack/solid-query';
 import { createFileRoute } from '@tanstack/solid-router';
 import { For, Show } from 'solid-js';
-
-import type { TProvider } from '~/db/app-schema';
-
-import { setAddProviderModalOpen } from '~/components/modals/auto-import/AddProviderModal';
-import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
-import { setEditProviderModalOpen } from '~/components/modals/auto-import/EditProviderModal';
 import { Button } from 'ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from 'ui/card';
 import {
@@ -15,6 +9,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from 'ui/dropdown-menu';
+
+import type { TProvider } from '~/db/app-schema';
+
+import { setAddProviderModalOpen } from '~/components/modals/auto-import/AddProviderModal';
+import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
+import { setEditProviderModalOpen } from '~/components/modals/auto-import/EditProviderModal';
 import { logger } from '~/db/client';
 import { queries } from '~/queries';
 import { queryClient } from '~/utils/query-client';

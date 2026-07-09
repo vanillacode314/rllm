@@ -1,9 +1,6 @@
 import { Link } from '@tanstack/solid-router';
 import { Show } from 'solid-js';
 import { For } from 'solid-js';
-
-import type { TChat } from '~/types/chat';
-
 import { Badge } from 'ui/badge';
 import {
   DropdownMenu,
@@ -12,6 +9,9 @@ import {
   DropdownMenuTrigger
 } from 'ui/dropdown-menu';
 import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from 'ui/sidebar';
+
+import type { TChat } from '~/types/chat';
+
 import { ChatGenerationManager } from '~/lib/chat/generation';
 
 export interface ChatListItemProps {

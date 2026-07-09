@@ -1,6 +1,5 @@
 import { useColorMode } from '@kobalte/core/color-mode';
 import { createFileRoute } from '@tanstack/solid-router';
-
 import { Button } from 'ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'ui/card';
 

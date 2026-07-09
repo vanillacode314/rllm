@@ -1,17 +1,11 @@
 import { useQuery } from '@tanstack/solid-query';
 import { createFileRoute, redirect } from '@tanstack/solid-router';
 import { createMemo, Show } from 'solid-js';
-
-import ModelSelector from '~/components/ModelSelector';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'ui/card';
 import { Label } from 'ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from 'ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'ui/select';
+
+import ModelSelector from '~/components/ModelSelector';
 import { logger } from '~/db/client';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { queries } from '~/queries';

@@ -2,9 +2,6 @@ import { createWritableMemo } from '@solid-primitives/memo';
 import { createVirtualizer } from '@tanstack/solid-virtual';
 import Fuse from 'fuse.js';
 import { createMemo, createSignal, For } from 'solid-js';
-
-import type { TChatPreset } from '~/db/app-schema';
-
 import {
   Combobox,
   ComboboxContent,
@@ -16,6 +13,8 @@ import {
   ComboboxListbox,
   ComboboxTrigger
 } from 'ui/combobox';
+
+import type { TChatPreset } from '~/db/app-schema';
 
 export function PresetSelector(props: {
   class?: string;

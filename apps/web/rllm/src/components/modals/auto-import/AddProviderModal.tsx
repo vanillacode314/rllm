@@ -1,10 +1,6 @@
 import { nanoid } from 'nanoid';
 import { createSignal, For, Show } from 'solid-js';
 import { produce } from 'solid-js/store';
-import * as z from 'zod/mini';
-
-import ValidationErrors from '~/components/form/ValidationErrors';
-import ProviderTestResult from '~/components/ProviderTestResult';
 import { Badge } from 'ui/badge';
 import { Button } from 'ui/button';
 import {
@@ -16,6 +12,10 @@ import {
   DialogTitle
 } from 'ui/dialog';
 import { TextField, TextFieldInput, TextFieldLabel } from 'ui/text-field';
+import * as z from 'zod/mini';
+
+import ValidationErrors from '~/components/form/ValidationErrors';
+import ProviderTestResult from '~/components/ProviderTestResult';
 import { logger } from '~/db/client';
 import { testProvider, type TestProviderResult } from '~/lib/providers/utils';
 import { createForm, parseFormErrors } from '~/utils/form';

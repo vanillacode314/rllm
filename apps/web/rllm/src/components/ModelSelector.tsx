@@ -3,10 +3,6 @@ import { useQuery } from '@tanstack/solid-query';
 import { createVirtualizer } from '@tanstack/solid-virtual';
 import Fuse from 'fuse.js';
 import { createMemo, createSignal, For } from 'solid-js';
-
-import type { TAdapter } from '~/lib/adapters/types';
-import type { TModel, TProvider } from '~/types';
-
 import {
   Combobox,
   ComboboxContent,
@@ -18,6 +14,9 @@ import {
   ComboboxListbox,
   ComboboxTrigger
 } from 'ui/combobox';
+
+import type { TAdapter } from '~/lib/adapters/types';
+import type { TModel, TProvider } from '~/types';
 
 export function ModelSelector(props: {
   adapter: null | TAdapter;

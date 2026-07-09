@@ -1,9 +1,6 @@
 import { createWritableMemo } from '@solid-primitives/memo';
 import Fuse from 'fuse.js';
 import { createMemo } from 'solid-js';
-
-import type { TProvider } from '~/db/schema';
-
 import {
   Combobox,
   ComboboxContent,
@@ -14,6 +11,8 @@ import {
   ComboboxItemLabel,
   ComboboxTrigger
 } from 'ui/combobox';
+
+import type { TProvider } from '~/db/schema';
 
 export function ProviderSelector(props: {
   class?: string;

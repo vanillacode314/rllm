@@ -1,12 +1,5 @@
 import { useQuery } from '@tanstack/solid-query';
 import { createMemo, createRenderEffect, createSignal, untrack } from 'solid-js';
-import * as z from 'zod/mini';
-
-import type { TChatSettings } from '~/lib/chat/settings';
-
-import ValidationErrors from '~/components/form/ValidationErrors';
-import ModelSelector from '~/components/ModelSelector';
-import ProviderSelector from '~/components/ProviderSelector';
 import { Button } from 'ui/button';
 import {
   Dialog,
@@ -17,20 +10,16 @@ import {
   DialogTitle
 } from 'ui/dialog';
 import { Label } from 'ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from 'ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'ui/select';
 import { Switch, SwitchControl, SwitchLabel, SwitchThumb } from 'ui/switch';
-import {
-  TextField,
-  TextFieldInput,
-  TextFieldLabel,
-  TextFieldTextArea
-} from 'ui/text-field';
+import { TextField, TextFieldInput, TextFieldLabel, TextFieldTextArea } from 'ui/text-field';
+import * as z from 'zod/mini';
+
+import type { TChatSettings } from '~/lib/chat/settings';
+
+import ValidationErrors from '~/components/form/ValidationErrors';
+import ModelSelector from '~/components/ModelSelector';
+import ProviderSelector from '~/components/ProviderSelector';
 import { REASONING_VALUE_TO_LABEL_MAP } from '~/constants/chat-settings';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { updatePreset } from '~/lib/chat/presets';

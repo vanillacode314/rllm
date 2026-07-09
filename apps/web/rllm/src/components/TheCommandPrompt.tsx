@@ -9,6 +9,15 @@ import {
 } from '@tanstack/solid-router';
 import { batch, createMemo, createSignal, For, Show } from 'solid-js';
 import { toast } from 'solid-sonner';
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator
+} from 'ui/command';
 
 import { SETTINGS_PAGES } from '~/constants/settings';
 import { logger } from '~/db/client';
@@ -19,15 +28,6 @@ import { slugify } from '~/utils/string';
 
 import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
 import { usePromptDialog } from './modals/auto-import/PromptDialog';
-import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator
-} from 'ui/command';
 
 interface TItem {
   condition?: () => boolean;

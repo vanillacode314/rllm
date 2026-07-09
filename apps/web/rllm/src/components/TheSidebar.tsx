@@ -1,8 +1,4 @@
 import { For, Show } from 'solid-js';
-
-import { useNotifications } from '~/context/notifications';
-
-import { ChatListSection, QuickActionsSection } from './ChatList';
 import {
   Sidebar,
   SidebarContent,
@@ -14,6 +10,10 @@ import {
   SidebarTrigger,
   useSidebar
 } from 'ui/sidebar';
+
+import { useNotifications } from '~/context/notifications';
+
+import { ChatListSection, QuickActionsSection } from './ChatList';
 
 export function TheSidebar() {
   const sidebar = useSidebar();

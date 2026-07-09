@@ -1,11 +1,11 @@
 import { createSignal, type JSXElement, onCleanup, onMount, Show } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { Dynamic, Portal } from 'solid-js/web';
-
-import { ChatListSection, QuickActionsSection } from './ChatList';
 import { Button } from 'ui/button';
 import { Drawer, DrawerClose, DrawerContent } from 'ui/drawer';
 import { Separator } from 'ui/separator';
+
+import { ChatListSection, QuickActionsSection } from './ChatList';
 
 export type AppDrawerComponent = (props: AppDrawerComponentProps) => JSXElement;
 export type AppDrawerComponentProps = {

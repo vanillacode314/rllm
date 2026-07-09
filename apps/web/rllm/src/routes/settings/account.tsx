@@ -8,21 +8,14 @@ import { createStore } from 'solid-js/store';
 import { toast } from 'solid-sonner';
 import { AsyncResult } from 'ts-result-option';
 import { tryBlock } from 'ts-result-option/utils';
+import { Button } from 'ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from 'ui/card';
+import { TextField, TextFieldInput, TextFieldLabel } from 'ui/text-field';
 
 import { useAlertDialog } from '~/components/modals/auto-import/AlertDialog';
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
 import { usePromptDialog } from '~/components/modals/auto-import/PromptDialog';
 import { setSaveMnemonicModalOpen } from '~/components/modals/auto-import/SaveMnemonicModal';
-import { Button } from 'ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle
-} from 'ui/card';
-import { TextField, TextFieldInput, TextFieldLabel } from 'ui/text-field';
 import { deleteDatabaseFile, logger } from '~/db/client';
 import { queries } from '~/queries';
 import { account, setAccount } from '~/signals/account';

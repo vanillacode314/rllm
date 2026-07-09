@@ -1,12 +1,6 @@
 import { useQuery } from '@tanstack/solid-query';
 import { createFileRoute } from '@tanstack/solid-router';
 import { For, Show } from 'solid-js';
-
-import type { TMCP } from '~/db/app-schema';
-
-import { setAddMCPModalOpen } from '~/components/modals/auto-import/AddMCPModal';
-import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
-import { setEditMCPModalOpen } from '~/components/modals/auto-import/EditMCPModal';
 import { Button } from 'ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from 'ui/card';
 import {
@@ -15,6 +9,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from 'ui/dropdown-menu';
+
+import type { TMCP } from '~/db/app-schema';
+
+import { setAddMCPModalOpen } from '~/components/modals/auto-import/AddMCPModal';
+import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
+import { setEditMCPModalOpen } from '~/components/modals/auto-import/EditMCPModal';
 import { logger } from '~/db/client';
 import { queries } from '~/queries';
 import { queryClient } from '~/utils/query-client';

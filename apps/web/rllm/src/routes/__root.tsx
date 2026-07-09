@@ -3,14 +3,14 @@ import { makePersisted } from '@solid-primitives/storage';
 import { QueryClientProvider } from '@tanstack/solid-query';
 import { createRootRouteWithContext, Outlet } from '@tanstack/solid-router';
 import { createSignal, For, type JSXElement, onMount, Suspense } from 'solid-js';
+import { Button } from 'ui/button';
+import { SidebarProvider } from 'ui/sidebar';
+import { Toaster } from 'ui/sonner';
 
 import AppDrawer from '~/components/AppDrawer';
 import TheChatSettingsDrawer from '~/components/TheChatSettingsDrawer';
 import TheCommandPrompt from '~/components/TheCommandPrompt';
 import TheSidebar from '~/components/TheSidebar';
-import { Button } from 'ui/button';
-import { SidebarProvider } from 'ui/sidebar';
-import { Toaster } from 'ui/sonner';
 import { deleteDatabaseFile, setupDb } from '~/db/client';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { ChatGenerationManager } from '~/lib/chat/generation';

@@ -1,19 +1,5 @@
 import { useNavigate } from '@tanstack/solid-router';
 import { For, type JSX, Match, Show, splitProps, Switch } from 'solid-js';
-
-import type { TAttachment } from '~/types/chat';
-
-import { logger } from '~/db/client';
-import { MCPManager } from '~/lib/mcp/manager';
-import { chatSettings } from '~/routes/(chat)/-state';
-import { getFile } from '~/utils/files';
-import { cn } from 'ui/utils/tailwind';
-
-import { useAppDrawer } from './AppDrawer';
-import { ExpandableTextField } from './ExpandableTextField';
-import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
-import { setChatSettingsDrawerOpen } from './TheChatSettingsDrawer';
-import { setCommandPromptOpen } from './TheCommandPrompt';
 import { Badge } from 'ui/badge';
 import { Button } from 'ui/button';
 import {
@@ -22,6 +8,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from 'ui/dropdown-menu';
+import { cn } from 'ui/utils/tailwind';
+
+import type { TAttachment } from '~/types/chat';
+
+import { logger } from '~/db/client';
+import { MCPManager } from '~/lib/mcp/manager';
+import { chatSettings } from '~/routes/(chat)/-state';
+import { getFile } from '~/utils/files';
+
+import { useAppDrawer } from './AppDrawer';
+import { ExpandableTextField } from './ExpandableTextField';
+import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
+import { setChatSettingsDrawerOpen } from './TheChatSettingsDrawer';
+import { setCommandPromptOpen } from './TheCommandPrompt';
 
 type Props = Omit<JSX.HTMLAttributes<HTMLDivElement>, 'onInput'> & {
   attachments: TAttachment[];

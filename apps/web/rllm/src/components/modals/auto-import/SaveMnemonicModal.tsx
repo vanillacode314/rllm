@@ -1,6 +1,5 @@
 import { ethers } from 'ethers';
 import { createSignal, For } from 'solid-js';
-
 import { Button } from 'ui/button';
 import {
   Dialog,

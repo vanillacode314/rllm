@@ -1,5 +1,4 @@
 import { createSignal } from 'solid-js';
-
 import { Button } from 'ui/button';
 import {
   Dialog,

@@ -19,21 +19,6 @@ import {
   Switch
 } from 'solid-js';
 import { toast } from 'solid-sonner';
-
-import type { TChat } from '~/db/app-schema';
-import type { TLLMMessageChunk, TMessage, TUserMessageChunk } from '~/types/chat';
-
-import { useAutoScroll } from '~/directives/auto-scroll';
-import { ChatGenerationManager } from '~/lib/chat/generation';
-import { queries } from '~/queries';
-import { formatAsKeyValuePair } from '~/utils/object';
-import { dedent } from '~/utils/string';
-import { cn } from 'ui/utils/tailwind';
-import { lowlightWorkerPool } from '~/workers/lowlight';
-
-import Markdown from './Markdown';
-import { useAlertDialog } from './modals/auto-import/AlertDialog';
-import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
 import { Button } from 'ui/button';
 import { Callout, CalloutContent, CalloutTitle } from 'ui/callout';
 import { Card, CardContent, CardHeader, CardTitle } from 'ui/card';
@@ -45,6 +30,21 @@ import {
   DropdownMenuTrigger
 } from 'ui/dropdown-menu';
 import { TextField, TextFieldTextArea } from 'ui/text-field';
+import { cn } from 'ui/utils/tailwind';
+
+import type { TChat } from '~/db/app-schema';
+import type { TLLMMessageChunk, TMessage, TUserMessageChunk } from '~/types/chat';
+
+import { useAutoScroll } from '~/directives/auto-scroll';
+import { ChatGenerationManager } from '~/lib/chat/generation';
+import { queries } from '~/queries';
+import { formatAsKeyValuePair } from '~/utils/object';
+import { dedent } from '~/utils/string';
+import { lowlightWorkerPool } from '~/workers/lowlight';
+
+import Markdown from './Markdown';
+import { useAlertDialog } from './modals/auto-import/AlertDialog';
+import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
 
 type Props = JSX.HTMLAttributes<HTMLDivElement> & {
   chat: Omit<TChat, 'createdAt' | 'updatedAt'>;

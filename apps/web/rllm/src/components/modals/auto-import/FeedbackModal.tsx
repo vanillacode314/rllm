@@ -1,7 +1,5 @@
 import { createMemo, For, Index, onCleanup, Show } from 'solid-js';
 import { createStore, produce } from 'solid-js/store';
-
-import ValidationErrors from '~/components/form/ValidationErrors';
 import { Button } from 'ui/button';
 import {
   Dialog,
@@ -13,6 +11,8 @@ import {
 } from 'ui/dialog';
 import { TextField, TextFieldInput, TextFieldTextArea } from 'ui/text-field';
 import { cn } from 'ui/utils/tailwind';
+
+import ValidationErrors from '~/components/form/ValidationErrors';
 
 const toggleCheckbox = (questionId: string, option: string) => {
   setState(
