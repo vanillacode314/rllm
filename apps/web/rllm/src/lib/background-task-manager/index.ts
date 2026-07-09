@@ -6,7 +6,7 @@ export class BackgroundTaskManager {
   private static concurrency = 6;
   private static initialized = false;
   private static items = new Set<{
-    promise: { promise: Promise<void>; reject: () => void; resolve: () => void };
+    promise: { promise: Promise<void>; reject: (reason: any) => void; resolve: () => void };
     signal: AbortSignal;
     status: 'idle' | 'pending';
     task: TTask;
@@ -111,11 +111,11 @@ export class BackgroundTaskManager {
       Promise.try(item.task.handler, item.signal)
         .then(() => {
           console.debug(`[Finished Background Task]`, item.task.serialize());
-          item.promise.resolve();
+          return item.promise.resolve();
         })
-        .catch(() => {
+        .catch((reason) => {
           console.debug(`[Aborted Background Task]`, item.task.serialize());
-          item.promise.reject();
+          item.promise.reject(reason);
         })
         .finally(async () => {
           this.items.delete(item);

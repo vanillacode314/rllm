@@ -22,7 +22,7 @@ import { Option } from 'ts-result-option';
 import { tryBlock } from 'ts-result-option/utils';
 import { SidebarTrigger, useSidebar } from 'ui/sidebar';
 
-import type { TChat as TDBChat } from '~/db/app-schema';
+import { chatsSchema, type TChat as TDBChat } from '~/db/app-schema';
 import type { TChat, TMessage, TUserMessageChunk } from '~/types/chat';
 
 import { Chat } from '~/components/Chat';
@@ -57,6 +57,7 @@ import {
   setPrompt
 } from './-state';
 import { getLatestPath } from './-utils';
+import { HLC } from 'hlc';
 
 export function useChatPage(
   opts: Accessor<{
@@ -72,17 +73,16 @@ export function useChatPage(
 
   const router = useRouter();
 
-  const [chat, setChat] = createWritableMemo<Omit<TChat, 'messages' | 'settings'>>(() =>
-    opts().isNewChat
-      ? {
-          finished: true,
-          id: opts().id,
-          settings: untrack(() => opts().chatSettings),
-          tags: [],
-          title: 'Untitled New Chat'
-        }
-      : opts().loaderChat!
-  );
+  const [chat, setChat] = createWritableMemo<Omit<TChat, 'messages' | 'settings'>>(() => {
+    if (!opts().isNewChat) return opts().loaderChat;
+    return {
+      finished: true,
+      id: opts().id,
+      settings: untrack(() => opts().chatSettings),
+      tags: [],
+      title: 'Untitled New Chat'
+    };
+  });
   const isPending = ChatGenerationManager.createIsPending(() => opts().id);
 
   const [currentPath, setCurrentPath] = createSignal<number[]>(getLatestPath(messages()));
@@ -235,15 +235,26 @@ export function useChatPage(
     }
 
     const $chat = chat();
+    const clientId = await logger.getClientId();
     if (opts().scratchpad) {
       await logger.dispatch({
         data: {
           id: 'scratchpad-chat',
-          value: JSON.stringify({
-            ...$chat,
-            messages: messages().toJSON(),
-            settings: chatSettings().unwrap()
-          })
+          value: JSON.stringify(
+            chatsSchema.parse(
+              produce($chat as TDBChat, (draft) => {
+                draft.messages = messages().toJSON();
+                draft.settings = chatSettings().unwrap();
+                if (opts().isNewChat) {
+                  const hlc = HLC.generate(clientId);
+                  draft.createdAt = hlc.toString();
+                  draft.updatedAt = {};
+                  draft.accessCount = 0;
+                  draft.lastAccessedAt = null;
+                }
+              })
+            )
+          )
         },
         dontLog: true,
         type: 'setUserMetadata'
