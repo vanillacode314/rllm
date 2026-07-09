@@ -174,10 +174,10 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
       if (events.length === 0) return;
       if (validateEvent) {
         for (let i = 0; i < events.length; i++) {
-          const event = events[i];
+          const event = events[i]!;
           try {
             const validatedEvent = validateEvent(event);
-            events[i] = validatedEvent;
+            events[i] = Object.assign(validatedEvent, { dontLog: event.dontLog });
           } catch (error) {
             throw new Error(`Invalid event: ${JSON.stringify(event)}`, { cause: error });
           }
