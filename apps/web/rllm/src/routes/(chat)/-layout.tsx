@@ -95,7 +95,7 @@ export function useChatPage(
   onMount(() => {
     setChatSettings(Option.Some(chatSettingsSchema.parse(opts().chatSettings)));
   });
-  onMount(() =>
+  createRenderEffect(() =>
     onCleanup(
       ChatGenerationManager.subscribe(opts().id, ($chat, newPath) => {
         setChat({ ...$chat });
