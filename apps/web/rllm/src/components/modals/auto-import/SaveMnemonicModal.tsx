@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { createSignal, For } from 'solid-js';
+import { createComputed, createRenderEffect, createSignal, For, untrack } from 'solid-js';
 import { Button } from 'ui/button';
 import {
   Dialog,
@@ -27,6 +27,24 @@ const setOpen = (mnemonic: false | null | string) => {
 
 export function SaveMnemonicModal() {
   const alertDialog = useAlertDialog();
+
+  if (import.meta.env.VITE_MODE === 'android') {
+    createComputed(() => {
+      const $open = open();
+      if (!$open) return;
+      // oxlint-disable-next-line solid/reactivity
+      untrack(async () => {
+        if (!mnemonic()) return;
+        const { PasswordAutofill } = await import('@capawesome/capacitor-password-autofill');
+        await PasswordAutofill.savePassword({
+          domain: 'llm.raqueeb.com',
+          password: mnemonic()!,
+          username: 'passphrase'
+        });
+      });
+    });
+  }
+
   return (
     <Dialog
       modal

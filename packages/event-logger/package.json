@@ -36,14 +36,22 @@
   "dependencies": {
     "hlc": "workspace:*",
     "merkle-tree": "workspace:*",
-    "sqlocal": "^0.18.0"
+    "mutex": "workspace:*"
   },
   "devDependencies": {
-    "@rthings/config": "workspace:*",
-    "@types/node": "^25.9.3",
-    "oxfmt": "^0.55.0",
-    "oxlint": "^1.70.0",
-    "tsdown": "^0.22.2",
-    "typescript": "^6.0.3"
+    "sqlocal": "^0.18.0",
+    "@capacitor-community/sqlite": "^8.1.0"
+  },
+  "peerDependencies": {
+    "sqlocal": "^0.18.0",
+    "@capacitor-community/sqlite": "^8.1.0"
+  },
+  "peerDependenciesMeta": {
+    "sqlocal": {
+      "optional": true
+    },
+    "@capacitor-community/sqlite": {
+      "optional": true
+    }
   }
 }

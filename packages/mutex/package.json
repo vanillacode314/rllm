@@ -1,0 +1,43 @@
+{
+  "name": "mutex",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "license": "MIT",
+  "author": "Raqueebuddin Aziz",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*/index.d.ts",
+      "import": "./dist/*/index.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./dist/*/index.d.ts",
+        "./dist/index.d.ts"
+      ]
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown --out-dir ./dist",
+    "dev": "npm run build -- --watch src",
+    "lint": "oxlint --fix",
+    "format": "oxfmt"
+  },
+  "devDependencies": {
+    "@rthings/config": "workspace:*",
+    "oxfmt": "^0.55.0",
+    "oxlint": "^1.70.0",
+    "tsdown": "^0.22.2",
+    "typescript": "^6.0.3"
+  }
+}

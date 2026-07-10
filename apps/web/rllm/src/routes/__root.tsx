@@ -1,4 +1,4 @@
-import { ColorModeProvider, cookieStorageManager } from '@kobalte/core';
+import { ColorModeProvider, cookieStorageManager, useColorMode } from '@kobalte/core';
 import { makePersisted } from '@solid-primitives/storage';
 import { QueryClientProvider } from '@tanstack/solid-query';
 import { createRootRouteWithContext, Outlet } from '@tanstack/solid-router';
@@ -11,7 +11,8 @@ import AppDrawer from '~/components/AppDrawer';
 import TheChatSettingsDrawer from '~/components/TheChatSettingsDrawer';
 import TheCommandPrompt from '~/components/TheCommandPrompt';
 import TheSidebar from '~/components/TheSidebar';
-import { deleteDatabaseFile, setupDb } from '~/db/client';
+import { deleteDatabaseFile, logger } from '~/db/client';
+import { setupDb } from '~/db/client.platform.common';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { ChatGenerationManager } from '~/lib/chat/generation';
 import { dbStorage, scratchpadStorage } from '~/lib/chat/generation/storages';
@@ -19,15 +20,17 @@ import { initChatSettings } from '~/lib/chat/settings';
 import { MCPManager } from '~/lib/mcp/manager';
 import { ProxyManager } from '~/lib/proxy';
 import { initSocket } from '~/sockets/messages';
+import { syncColorMode } from '~/utils/color-mode';
 import { once } from '~/utils/functions';
 import { queryClient } from '~/utils/query-client';
 
 export const Route = createRootRouteWithContext()({
   beforeLoad: once(async () => {
+    if (import.meta.env.VITE_MODE === 'android') syncColorMode();
     if ('storage' in navigator) {
       await navigator.storage.persist();
     }
-    await setupDb().unwrap();
+    await setupDb(logger).unwrap();
     console.debug('[Finished DB Setup]');
     await initChatSettings();
     void initSocket().unwrap();

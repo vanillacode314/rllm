@@ -1,3 +1,4 @@
+// oxlint-disable perfectionist/sort-objects
 import { serwist } from '@serwist/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
@@ -11,11 +12,16 @@ import { compression } from 'vite-plugin-compression2';
 import VitePluginDbg from 'vite-plugin-dbg';
 import solidPlugin from 'vite-plugin-solid';
 
+import pkgJson from './package.json' with { type: 'json' };
+
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   build: {
     reportCompressedSize: false
     // sourcemap: true
+  },
+  define: {
+    __VERSION__: JSON.stringify(pkgJson.version)
   },
   plugins: [
     // analyzer(),
@@ -58,6 +64,10 @@ export default defineConfig({
         '../../../node_modules/hast-util-from-html-isomorphic/index.js'
       ),
       'micromark-extension-math': 'micromark-extension-llm-math',
+      '~/db/client':
+        mode === 'android'
+          ? path.resolve(__dirname, './src/db/client.platform.android.ts')
+          : path.resolve(__dirname, './src/db/client.platform.web.ts'),
       '~': path.resolve(__dirname, './src')
     }
   },
@@ -69,4 +79,4 @@ export default defineConfig({
     format: 'es',
     plugins: () => [comlink()]
   }
-});
+}));

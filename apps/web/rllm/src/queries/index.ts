@@ -38,9 +38,9 @@ const providers = {
         .then((rows) => rows[0] ?? null),
     countProviders: () =>
       db
-        .select({ count: count() })
+        .select({ value: sql`count(*)`.as('value') })
         .from(tables.providers)
-        .then((rows) => rows[0]?.count ?? 0),
+        .then((rows) => rows[0]?.value ?? 0),
     getAllProviders: () => db.select().from(tables.providers)
   },
   queries: {
@@ -120,7 +120,7 @@ const chats = {
           finished: tables.chats.finished,
           id: tables.chats.id,
           score:
-            sql`${tables.chats.accessCount} * exp(-0.693 * (strftime('%s','now') - ${tables.chats.lastAccessedAt} / 1000) / 86400.0 / 7.0)`.as(
+            sql`${tables.chats.accessCount} * MAX(0, 1 - (strftime('%s','now') - (${tables.chats.lastAccessedAt} / 1000.0)) / (86400.0 * 7))`.as(
               'score'
             ),
           tags: tables.chats.tags,

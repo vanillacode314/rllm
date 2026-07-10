@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">rllm</string>
+    <string name="title_activity_main">rllm</string>
+    <string name="package_name">com.raqueeb.rllm</string>
+    <string name="custom_url_scheme">com.raqueeb.rllm</string>
+</resources>

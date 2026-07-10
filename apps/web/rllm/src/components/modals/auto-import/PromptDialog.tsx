@@ -61,6 +61,7 @@ export function PromptDialog() {
               <TextFieldLabel>{options()!.label}</TextFieldLabel>
             </Show>
             <TextFieldInput
+              autocomplete={options()?.inputType === 'password' ? 'current-password' : undefined}
               onInput={(e) => setInputValue(e.currentTarget.value)}
               type={options()?.inputType || 'text'}
               value={inputValue()}
