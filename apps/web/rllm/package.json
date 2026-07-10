@@ -1,6 +1,6 @@
 {
   "name": "rllm",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,13 +8,14 @@
     "start": "vite --port 3000",
     "build": "vite build --mode $VITE_MODE",
     "build:web": "VITE_MODE=web npm run build",
-    "build:android": "VITE_MODE=android npm run build && npx cap sync android && cd android && ./gradlew assembleRelease",
+    "build:android": "VITE_MODE=android npm run build && npm run sync-version && npx cap sync android && cd android && ./gradlew assembleRelease",
+    "sync-version": "node scripts/sync-capacitor-versions.ts",
     "serve": "vite preview",
     "test": "vitest run",
     "format": "oxfmt --write src",
     "lint": "oxlint --fix",
     "typecheck": "tsc",
-    "db:migrate": "drizzle-kit generate && bun run scripts/generate-migrations.ts",
+    "db:migrate": "drizzle-kit generate && node scripts/generate-migrations.ts",
     "dependencies": "cp ../../node_modules/pdf-parse/dist/pdf-parse/web/pdf.worker.mjs public/pdf.worker.mjs",
     "generate-pwa-assets": "pwa-assets-generator"
   },

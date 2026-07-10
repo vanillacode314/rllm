@@ -34,6 +34,7 @@ jobs:
       - name: Sync Capacitor
         run: |
           cd apps/web/rllm
+          bun run scripts/sync-capacitor-versions.ts
           bunx cap sync android
 
       - name: Setup Java 21
