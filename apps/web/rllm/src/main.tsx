@@ -10,6 +10,7 @@ import { toast } from 'solid-sonner';
 import 'virtual:uno.css';
 
 import { routeTree } from './routeTree.gen';
+import { Keyboard } from '@capacitor/keyboard';
 
 const router = createRouter({
   defaultGcTime: 0,
@@ -33,7 +34,20 @@ declare module '@tanstack/solid-router' {
 
 function App() {
   if (import.meta.env.VITE_MODE === 'web') {
-    onMount(setupServiceWorker);
+    onMount(() => {
+      void setupServiceWorker();
+    });
+  }
+  if (import.meta.env.VITE_MODE === 'android') {
+    onMount(() => {
+      Keyboard.addListener('keyboardWillShow', (info) => {
+        const { keyboardHeight } = info;
+        document.documentElement.style.setProperty('--keyboard-offset', keyboardHeight + 'px');
+      });
+      Keyboard.addListener('keyboardWillHide', () => {
+        document.documentElement.style.removeProperty('--keyboard-offset');
+      });
+    });
   }
 
   return (

@@ -292,11 +292,16 @@
       'calt' 1;
   }
 
+  :root {
+    height: calc(100% - var(--keyboard-offset, 0px));
+  }
+  body {
+    height: 100%;
+  }
   :root,
   body {
     overscroll-behavior-y: contain;
     overflow: hidden;
-    height: 100%;
   }
   a {
     cursor: default;

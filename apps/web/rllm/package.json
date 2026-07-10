@@ -1,6 +1,6 @@
 {
   "name": "rllm",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "private": true,
   "type": "module",
   "scripts": {
@@ -26,6 +26,7 @@
     "@capacitor/assets": "^3.0.5",
     "@capacitor/core": "^8.4.1",
     "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/keyboard": "^8.0.5",
     "@capawesome/capacitor-android-edge-to-edge-support": "^8.0.8",
     "@capawesome/capacitor-password-autofill": "^0.0.1",
     "@corvu/drawer": "^0.2.4",

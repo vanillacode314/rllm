@@ -28,6 +28,9 @@ const config: CapacitorConfig = {
       navigationBarColor: '#111111',
       statusBarColor: '#111111'
     },
+    Keyboard: {
+      resizeOnFullScreen: false
+    },
     SystemBars: {
       insetsHandling: 'disable'
     }

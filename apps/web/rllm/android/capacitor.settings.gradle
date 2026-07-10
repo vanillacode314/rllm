@@ -8,6 +8,9 @@ project(':capacitor-community-sqlite').projectDir = new File('../../../../node_m
 include ':capacitor-filesystem'
 project(':capacitor-filesystem').projectDir = new File('../../../../node_modules/@capacitor/filesystem/android')
 
+include ':capacitor-keyboard'
+project(':capacitor-keyboard').projectDir = new File('../../../../node_modules/@capacitor/keyboard/android')
+
 include ':capawesome-capacitor-android-edge-to-edge-support'
 project(':capawesome-capacitor-android-edge-to-edge-support').projectDir = new File('../../../../node_modules/@capawesome/capacitor-android-edge-to-edge-support/android')
 
