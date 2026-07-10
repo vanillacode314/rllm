@@ -7,6 +7,7 @@ RUN nix build .#devShells.x86_64-linux.default;
 FROM base AS build
 RUN nix develop --command bun install --frozen-lockfile
 ARG VITE_SYNC_SERVER_BASE_URL
+ARG VITE_MODE
 RUN nix develop --command bun run build --filter rllm
 
 
