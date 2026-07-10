@@ -6,7 +6,7 @@ import path from 'node:path';
 import sqlocalPlugin from 'sqlocal/vite';
 import UnoCSS from 'unocss/vite';
 import AutoImport from 'unplugin-auto-import/vite';
-import { defineConfig } from 'vite';
+import { defineConfig, type PluginOption } from 'vite';
 import { comlink } from 'vite-plugin-comlink';
 import { compression } from 'vite-plugin-compression2';
 import VitePluginDbg from 'vite-plugin-dbg';
@@ -15,15 +15,8 @@ import solidPlugin from 'vite-plugin-solid';
 import pkgJson from './package.json' with { type: 'json' };
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  build: {
-    reportCompressedSize: false
-    // sourcemap: true
-  },
-  define: {
-    __VERSION__: JSON.stringify(pkgJson.version)
-  },
-  plugins: [
+export default defineConfig(({ mode }) => {
+  const plugins: PluginOption[] = [
     // analyzer(),
     VitePluginDbg({
       enabled: process.env.NODE_ENV === 'development'
@@ -36,47 +29,63 @@ export default defineConfig(({ mode }) => ({
     tanstackRouter({ autoCodeSplitting: true, target: 'solid' }),
     UnoCSS(),
     solidPlugin(),
-    tailwindcss(),
-    sqlocalPlugin(),
-    serwist({
-      globDirectory: 'dist',
-      globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,wasm}'],
-      injectionPoint: 'self.__SW_MANIFEST',
-      maximumFileSizeToCacheInBytes: 100 * 1024 * 1024,
-      rollupFormat: 'es',
-      swDest: 'sw.js',
-      swSrc: 'src/sw.ts'
-      // additionalPrecacheEntries: ['manifest.json']
-    }),
-    compression({
-      algorithms: ['brotli'],
-      include: /\.(html|xml|css|json|js|mjs|svg|png|yaml|yml|toml|wasm|woff2|woff|ttf)$/
-    })
-  ],
-  resolve: {
-    alias: {
-      'decode-named-character-reference': path.resolve(
-        __dirname,
-        '../../../node_modules/decode-named-character-reference/index.js'
-      ),
-      'hast-util-from-html-isomorphic': path.resolve(
-        __dirname,
-        '../../../node_modules/hast-util-from-html-isomorphic/index.js'
-      ),
-      'micromark-extension-math': 'micromark-extension-llm-math',
-      '~/db/client':
-        mode === 'android'
-          ? path.resolve(__dirname, './src/db/client.platform.android.ts')
-          : path.resolve(__dirname, './src/db/client.platform.web.ts'),
-      '~': path.resolve(__dirname, './src')
-    }
-  },
-  server: {
-    allowedHosts: ['dev.homelab.lan'],
-    host: '0.0.0.0'
-  },
-  worker: {
-    format: 'es',
-    plugins: () => [comlink()]
+    tailwindcss()
+  ];
+
+  if (mode === 'web') {
+    plugins.push(
+      sqlocalPlugin(),
+      serwist({
+        globDirectory: 'dist',
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,wasm}'],
+        injectionPoint: 'self.__SW_MANIFEST',
+        maximumFileSizeToCacheInBytes: 100 * 1024 * 1024,
+        rollupFormat: 'es',
+        swDest: 'sw.js',
+        swSrc: 'src/sw.ts'
+        // additionalPrecacheEntries: ['manifest.json']
+      }),
+      compression({
+        algorithms: ['brotli'],
+        include: /\.(html|xml|css|json|js|mjs|svg|png|yaml|yml|toml|wasm|woff2|woff|ttf)$/
+      })
+    );
   }
-}));
+
+  return {
+    build: {
+      reportCompressedSize: false
+      // sourcemap: true
+    },
+    define: {
+      __VERSION__: JSON.stringify(pkgJson.version)
+    },
+    plugins,
+    resolve: {
+      alias: {
+        'decode-named-character-reference': path.resolve(
+          __dirname,
+          '../../../node_modules/decode-named-character-reference/index.js'
+        ),
+        'hast-util-from-html-isomorphic': path.resolve(
+          __dirname,
+          '../../../node_modules/hast-util-from-html-isomorphic/index.js'
+        ),
+        'micromark-extension-math': 'micromark-extension-llm-math',
+        '~/db/client':
+          mode === 'android'
+            ? path.resolve(__dirname, './src/db/client.platform.android.ts')
+            : path.resolve(__dirname, './src/db/client.platform.web.ts'),
+        '~': path.resolve(__dirname, './src')
+      }
+    },
+    server: {
+      allowedHosts: ['dev.homelab.lan'],
+      host: '0.0.0.0'
+    },
+    worker: {
+      format: 'es',
+      plugins: () => [comlink()]
+    }
+  };
+});

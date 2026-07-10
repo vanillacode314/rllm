@@ -7,7 +7,6 @@ import './styles.css';
 import 'highlight.js/styles/dark.css';
 import { render } from 'solid-js/web';
 import { toast } from 'solid-sonner';
-import { getSerwist } from 'virtual:serwist';
 import 'virtual:uno.css';
 
 import { routeTree } from './routeTree.gen';
@@ -33,7 +32,9 @@ declare module '@tanstack/solid-router' {
 }
 
 function App() {
-  onMount(setupServiceWorker);
+  if (import.meta.env.VITE_MODE === 'web') {
+    onMount(setupServiceWorker);
+  }
 
   return (
     <>
@@ -50,6 +51,7 @@ if (rootElement) {
 async function setupServiceWorker() {
   if (!('serviceWorker' in navigator) || !import.meta.env.PROD) return;
 
+  const { getSerwist } = await import('virtual:serwist');
   try {
     const serwist = await getSerwist();
     if (!serwist) {
