@@ -20,11 +20,9 @@ import {
 } from '~/constants/prompts';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { MCPManager } from '~/lib/mcp/manager';
-import { fetchers } from '~/queries';
 import { finalizeChat } from '~/routes/(chat)/-utils';
 import { getMessagesForPath } from '~/utils/chat';
 import { formatError } from '~/utils/errors';
-import { produce } from '~/utils/immer';
 import { Tree, TreeNode } from '~/utils/tree';
 import * as rag from '~/workers/rag';
 

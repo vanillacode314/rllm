@@ -1,16 +1,16 @@
+import { Keyboard } from '@capacitor/keyboard';
 import { createRouter, RouterProvider } from '@tanstack/solid-router';
-import { onMount } from 'solid-js';
 import 'katex/dist/katex.css';
 
 import './styles.css';
 // import './styles/starry-night/vscode-dark.css';
 import 'highlight.js/styles/dark.css';
+import { onMount } from 'solid-js';
 import { render } from 'solid-js/web';
-import { toast } from 'solid-sonner';
 import 'virtual:uno.css';
+import { toast } from 'solid-sonner';
 
 import { routeTree } from './routeTree.gen';
-import { Keyboard } from '@capacitor/keyboard';
 
 const router = createRouter({
   defaultGcTime: 0,

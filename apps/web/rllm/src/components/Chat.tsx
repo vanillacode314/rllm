@@ -39,7 +39,6 @@ import { useAutoScroll } from '~/directives/auto-scroll';
 import { ChatGenerationManager } from '~/lib/chat/generation';
 import { queries } from '~/queries';
 import { formatAsKeyValuePair } from '~/utils/object';
-import { dedent } from '~/utils/string';
 import { lowlightWorkerPool } from '~/workers/lowlight';
 
 import Markdown from './Markdown';

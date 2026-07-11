@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { createComputed, createRenderEffect, createSignal, For, untrack } from 'solid-js';
+import { createComputed, createSignal, For, untrack } from 'solid-js';
 import { Button } from 'ui/button';
 import {
   Dialog,

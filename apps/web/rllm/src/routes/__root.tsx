@@ -1,4 +1,4 @@
-import { ColorModeProvider, cookieStorageManager, useColorMode } from '@kobalte/core';
+import { ColorModeProvider, cookieStorageManager } from '@kobalte/core';
 import { makePersisted } from '@solid-primitives/storage';
 import { QueryClientProvider } from '@tanstack/solid-query';
 import { createRootRouteWithContext, Outlet } from '@tanstack/solid-router';

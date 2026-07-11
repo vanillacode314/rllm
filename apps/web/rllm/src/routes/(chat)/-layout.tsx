@@ -4,6 +4,7 @@ import { createWritableMemo } from '@solid-primitives/memo';
 import { createElementSize } from '@solid-primitives/resize-observer';
 import { useMutation } from '@tanstack/solid-query';
 import { type NavigateFn, useBlocker, useRouter } from '@tanstack/solid-router';
+import { HLC } from 'hlc';
 import { animate } from 'motion';
 import { nanoid } from 'nanoid';
 import {
@@ -22,12 +23,12 @@ import { Option } from 'ts-result-option';
 import { tryBlock } from 'ts-result-option/utils';
 import { SidebarTrigger, useSidebar } from 'ui/sidebar';
 
-import { chatsSchema, type TChat as TDBChat } from '~/db/app-schema';
 import type { TChat, TMessage, TUserMessageChunk } from '~/types/chat';
 
 import { Chat } from '~/components/Chat';
 import ThePromptBox from '~/components/ThePromptBox';
 import { useNotifications } from '~/context/notifications';
+import { chatsSchema, type TChat as TDBChat } from '~/db/app-schema';
 import { logger } from '~/db/client';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { createTask } from '~/lib/background-task-manager/tasks';
@@ -57,7 +58,6 @@ import {
   setPrompt
 } from './-state';
 import { getLatestPath } from './-utils';
-import { HLC } from 'hlc';
 
 export function useChatPage(
   opts: Accessor<{
