@@ -1,4 +1,5 @@
 // oxlint-disable perfectionist/sort-objects
+import { exec, execSync } from 'node:child_process';
 import { serwist } from '@serwist/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
@@ -11,6 +12,7 @@ import { comlink } from 'vite-plugin-comlink';
 import { compression } from 'vite-plugin-compression2';
 import VitePluginDbg from 'vite-plugin-dbg';
 import solidPlugin from 'vite-plugin-solid';
+import fs from 'node:fs';
 
 import pkgJson from './package.json' with { type: 'json' };
 
@@ -26,7 +28,7 @@ export default defineConfig(({ mode }) => {
       include: [/\.[tj]sx?$/]
     }),
     comlink(),
-    tanstackRouter({ autoCodeSplitting: true, target: 'solid' }),
+    tanstackRouter({ autoCodeSplitting: true, target: 'solid', enableRouteGeneration: true }),
     UnoCSS(),
     solidPlugin(),
     tailwindcss()
@@ -52,6 +54,34 @@ export default defineConfig(({ mode }) => {
     );
   }
 
+  const webOnlyRoutes = ['settings/proxy'];
+
+  if (mode === 'android') {
+    plugins.push({
+      name: 'exclude-web-only-routes',
+      enforce: 'pre', // before tanstackRouter
+      buildStart() {
+        webOnlyRoutes.forEach((name) => {
+          const filepath = path.resolve(__dirname, `src/routes/${name}.tsx`);
+          const filename = path.basename(filepath);
+          const ignoredFilename = `-${filename}.ignored`;
+          const ignoredFilepath = path.resolve(filepath, '..', ignoredFilename);
+          if (fs.existsSync(filepath)) fs.renameSync(filepath, ignoredFilepath);
+        });
+        execSync('npm run generate:routes');
+      },
+      buildEnd() {
+        webOnlyRoutes.forEach((name) => {
+          const filepath = path.resolve(__dirname, `src/routes/${name}.tsx`);
+          const filename = path.basename(filepath);
+          const ignoredFilename = `-${filename}.ignored`;
+          const ignoredFilepath = path.resolve(filepath, '..', ignoredFilename);
+          if (fs.existsSync(ignoredFilepath)) fs.renameSync(ignoredFilepath, filepath);
+        });
+      }
+    });
+  }
+
   return {
     build: {
       reportCompressedSize: false
@@ -72,6 +102,10 @@ export default defineConfig(({ mode }) => {
           '../../../node_modules/hast-util-from-html-isomorphic/index.js'
         ),
         'micromark-extension-math': 'micromark-extension-llm-math',
+        '~/lib/proxy':
+          mode === 'android'
+            ? path.resolve(__dirname, './src/lib/proxy.platform.android.ts')
+            : path.resolve(__dirname, './src/lib/proxy.platform.web.ts'),
         '~/db/client':
           mode === 'android'
             ? path.resolve(__dirname, './src/db/client.platform.android.ts')

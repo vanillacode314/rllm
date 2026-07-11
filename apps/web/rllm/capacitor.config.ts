@@ -4,6 +4,9 @@ const config: CapacitorConfig = {
   appId: 'com.raqueeb.rllm',
   appName: 'rllm',
   plugins: {
+    CapacitorHttp: {
+      enabled: true
+    },
     CapacitorSQLite: {
       androidBiometric: {
         biometricAuth: false,

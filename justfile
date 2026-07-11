@@ -4,3 +4,5 @@ dev APP='rllm':
   if [ "{{APP}}" = "rllm" ]; then
     bunx turbo run dev --filter=rllm --filter=sync-server --filter=hlc --filter=merkle-tree --filter=event-logger --filter=proto --filter=ts-result-option --filter=ui --filter=mutex
   fi
+push:
+  jj git push && git push --tags

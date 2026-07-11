@@ -20,6 +20,7 @@ const SETTINGS_PAGES: Page[] = [
     path: '/settings/mcp'
   },
   {
+    condition: () => env.VITE_MODE === 'web',
     name: 'Proxy',
     path: '/settings/proxy'
   },

@@ -1,11 +1,12 @@
 {
   "name": "rllm",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --port 3000 --mode ${VITE_MODE:-web}",
     "start": "vite --port 3000 --mode ${VITE_MODE:-web}",
+    "generate:routes": "tsr generate",
     "build": "vite build --mode $VITE_MODE",
     "build:web": "VITE_MODE=web npm run build",
     "build:android": "VITE_MODE=android npm run build && npm run sync-version && npx cap sync android && cd android && ./gradlew assembleRelease",
@@ -125,6 +126,7 @@
     "@serwist/vite": "^9.5.11",
     "@serwist/window": "^9.5.11",
     "@tailwindcss/typography": "^0.5.20",
+    "@tanstack/router-cli": "^1.167.18",
     "@typescript-eslint/parser": "^8.61.0",
     "@unocss/preset-web-fonts": "^66.7.2",
     "@vite-pwa/assets-generator": "^1.0.2",
