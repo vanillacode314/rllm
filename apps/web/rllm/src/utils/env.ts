@@ -1,7 +1,6 @@
 import * as z from 'zod/mini';
 
 const envSchema = z.object({
-  VITE_MODE: z.union([z.literal('web'), z.literal('android')]),
   VITE_SYNC_SERVER_BASE_URL: z.optional(z.url())
 });
 
