@@ -107,11 +107,15 @@ export async function updateChatSettings(
   if (chatSettings().isNone()) return;
   const newValue = { ...chatSettings().unwrap(), ...settings };
   setChatSettings(Option.Some(newValue));
+
   if (scratchpad) {
     const chat = Option.from(await fetchers.userMetadata.byId('scratchpad-chat'))
       .okOrElse(() => new Error('No chat found'))
-      .andThen((value) => safeParseJson(value, { validate: chatsSchema.parse }))
-      .expect('Failed to parse chat');
+      .andThen((value) => safeParseJson(value, { validate: chatsSchema.parse }));
+    if (chat.isErr()) {
+      console.error(chat.unwrapErr());
+      return;
+    }
     await logger.dispatch({
       data: {
         id: 'scratchpad-chat',
@@ -125,6 +129,7 @@ export async function updateChatSettings(
     });
     return;
   }
+
   if (chatId) {
     await logger.dispatch({
       data: { id: chatId, settings: newValue },
