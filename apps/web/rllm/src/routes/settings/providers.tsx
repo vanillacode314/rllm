@@ -88,15 +88,9 @@ function ProviderCard(props: { onDelete: (id: string) => void; provider: TProvid
 
 function SettingsProviderComponent() {
   const providers = useQuery(queries.providers.all);
-  const confirmDialog = useConfirmDialog();
 
-  async function deleteProvider(id: string) {
-    const yes = await confirmDialog.confirm({
-      description: 'Are you sure you want to delete this provider?',
-      title: 'Delete Provider'
-    });
-    if (!yes) return;
-    await logger.dispatch({
+  function deleteProvider(id: string) {
+    return logger.dispatch({
       data: { id },
       type: 'deleteProvider'
     });

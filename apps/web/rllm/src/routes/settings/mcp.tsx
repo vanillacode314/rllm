@@ -81,15 +81,9 @@ function MCPCard(props: { mcp: TMCP; onDelete: (id: string) => void }) {
 
 function SettingsMCPComponent() {
   const mcps = useQuery(queries.mcps.all);
-  const confirmDialog = useConfirmDialog();
 
-  async function deleteMCP(id: string) {
-    const yes = await confirmDialog.confirm({
-      description: 'Are you sure you want to delete this mcp?',
-      title: 'Delete MCP'
-    });
-    if (!yes) return;
-    await logger.dispatch({
+  function deleteMCP(id: string) {
+    return logger.dispatch({
       data: { id },
       type: 'deleteMcp'
     });
