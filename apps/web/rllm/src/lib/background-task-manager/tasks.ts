@@ -17,7 +17,11 @@ export interface TTask {
   handler: (signal: AbortSignal) => Promise<unknown> | unknown;
   id: string;
   priority: TTaskPriority;
-  serialize: () => unknown;
+  serialize: () => {
+    id: string;
+    priority: TTaskPriority;
+    task: TValidTask;
+  };
   type: string;
 }
 

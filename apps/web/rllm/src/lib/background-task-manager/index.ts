@@ -105,16 +105,20 @@ export class BackgroundTaskManager {
     if (!item) return;
     this.running += 1;
     item.status = 'pending';
-    console.debug(`[Running Background Task]`, item.task.serialize());
+    const serializedTask = item.task.serialize();
+    console.debug(`[BTM][Started Task][${item.task.type}][${item.task.id}]`, serializedTask);
     const schedule = this.getScheduler(item.task.priority);
     schedule(() =>
       Promise.try(item.task.handler, item.signal)
         .then(() => {
-          console.debug(`[Finished Background Task]`, item.task.serialize());
+          console.debug(
+            `[BTM][Completed Task][${item.task.type}][${item.task.id}]`,
+            serializedTask
+          );
           return item.promise.resolve();
         })
         .catch((reason) => {
-          console.debug(`[Aborted Background Task]`, item.task.serialize());
+          console.debug(`[BTM][Failed Task][${item.task.type}][${item.task.id}]`, serializedTask);
           item.promise.reject(reason);
         })
         .finally(async () => {
