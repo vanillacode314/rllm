@@ -34,6 +34,7 @@ export type TChatCompletionLastChunk =
     }
   | {
       finish_reason: 'tool_calls';
+      usage?: TCompletionLastChunkUsage;
     };
 
 export type TCompletionLastChunkUsage = {

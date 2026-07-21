@@ -164,7 +164,10 @@ export class OpenAIAdapter implements TAdapter {
         };
       }
       case 'tool_calls': {
-        return { finish_reason: 'tool_calls' };
+        return {
+          finish_reason: 'tool_calls',
+          usage: usage.toUndefined()
+        };
       }
     }
   }

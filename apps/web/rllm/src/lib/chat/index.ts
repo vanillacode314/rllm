@@ -2,7 +2,7 @@ import { nanoid } from 'nanoid';
 import { AsyncResult, Option } from 'ts-result-option';
 import { safeParseJson, tryBlock } from 'ts-result-option/utils';
 
-import type { TAdapter } from '~/lib/adapters/types';
+import type { TAdapter, TCompletionLastChunkUsage } from '~/lib/adapters/types';
 import type { TLLMMessageChunk, TMessage } from '~/types/chat';
 
 import { type TTool } from '~/types';
@@ -30,6 +30,17 @@ export function handleCompletion(opts: {
 
       const producedChunks = [] as TLLMMessageChunk[];
       const executedToolCalls = new Set<string>();
+      const usage: TCompletionLastChunkUsage = {};
+      function accumulateUsage(usageB: TCompletionLastChunkUsage) {
+        if (usageB.cached_tokens)
+          usage.cached_tokens = (usage.cached_tokens ?? 0) + usageB.cached_tokens;
+        if (usageB.completion_tokens)
+          usage.completion_tokens = (usage.completion_tokens ?? 0) + usageB.completion_tokens;
+        if (usageB.prompt_tokens)
+          usage.prompt_tokens = (usage.prompt_tokens ?? 0) + usageB.prompt_tokens;
+        if (usageB.reasoning_tokens)
+          usage.reasoning_tokens = (usage.reasoning_tokens ?? 0) + usageB.reasoning_tokens;
+      }
 
       const controller = new AbortController();
       if (signal) signal.addEventListener('abort', () => controller.abort());
@@ -119,11 +130,12 @@ export function handleCompletion(opts: {
           }
           case 'stop': {
             controller.abort();
-            const usage = result.value.usage;
+            if (result.value.usage) accumulateUsage(result.value.usage);
             onUpdate?.({ chunks: producedChunks, usage });
             break;
           }
           case 'tool_calls': {
+            if (result.value.usage) accumulateUsage(result.value.usage);
             if (!tools) throw new Error('No tools provided but tool calls were requested');
             const tool_calls = producedChunks.filter(
               (chunk): chunk is TLLMMessageChunk & { type: 'tool_call' } =>

@@ -35,10 +35,11 @@ import { cn } from 'ui/utils/tailwind';
 import type { TChat } from '~/db/app-schema';
 import type { TLLMMessageChunk, TMessage, TUserMessageChunk } from '~/types/chat';
 
-import { useAutoScroll } from '~/directives/auto-scroll';
 import { USER_METADATA_KEYS } from '~/constants/user-metadata';
+import { useAutoScroll } from '~/directives/auto-scroll';
 import { ChatGenerationManager } from '~/lib/chat/generation';
 import { queries } from '~/queries';
+import { formatToPercentage, formatToTokens } from '~/utils/number';
 import { formatAsKeyValuePair } from '~/utils/object';
 import { lowlightWorkerPool } from '~/workers/lowlight';
 
@@ -96,7 +97,9 @@ export function Chat(props: Props): JSXElement {
 
   const [offsetBottomPixels, setOffsetBottomPixels] = createSignal(0);
 
-  const displayName = useQuery(() => queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME));
+  const displayName = useQuery(() =>
+    queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME)
+  );
 
   return (
     <div class="relative overflow-hidden grid">
@@ -189,11 +192,6 @@ export function Chat(props: Props): JSXElement {
       </Show>
     </div>
   );
-}
-
-function formatTokenNumberToString(tokens: number): string {
-  if (tokens === 1) return '1 Token';
-  return `${tokens} Tokens`;
 }
 
 function LLMChat(props: {
@@ -305,21 +303,15 @@ function LLMChat(props: {
                       alertDialog.alert({
                         description: formatAsKeyValuePair(
                           {
-                            Context: formatTokenNumberToString(
-                              props.message.usage!.prompt_tokens ?? 0
-                            ),
+                            Context: formatToTokens(props.message.usage!.prompt_tokens ?? 0),
                             // oxlint-disable-next-line perfectionist/sort-objects
-                            'Cached Context': formatTokenNumberToString(
-                              props.message.usage!.cached_tokens ?? 0
-                            ),
-                            'Total Generated': formatTokenNumberToString(
+                            'Cached Context': `${formatToTokens(props.message.usage!.cached_tokens ?? 0)} (${formatToPercentage(props.message.usage!.cached_tokens ?? 0, props.message.usage!.prompt_tokens ?? 0)})`,
+                            'Total Generated': formatToTokens(
                               props.message.usage!.completion_tokens ?? 0
                             ),
                             // oxlint-disable-next-line perfectionist/sort-objects
-                            'Reasoning Generated': formatTokenNumberToString(
-                              props.message.usage!.reasoning_tokens ?? 0
-                            ),
-                            'Total (Context + Generated)': formatTokenNumberToString(
+                            'Reasoning Generated': `${formatToTokens(props.message.usage!.reasoning_tokens ?? 0)} (${formatToPercentage(props.message.usage!.reasoning_tokens ?? 0, props.message.usage!.completion_tokens ?? 0)})`,
+                            'Total (Context + Generated)': formatToTokens(
                               (props.message.usage!.completion_tokens ?? 0) +
                                 (props.message.usage!.prompt_tokens ?? 0)
                             )
