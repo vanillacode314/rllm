@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/solid-router';
 import { toast } from 'solid-sonner';
 import { Button } from 'ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'ui/card';
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 
 import { db, deleteDatabaseFile, getDatabaseSize, logger } from '~/db/client';
 import * as schema from '~/db/schema';
@@ -62,7 +63,15 @@ function SettingsStorageComponent() {
       db.select().from(schema.userMetadata).orderBy(schema.userMetadata.createdAt),
       db.select().from(schema.chatPresets).orderBy(schema.chatPresets.createdAt)
     ]);
-    const json = { chatPresets, chats: [], mcps, providers, userMetadata };
+    const json = {
+      chatPresets,
+      chats: [],
+      mcps,
+      providers,
+      userMetadata: userMetadata.filter(
+        (metadata) => metadata.id !== USER_METADATA_KEYS.SCRATCHPAD_CHAT
+      )
+    };
     const blob = new Blob([JSON.stringify(json)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
