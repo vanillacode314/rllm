@@ -55,6 +55,24 @@ function SettingsStorageComponent() {
     URL.revokeObjectURL(url);
   }
 
+  async function exportDataWithoutChats() {
+    const [mcps, providers, userMetadata, chatPresets] = await Promise.all([
+      db.select().from(schema.mcps).orderBy(schema.mcps.createdAt),
+      db.select().from(schema.providers).orderBy(schema.providers.createdAt),
+      db.select().from(schema.userMetadata).orderBy(schema.userMetadata.createdAt),
+      db.select().from(schema.chatPresets).orderBy(schema.chatPresets.createdAt)
+    ]);
+    const json = { chatPresets, chats: [], mcps, providers, userMetadata };
+    const blob = new Blob([JSON.stringify(json)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    a.href = url;
+    a.download = `rllm-${timestamp}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function importData() {
     const yes = confirm('Are you sure? This will overwrite your current data.');
     if (!yes) return;
@@ -130,6 +148,9 @@ function SettingsStorageComponent() {
         <CardContent class="flex max-sm:flex-col gap-4">
           <Button onClick={exportData} type="button">
             Export Data
+          </Button>
+          <Button onClick={exportDataWithoutChats} type="button">
+            Export Without Chats
           </Button>
         </CardContent>
       </Card>
