@@ -1,5 +1,6 @@
 import { ColorModeProvider, cookieStorageManager } from '@kobalte/core';
 import { makePersisted } from '@solid-primitives/storage';
+import { debounce } from '@tanstack/solid-pacer';
 import { QueryClientProvider } from '@tanstack/solid-query';
 import { createRootRouteWithContext, Outlet } from '@tanstack/solid-router';
 import { createSignal, For, type JSXElement, onMount, Suspense } from 'solid-js';
@@ -36,6 +37,10 @@ export const Route = createRootRouteWithContext()({
     void initSocket().unwrap();
     void ProxyManager.initialize().finally(() => void MCPManager.initialize());
     void BackgroundTaskManager.init();
+    const debouncedMcpInitialized = debounce(() => MCPManager.initialize(), { wait: 1000 });
+    logger.on('updateMcp', debouncedMcpInitialized, { self: true });
+    logger.on('createMcp', debouncedMcpInitialized, { self: true });
+    logger.on('deleteMcp', debouncedMcpInitialized, { self: true });
     ChatGenerationManager.registerStorage(dbStorage);
     ChatGenerationManager.registerStorage(scratchpadStorage);
   }),
