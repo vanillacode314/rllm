@@ -2,8 +2,8 @@ import { createFileRoute } from '@tanstack/solid-router';
 import { toast } from 'solid-sonner';
 import { Button } from 'ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'ui/card';
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { db, deleteDatabaseFile, getDatabaseSize, logger } from '~/db/client';
 import * as schema from '~/db/schema';
 import { setAccount } from '~/signals/account';

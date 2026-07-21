@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { TextField, TextFieldInput, TextFieldLabel } from 'ui/text-field';
 import * as z from 'zod/mini';
 
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import ValidationErrors from '~/components/form/ValidationErrors';
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { logger } from '~/db/client';
 import { ProxyManager } from '~/lib/proxy';
 import { queries } from '~/queries';

@@ -20,8 +20,12 @@ export const Route = createFileRoute('/settings/models')({
   component: SettingsModelComponent,
   loader: async () => {
     await Promise.all([
-      queryClient.ensureQueryData(queries.userMetadata.byId(USER_METADATA_KEYS.TITLE_GENERATION_PROVIDER_ID)),
-      queryClient.ensureQueryData(queries.userMetadata.byId(USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID))
+      queryClient.ensureQueryData(
+        queries.userMetadata.byId(USER_METADATA_KEYS.TITLE_GENERATION_PROVIDER_ID)
+      ),
+      queryClient.ensureQueryData(
+        queries.userMetadata.byId(USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID)
+      )
     ]);
   }
 });

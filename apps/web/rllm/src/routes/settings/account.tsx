@@ -12,11 +12,11 @@ import { Button } from 'ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from 'ui/card';
 import { TextField, TextFieldInput, TextFieldLabel } from 'ui/text-field';
 
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { useAlertDialog } from '~/components/modals/auto-import/AlertDialog';
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
 import { usePromptDialog } from '~/components/modals/auto-import/PromptDialog';
 import { setSaveMnemonicModalOpen } from '~/components/modals/auto-import/SaveMnemonicModal';
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { deleteDatabaseFile, logger } from '~/db/client';
 import { queries } from '~/queries';
 import { account, setAccount } from '~/signals/account';
@@ -31,7 +31,9 @@ import {
 export const Route = createFileRoute('/settings/account')({
   component: SettingsAccountComponent,
   async loader() {
-    await queryClient.ensureQueryData(queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME));
+    await queryClient.ensureQueryData(
+      queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME)
+    );
   }
 });
 
@@ -50,7 +52,9 @@ function SettingsAccountComponent() {
     shouldBlockFn: () => false
   });
 
-  const displayName = useQuery(() => queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME));
+  const displayName = useQuery(() =>
+    queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME)
+  );
 
   async function createNewAccount() {
     const wallet = ethers.Wallet.createRandom();

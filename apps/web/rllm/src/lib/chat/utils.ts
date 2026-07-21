@@ -33,7 +33,9 @@ export const generateTitleAndTags = (config: {
             const provider = await fetchers.providers.byId(titleGenerationProviderId);
             return { provider, providerId: titleGenerationProviderId };
           }),
-        fetchers.userMetadata.byId(USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID).then((id) => id ?? config.model)
+        fetchers.userMetadata
+          .byId(USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID)
+          .then((id) => id ?? config.model)
       ]);
       if (!provider) throw new Error(`Provider ${providerId} not found`);
       if (!model) throw new Error(`Model ${model} not found`);

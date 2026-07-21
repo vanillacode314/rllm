@@ -32,13 +32,17 @@ export const Route = createFileRoute('/presets')({
     await Promise.all([
       queryClient.ensureQueryData(queries.providers.all()),
       queryClient.ensureQueryData(queries.chatPresets.all()),
-      queryClient.ensureQueryData(queries.userMetadata.byId(USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET))
+      queryClient.ensureQueryData(
+        queries.userMetadata.byId(USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET)
+      )
     ]);
   }
 });
 
 export function PresetCardDropdownMenu(props: { preset: TChatPreset }) {
-  const defaultPresetId = useQuery(() => queries.userMetadata.byId(USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET));
+  const defaultPresetId = useQuery(() =>
+    queries.userMetadata.byId(USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET)
+  );
   const confirmDialog = useConfirmDialog();
   return (
     <div class="flex-col">
@@ -83,7 +87,9 @@ export function PresetCardDropdownMenu(props: { preset: TChatPreset }) {
 }
 
 function PresetCard(props: { preset: TChatPreset }) {
-  const defaultPresetId = useQuery(() => queries.userMetadata.byId(USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET));
+  const defaultPresetId = useQuery(() =>
+    queries.userMetadata.byId(USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET)
+  );
   const providers = useQuery(() => queries.providers.all());
 
   function getProviderNameById(id: string) {

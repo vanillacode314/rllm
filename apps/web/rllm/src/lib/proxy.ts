@@ -2,8 +2,8 @@ import type { ConfiguredMiddleware } from 'wretch';
 
 import { createSignal } from 'solid-js';
 
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { PROXY_HEALTH_CHECK_INTERVAL_MS, PROXY_HEALTH_CHECK_TIMEOUT_MS } from '~/constants/proxy';
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { fetchers } from '~/queries';
 
 export type TProxyHealthStatus = 'failed' | 'passing' | 'untested';

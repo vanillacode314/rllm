@@ -27,12 +27,12 @@ import type { TChat, TMessage, TUserMessageChunk } from '~/types/chat';
 
 import { Chat } from '~/components/Chat';
 import ThePromptBox from '~/components/ThePromptBox';
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { useNotifications } from '~/context/notifications';
 import { chatsSchema, type TChat as TDBChat } from '~/db/app-schema';
 import { logger } from '~/db/client';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { createTask } from '~/lib/background-task-manager/tasks';
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { ChatGenerationManager } from '~/lib/chat/generation';
 import { chatSettingsSchema, type TChatSettings } from '~/lib/chat/settings';
 import { epubRAGAdapter } from '~/lib/rag/epub';
@@ -683,7 +683,9 @@ export function useChatPageLoader(opts: { scratchpad?: boolean }) {
     ] as Promise<unknown>[];
     let scratchpadPromise;
     if (opts.scratchpad) {
-      scratchpadPromise = queryClient.fetchQuery(queries.userMetadata.byId(USER_METADATA_KEYS.SCRATCHPAD_CHAT));
+      scratchpadPromise = queryClient.fetchQuery(
+        queries.userMetadata.byId(USER_METADATA_KEYS.SCRATCHPAD_CHAT)
+      );
       promises.push(scratchpadPromise);
     }
     const defaultChatSettingsPresetPromise = queryClient.ensureQueryData(

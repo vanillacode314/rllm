@@ -107,9 +107,9 @@ export function createTask(task: TValidTask, priority: TTaskPriority = 'idle', i
     case 'saveScratchpadChat':
       return {
         async handler() {
-          const chat = Option.from(await fetchers.userMetadata.byId(USER_METADATA_KEYS.SCRATCHPAD_CHAT)).andThen(
-            (chat) => safeParseJson(chat, { validate: chatsSchema.parse }).ok()
-          );
+          const chat = Option.from(
+            await fetchers.userMetadata.byId(USER_METADATA_KEYS.SCRATCHPAD_CHAT)
+          ).andThen((chat) => safeParseJson(chat, { validate: chatsSchema.parse }).ok());
           if (chat.isNone()) return;
           await logger.dispatch(
             {
