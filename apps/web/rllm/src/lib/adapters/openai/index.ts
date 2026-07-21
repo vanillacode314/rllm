@@ -322,12 +322,14 @@ export class OpenAIAdapter implements TAdapter {
       if (message.type === 'llm') {
         if (currentChunk !== null && currentChunk.role === 'user') commitChunk();
         for (const chunk of message.chunks) {
+          if (toolCallsChunks.length > 0 && chunk.type !== 'tool_call') commitChunk();
           if (chunk.type === 'reasoning') {
             if (i < messages.length - 1) continue;
             updateAssistantChunk({ reasoning_content: chunk.content });
           } else if (chunk.type === 'text') {
             updateAssistantChunk({ content: chunk.content });
           } else if (chunk.type === 'tool_call') {
+            if (currentChunk === null) updateAssistantChunk({});
             toolCallsChunks.push(chunk);
           }
         }
