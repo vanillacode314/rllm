@@ -5,6 +5,7 @@ import * as z from 'zod/mini';
 
 import type { TMessage } from '~/types/chat';
 
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { fetchers } from '~/queries';
 import { type TTool } from '~/types';
@@ -26,13 +27,13 @@ export const generateTitleAndTags = (config: {
       const { signal } = config;
       const [{ provider, providerId }, model] = await Promise.all([
         fetchers.userMetadata
-          .byId('title-generation-provider-id')
+          .byId(USER_METADATA_KEYS.TITLE_GENERATION_PROVIDER_ID)
           .then(async (titleGenerationProviderId) => {
             if (!titleGenerationProviderId) titleGenerationProviderId = config.providerId;
             const provider = await fetchers.providers.byId(titleGenerationProviderId);
             return { provider, providerId: titleGenerationProviderId };
           }),
-        fetchers.userMetadata.byId('title-generation-model-id').then((id) => id ?? config.model)
+        fetchers.userMetadata.byId(USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID).then((id) => id ?? config.model)
       ]);
       if (!provider) throw new Error(`Provider ${providerId} not found`);
       if (!model) throw new Error(`Model ${model} not found`);

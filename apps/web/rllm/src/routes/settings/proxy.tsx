@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { TextField, TextFieldInput, TextFieldLabel } from 'ui/text-field';
 import * as z from 'zod/mini';
 
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import ValidationErrors from '~/components/form/ValidationErrors';
 import { logger } from '~/db/client';
 import { ProxyManager } from '~/lib/proxy';
@@ -16,7 +17,7 @@ import { queryClient } from '~/utils/query-client';
 export const Route = createFileRoute('/settings/proxy')({
   component: SettingsProxyComponent,
   loader: async () => {
-    await queryClient.ensureQueryData(queries.userMetadata.byId('cors-proxy-url'));
+    await queryClient.ensureQueryData(queries.userMetadata.byId(USER_METADATA_KEYS.CORS_PROXY_URL));
   }
 });
 
@@ -26,7 +27,7 @@ const formSchema = z.object({
   })
 });
 function SettingsProxyComponent() {
-  const proxyUrl = useQuery(() => queries.userMetadata.byId('cors-proxy-url'));
+  const proxyUrl = useQuery(() => queries.userMetadata.byId(USER_METADATA_KEYS.CORS_PROXY_URL));
   const [{ form, formErrors }, { resetFormErrors, setForm, setFormErrors }] = createForm(
     formSchema,
     () => ({
@@ -49,7 +50,7 @@ function SettingsProxyComponent() {
         }
         await logger.dispatch({
           data: {
-            id: 'cors-proxy-url',
+            id: USER_METADATA_KEYS.CORS_PROXY_URL,
             value: parsedForm.data.url
           },
           type: 'setUserMetadata'

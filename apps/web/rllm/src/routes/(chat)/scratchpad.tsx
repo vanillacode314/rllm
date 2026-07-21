@@ -10,6 +10,7 @@ import type { TMessage } from '~/types/chat';
 import { useAppDrawer } from '~/components/AppDrawer';
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
 import { FALLBACK_CHAT_SETTINGS } from '~/constants/chat-settings';
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { chatsSchema } from '~/db/app-schema';
 import { logger } from '~/db/client';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
@@ -101,7 +102,7 @@ function ChatPageComponent() {
     });
     if (!yes) return;
     await logger.dispatch({
-      data: { id: 'scratchpad-chat' },
+      data: { id: USER_METADATA_KEYS.SCRATCHPAD_CHAT },
       dontLog: true,
       type: 'deleteUserMetadata'
     });

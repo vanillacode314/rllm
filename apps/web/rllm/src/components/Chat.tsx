@@ -36,6 +36,7 @@ import type { TChat } from '~/db/app-schema';
 import type { TLLMMessageChunk, TMessage, TUserMessageChunk } from '~/types/chat';
 
 import { useAutoScroll } from '~/directives/auto-scroll';
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { ChatGenerationManager } from '~/lib/chat/generation';
 import { queries } from '~/queries';
 import { formatAsKeyValuePair } from '~/utils/object';
@@ -95,7 +96,7 @@ export function Chat(props: Props): JSXElement {
 
   const [offsetBottomPixels, setOffsetBottomPixels] = createSignal(0);
 
-  const displayName = useQuery(() => queries.userMetadata.byId('user-display-name'));
+  const displayName = useQuery(() => queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME));
 
   return (
     <div class="relative overflow-hidden grid">

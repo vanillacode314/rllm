@@ -4,6 +4,7 @@ import { Option } from 'ts-result-option';
 import { safeParseJson } from 'ts-result-option/utils';
 import * as z from 'zod/mini';
 
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { chatsSchema } from '~/db/app-schema';
 import { logger } from '~/db/client';
 import { fetchers } from '~/queries';
@@ -26,8 +27,8 @@ export type TChatSettings = z.infer<typeof chatSettingsSchema>;
 
 export async function initChatSettings() {
   const [titleGenerationProviderId, titleGenerationModelId, providers] = await Promise.all([
-    fetchers.userMetadata.byId('title-generation-provider-id'),
-    fetchers.userMetadata.byId('title-generation-model-id'),
+    fetchers.userMetadata.byId(USER_METADATA_KEYS.TITLE_GENERATION_PROVIDER_ID),
+    fetchers.userMetadata.byId(USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID),
     fetchers.providers.getAllProviders()
   ]);
   if (providers.length === 0) {
@@ -42,7 +43,7 @@ export async function initChatSettings() {
     tasks.push(() =>
       logger.dispatch({
         data: {
-          id: 'title-generation-provider-id',
+          id: USER_METADATA_KEYS.TITLE_GENERATION_PROVIDER_ID,
           value: providers[0].id
         },
         type: 'setUserMetadata'
@@ -56,14 +57,14 @@ export async function initChatSettings() {
       logger.dispatch(
         {
           data: {
-            id: 'title-generation-provider-id',
+            id: USER_METADATA_KEYS.TITLE_GENERATION_PROVIDER_ID,
             value: providers[0].id
           },
           type: 'setUserMetadata'
         },
         {
           data: {
-            id: 'title-generation-model-id',
+            id: USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID,
             value: providers[0].defaultModelIds[0]
           },
           type: 'setUserMetadata'
@@ -79,7 +80,7 @@ export async function initChatSettings() {
     tasks.push(() =>
       logger.dispatch({
         data: {
-          id: 'title-generation-model-id',
+          id: USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID,
           value: provider.defaultModelIds[0]
         },
         type: 'setUserMetadata'
@@ -109,7 +110,7 @@ export async function updateChatSettings(
   setChatSettings(Option.Some(newValue));
 
   if (scratchpad) {
-    const chat = Option.from(await fetchers.userMetadata.byId('scratchpad-chat'))
+    const chat = Option.from(await fetchers.userMetadata.byId(USER_METADATA_KEYS.SCRATCHPAD_CHAT))
       .okOrElse(() => new Error('No chat found'))
       .andThen((value) => safeParseJson(value, { validate: chatsSchema.parse }));
     if (chat.isErr()) {
@@ -118,7 +119,7 @@ export async function updateChatSettings(
     }
     await logger.dispatch({
       data: {
-        id: 'scratchpad-chat',
+        id: USER_METADATA_KEYS.SCRATCHPAD_CHAT,
         value: JSON.stringify({
           ...chat,
           settings: newValue

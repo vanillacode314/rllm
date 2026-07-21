@@ -2,6 +2,7 @@ import { nanoid } from 'nanoid';
 
 import type { TChatPreset } from '~/db/app-schema';
 
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { logger } from '~/db/client';
 import { fetchers } from '~/queries';
 
@@ -9,12 +10,10 @@ import type { TChatSettings } from './settings';
 
 export type { TChatPreset };
 
-const DEFAULT_PRESET_METADATA_ID = 'default-chat-settings-preset';
-
 export async function clearDefaultPresetId(): Promise<void> {
   await logger.dispatch({
     data: {
-      id: DEFAULT_PRESET_METADATA_ID,
+      id: USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET,
       value: ''
     },
     type: 'setUserMetadata'
@@ -52,13 +51,13 @@ export async function duplicatePreset(preset: TChatPreset): Promise<string> {
 }
 
 export async function getDefaultPresetId(): Promise<null | string> {
-  return fetchers.userMetadata.byId(DEFAULT_PRESET_METADATA_ID);
+  return fetchers.userMetadata.byId(USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET);
 }
 
 export async function setDefaultPresetId(presetId: string): Promise<void> {
   await logger.dispatch({
     data: {
-      id: DEFAULT_PRESET_METADATA_ID,
+      id: USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET,
       value: presetId
     },
     type: 'setUserMetadata'

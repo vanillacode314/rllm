@@ -1,6 +1,7 @@
 import { Option } from 'ts-result-option';
 import { safeParseJson } from 'ts-result-option/utils';
 
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { chatsSchema, type TChat, type TProvider } from '~/db/app-schema';
 import { fetchers } from '~/queries';
 
@@ -20,7 +21,7 @@ export const dbStorage: ChatGenerationStorage = {
 
 export const scratchpadStorage: ChatGenerationStorage = {
   async getChat(id) {
-    const chat = Option.from(await fetchers.userMetadata.byId('scratchpad-chat'))
+    const chat = Option.from(await fetchers.userMetadata.byId(USER_METADATA_KEYS.SCRATCHPAD_CHAT))
       .okOrElse(() => new Error('No chat found'))
       .andThen((value) => safeParseJson(value, { validate: chatsSchema.parse }))
       .ok()

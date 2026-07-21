@@ -32,6 +32,7 @@ import { chatsSchema, type TChat as TDBChat } from '~/db/app-schema';
 import { logger } from '~/db/client';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { createTask } from '~/lib/background-task-manager/tasks';
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { ChatGenerationManager } from '~/lib/chat/generation';
 import { chatSettingsSchema, type TChatSettings } from '~/lib/chat/settings';
 import { epubRAGAdapter } from '~/lib/rag/epub';
@@ -239,7 +240,7 @@ export function useChatPage(
     if (opts().scratchpad) {
       await logger.dispatch({
         data: {
-          id: 'scratchpad-chat',
+          id: USER_METADATA_KEYS.SCRATCHPAD_CHAT,
           value: JSON.stringify(
             chatsSchema.parse(
               produce($chat as TDBChat, (draft) => {
@@ -318,7 +319,7 @@ export function useChatPage(
     if (opts().scratchpad) {
       await logger.dispatch({
         data: {
-          id: 'scratchpad-chat',
+          id: USER_METADATA_KEYS.SCRATCHPAD_CHAT,
           value: JSON.stringify({
             ...chat(),
             messages: $messages.toJSON()
@@ -383,7 +384,7 @@ export function useChatPage(
     if (opts().scratchpad) {
       await logger.dispatch({
         data: {
-          id: 'scratchpad-chat',
+          id: USER_METADATA_KEYS.SCRATCHPAD_CHAT,
           value: JSON.stringify({
             ...chat(),
             messages: messages().toJSON()
@@ -677,16 +678,16 @@ export function useChatPageLoader(opts: { scratchpad?: boolean }) {
 
   async function ensureQueryData() {
     const promises = [
-      queryClient.ensureQueryData(queries.userMetadata.byId('selected-model-id')),
-      queryClient.ensureQueryData(queries.userMetadata.byId('user-display-name'))
+      queryClient.ensureQueryData(queries.userMetadata.byId(USER_METADATA_KEYS.SELECTED_MODEL_ID)),
+      queryClient.ensureQueryData(queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME))
     ] as Promise<unknown>[];
     let scratchpadPromise;
     if (opts.scratchpad) {
-      scratchpadPromise = queryClient.fetchQuery(queries.userMetadata.byId('scratchpad-chat'));
+      scratchpadPromise = queryClient.fetchQuery(queries.userMetadata.byId(USER_METADATA_KEYS.SCRATCHPAD_CHAT));
       promises.push(scratchpadPromise);
     }
     const defaultChatSettingsPresetPromise = queryClient.ensureQueryData(
-      queries.userMetadata.byId('default-chat-settings-preset')
+      queries.userMetadata.byId(USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET)
     );
     const providersPromise = queryClient.ensureQueryData(queries.providers.all());
     promises.push(defaultChatSettingsPresetPromise, providersPromise);

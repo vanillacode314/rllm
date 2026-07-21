@@ -3,6 +3,7 @@ import { Option } from 'ts-result-option';
 import { safeParseJson } from 'ts-result-option/utils';
 import { z } from 'zod/mini';
 
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { chatsSchema } from '~/db/app-schema';
 import { logger } from '~/db/client';
 import { ChatGenerationManager } from '~/lib/chat/generation';
@@ -106,7 +107,7 @@ export function createTask(task: TValidTask, priority: TTaskPriority = 'idle', i
     case 'saveScratchpadChat':
       return {
         async handler() {
-          const chat = Option.from(await fetchers.userMetadata.byId('scratchpad-chat')).andThen(
+          const chat = Option.from(await fetchers.userMetadata.byId(USER_METADATA_KEYS.SCRATCHPAD_CHAT)).andThen(
             (chat) => safeParseJson(chat, { validate: chatsSchema.parse }).ok()
           );
           if (chat.isNone()) return;
@@ -116,7 +117,7 @@ export function createTask(task: TValidTask, priority: TTaskPriority = 'idle', i
               type: 'createChat'
             },
             {
-              data: { id: 'scratchpad-chat' },
+              data: { id: USER_METADATA_KEYS.SCRATCHPAD_CHAT },
               type: 'deleteUserMetadata'
             }
           );
@@ -155,7 +156,7 @@ export function createTask(task: TValidTask, priority: TTaskPriority = 'idle', i
           if (task.arguments.scratchpad) {
             await logger.dispatch({
               data: {
-                id: 'scratchpad-chat',
+                id: USER_METADATA_KEYS.SCRATCHPAD_CHAT,
                 value: JSON.stringify(chat)
               },
               dontLog: true,

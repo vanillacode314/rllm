@@ -6,6 +6,7 @@ import { Label } from 'ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'ui/select';
 
 import ModelSelector from '~/components/ModelSelector';
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { logger } from '~/db/client';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { queries } from '~/queries';
@@ -19,8 +20,8 @@ export const Route = createFileRoute('/settings/models')({
   component: SettingsModelComponent,
   loader: async () => {
     await Promise.all([
-      queryClient.ensureQueryData(queries.userMetadata.byId('title-generation-provider-id')),
-      queryClient.ensureQueryData(queries.userMetadata.byId('title-generation-model-id'))
+      queryClient.ensureQueryData(queries.userMetadata.byId(USER_METADATA_KEYS.TITLE_GENERATION_PROVIDER_ID)),
+      queryClient.ensureQueryData(queries.userMetadata.byId(USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID))
     ]);
   }
 });
@@ -28,7 +29,7 @@ export const Route = createFileRoute('/settings/models')({
 function SettingsModelComponent() {
   const providers = useQuery(queries.providers.all);
   const titleGenerationProviderId = useQuery(() =>
-    queries.userMetadata.byId('title-generation-provider-id')
+    queries.userMetadata.byId(USER_METADATA_KEYS.TITLE_GENERATION_PROVIDER_ID)
   );
   const provider = useQuery(() => ({
     enabled:
@@ -45,7 +46,7 @@ function SettingsModelComponent() {
   });
 
   const titleGenerationModelId = useQuery(() =>
-    queries.userMetadata.byId('title-generation-model-id')
+    queries.userMetadata.byId(USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID)
   );
 
   const options = createMemo(() => {
@@ -60,14 +61,14 @@ function SettingsModelComponent() {
     await logger.dispatch(
       {
         data: {
-          id: 'title-generation-provider-id',
+          id: USER_METADATA_KEYS.TITLE_GENERATION_PROVIDER_ID,
           value: providerId
         },
         type: 'setUserMetadata'
       },
       {
         data: {
-          id: 'title-generation-model-id',
+          id: USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID,
           value: provider?.defaultModelIds[0] ?? 'current-model'
         },
         type: 'setUserMetadata'
@@ -78,7 +79,7 @@ function SettingsModelComponent() {
   async function updateTitleGenerationModel(modelId: string) {
     await logger.dispatch({
       data: {
-        id: 'title-generation-model-id',
+        id: USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID,
         value: modelId
       },
       type: 'setUserMetadata'

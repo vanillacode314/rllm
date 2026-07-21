@@ -2,6 +2,7 @@ import type { ConfiguredMiddleware } from 'wretch';
 
 import { createSignal } from 'solid-js';
 
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { PROXY_HEALTH_CHECK_INTERVAL_MS, PROXY_HEALTH_CHECK_TIMEOUT_MS } from '~/constants/proxy';
 import { fetchers } from '~/queries';
 
@@ -40,7 +41,7 @@ export class ProxyManager {
   }
 
   static async initialize(): Promise<void> {
-    const url = await fetchers.userMetadata.byId('cors-proxy-url');
+    const url = await fetchers.userMetadata.byId(USER_METADATA_KEYS.CORS_PROXY_URL);
     this.#proxyUrl[1](url);
     await this.checkHealth();
   }

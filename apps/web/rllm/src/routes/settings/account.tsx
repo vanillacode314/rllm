@@ -12,6 +12,7 @@ import { Button } from 'ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from 'ui/card';
 import { TextField, TextFieldInput, TextFieldLabel } from 'ui/text-field';
 
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { useAlertDialog } from '~/components/modals/auto-import/AlertDialog';
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
 import { usePromptDialog } from '~/components/modals/auto-import/PromptDialog';
@@ -30,7 +31,7 @@ import {
 export const Route = createFileRoute('/settings/account')({
   component: SettingsAccountComponent,
   async loader() {
-    await queryClient.ensureQueryData(queries.userMetadata.byId('user-display-name'));
+    await queryClient.ensureQueryData(queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME));
   }
 });
 
@@ -49,7 +50,7 @@ function SettingsAccountComponent() {
     shouldBlockFn: () => false
   });
 
-  const displayName = useQuery(() => queries.userMetadata.byId('user-display-name'));
+  const displayName = useQuery(() => queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME));
 
   async function createNewAccount() {
     const wallet = ethers.Wallet.createRandom();
@@ -254,7 +255,7 @@ function SettingsAccountComponent() {
               }
               await logger.dispatch({
                 data: {
-                  id: 'user-display-name',
+                  id: USER_METADATA_KEYS.USER_DISPLAY_NAME,
                   value: formData.displayName
                 },
                 type: 'setUserMetadata'
