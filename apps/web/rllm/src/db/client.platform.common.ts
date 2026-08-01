@@ -25,6 +25,7 @@ export const setupDb = (logger: SqliteAdapter['logger']) =>
         });
         console.debug(`Migration ${version} applied`);
       }
+      await logger.invalidateSchema();
 
       console.debug(
         '[DB Metadata]',

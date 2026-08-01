@@ -71,6 +71,7 @@ interface Logger<T extends TBaseEvent> {
   getMerkleTree: () => Promise<MerkleTree<string, string>>;
   getMetadata: (key: string) => Promise<null | string>;
   getVersion: () => Promise<string | undefined>;
+  invalidateSchema: () => Promise<void>;
   on: <
     U extends T,
     TType extends '*' | U['type'],
@@ -126,6 +127,8 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
     return schema;
   }
 
+  let schema = await getSchema();
+
   const subscriptions = new Map<
     string,
     Set<{
@@ -138,7 +141,6 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
   const logger = {
     applyUpdates: async (updates: TUpdate[], timestamp: string, tx: TSqlRunner) => {
       if (updates.length === 0) return;
-      const schema = await getSchema(tx);
       for (const update of updates) {
         const statements = await convertUpdateToStatement(update, timestamp, schema, tx);
         if (statements === null) continue;
@@ -292,6 +294,9 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
       return await tx
         .query<{ value: string }>(sql`SELECT value FROM metadata WHERE key = 'version'`)
         .then((rows) => rows[0]?.value);
+    },
+    invalidateSchema: async () => {
+      schema = await getSchema();
     },
     on(
       type: '*' | TEvent['type'],
@@ -448,6 +453,7 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
     getMerkleTree: logger.getMerkleTree,
     getMetadata: logger.getMetadata,
     getVersion: logger.getVersion,
+    invalidateSchema: logger.invalidateSchema,
     // @ts-expect-error: will fix later
     on: logger.on,
     receive: logger.receive,
