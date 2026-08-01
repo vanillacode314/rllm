@@ -5,4 +5,4 @@ dev APP='rllm':
     bunx turbo run dev --filter=rllm --filter=sync-server --filter=hlc --filter=merkle-tree --filter=event-logger --filter=proto --filter=ts-result-option --filter=ui --filter=mutex
   fi
 push:
-  jj git push && git push --tags
+  jj git push && git push --tags && jj new main
