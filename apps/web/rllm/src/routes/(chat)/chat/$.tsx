@@ -123,12 +123,6 @@ function ChatPageComponent() {
       })
     );
   });
-  createEventListenerMap(document, {
-    'chat:handoff': (event: CustomEvent<{ prefilledPrompt: string }>) => {
-      setPrompt(event.detail.prefilledPrompt);
-      navigate({ params: { _splat: 'new' }, to: '/chat/$' });
-    }
-  });
 
   return <ChatPage />;
 }

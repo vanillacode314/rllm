@@ -637,6 +637,13 @@ export function useChatPage(
     );
   }
 
+  createEventListenerMap(document, {
+    'chat:handoff': (event: CustomEvent<{ prefilledPrompt: string }>) => {
+      setPrompt(event.detail.prefilledPrompt);
+      navigate({ params: { _splat: 'new' }, to: '/chat/$' });
+    }
+  });
+
   return {
     chat,
     ChatPage,
