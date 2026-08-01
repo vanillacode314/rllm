@@ -28,7 +28,7 @@ const remarkPlugins = [
   remarkDedentCodeBlocks,
   remarkGfm,
   // remarkDirective
-  remarkMath
+  [remarkMath, { singleDollarTextMath: false }]
 ] satisfies PluggableList;
 
 const rehypePlugins = [

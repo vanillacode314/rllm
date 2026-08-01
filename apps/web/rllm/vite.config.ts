@@ -71,7 +71,6 @@ export default defineConfig(({ mode }) => {
           __dirname,
           '../../../node_modules/hast-util-from-html-isomorphic/index.js'
         ),
-        'micromark-extension-math': 'micromark-extension-llm-math',
         '~/db/client':
           mode === 'android'
             ? path.resolve(__dirname, './src/db/client.platform.android.ts')

@@ -1,6 +1,6 @@
 {
   "name": "rllm",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "private": true,
   "type": "module",
   "scripts": {
@@ -79,7 +79,6 @@
     "katex": "^0.17.0",
     "localforage": "^1.10.0",
     "lowlight": "^3.3.0",
-    "micromark-extension-llm-math": "^3.1.1-20250610",
     "motion": "^12.40.0",
     "mutex": "workspace:*",
     "nanoid": "^5.1.11",
