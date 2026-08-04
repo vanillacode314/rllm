@@ -6,6 +6,7 @@ export const ATTACHMENT_TOOL_INSTRUCTIONS_PROMPT = (attachments: string[]) => de
 Use this tool to search for relevant information within attached documents (PDFs, EPUBs, etc.) that may help answer the user's query.
 
 ## Parameters
+- \`ids\`: IDs of the attachments to search within (at least one). Use the IDs listed in "Provided Attachments" below to scope the search to specific attachments
 - \`query\`: Search terms or question to find relevant content in attachments
 - \`postSearchFilters\`: Control result pagination
   - \`limit\`: Number of results to retrieve
@@ -30,26 +31,29 @@ Use this tool to search for relevant information within attached documents (PDFs
 
 1. **Craft effective queries**: Use specific keywords and phrases that are likely to appear in relevant sections of the documents
 
-2. **Use pre-search filters strategically**: 
+2. **Scope the search with \`ids\`**: Search only the attachments most likely to contain the answer (e.g., based on their descriptions in "Provided Attachments"). Searching all attachments at once can return irrelevant results and is slower
+
+3. **Use pre-search filters strategically**: 
    - When you find relevant but incomplete content, use \`afterIndex\`/\`beforeIndex\` to search adjacent documents that may contain related information
    - Narrow search scope when you suspect information appears sequentially in the source document
    - Use to reduce search space when initial results are too broad
 
-3. **Iterate when necessary**: 
+4. **Iterate when necessary**: 
    - If results are relevant but incomplete, call again with increased \`offset\` and the same \`query\` to get more context
    - If results suggest relevant information exists but wasn't returned, try reformulating your \`query\` and restarting with \`offset: 0\` with different keywords
    - You may call this tool multiple times to gather comprehensive information
 
-4. **Evaluate relevance**: After receiving results, assess whether:
+5. **Evaluate relevance**: After receiving results, assess whether:
    - The content is actually relevant to the user's question
    - You need additional context (use pagination or refine search scope / query)
    - The attachments don't contain pertinent information (stop searching and answer based on your general knowledge)
 
-5. **Be efficient**: Don't make unnecessary calls. If initial results clearly indicate the attachments lack relevant information, proceed without further searches.
+6. **Be efficient**: Don't make unnecessary calls. If initial results clearly indicate the attachments lack relevant information, proceed without further searches.
 
 **Note**: Document indices reflect ordering in source attachments, but ignore any page number or index references within the content itself as those refer to original document structure.
 
 ## Provided Attachments
+Each attachment is listed as \`<id>: <description>\`. Pass the \`id\`(s) of the attachment(s) you want to search in the \`ids\` parameter.
 - ${attachments.join('\n- ')}
 `;
 

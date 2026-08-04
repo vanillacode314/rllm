@@ -174,9 +174,10 @@ export const summarizeChat = (config: {
     (e) => new Error(`Failed to summarize chat`, { cause: e })
   );
 
-export function makeTool(
-  tool: Omit<TTool, 'jsonSchema'> & {
-    inputSchema: z.core.$ZodType;
+export function makeTool<TSchema extends z.core.$ZodType>(
+  tool: Omit<TTool, 'handler' | 'jsonSchema'> & {
+    handler: (args: z.infer<NoInfer<TSchema>>) => Promise<string> | string;
+    inputSchema: TSchema;
   }
 ): TTool {
   return { ...tool, jsonSchema: z.toJSONSchema(tool.inputSchema) };

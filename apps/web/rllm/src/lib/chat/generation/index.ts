@@ -9,10 +9,7 @@ import * as z from 'zod/mini';
 import type { TProvider } from '~/db/app-schema';
 import type { TAttachment, TChat, TMessage } from '~/types/chat';
 
-import {
-  type TFeedbackQuestion,
-  useFeedbackModal
-} from '~/components/modals/auto-import/FeedbackModal';
+import { useFeedbackModal } from '~/components/modals/auto-import/FeedbackModal';
 import {
   ASK_QUESTIONS_TOOL_PROMPT,
   ATTACHMENT_TOOL_INSTRUCTIONS_PROMPT,
@@ -139,29 +136,25 @@ export class ChatGenerationManager {
     if (attachments.length > 0) {
       const tool = makeTool({
         description: ATTACHMENT_TOOL_INSTRUCTIONS_PROMPT(
-          attachments.map((attachement) => attachement.description)
+          attachments.map((attachement) => `${attachement.id}: ${attachement.description}`)
         ),
-        handler: async (args: {
-          postSearchFilters: {
-            limit: number;
-            offset: number;
-          };
-          preSearchFilters?: {
-            afterIndex?: number;
-            beforeIndex?: number;
-          };
-          query: string;
-        }) => {
+        handler: async (args) => {
           const { query } = args;
           const { limit, offset } = args.postSearchFilters;
           const { afterIndex, beforeIndex } = args.preSearchFilters ?? {};
           if (afterIndex !== undefined && beforeIndex !== undefined && afterIndex > beforeIndex) {
             throw new Error('afterIndex must be less than beforeIndex');
           }
+          if (!attachments.some((attachment) => args.ids.includes(attachment.id))) {
+            throw new Error(
+              `Attachment with id (${args.ids.join(',')}) not found in the provided attachments`
+            );
+          }
           const embedding = await rag.getEmbedding(query);
           const documents = await Promise.all(
             attachments
               .values()
+              .filter((attachment) => args.ids.includes(attachment.id))
               .flatMap((attachment) =>
                 attachment.documents.map((document) => ({
                   ...document,
@@ -183,7 +176,7 @@ export class ChatGenerationManager {
           return JSON.stringify(
             documents.slice(offset, offset + limit).map((document) => ({
               content: document.content,
-              description: document.attachment.description,
+              id: document.attachment.id,
               index: document.index
             })),
             null,
@@ -191,6 +184,7 @@ export class ChatGenerationManager {
           );
         },
         inputSchema: z.object({
+          ids: z.array(z.string()).check(z.minLength(1)),
           postSearchFilters: z.object({
             limit: z.number().check(z.int(), z.gt(0)),
             offset: z.number().check(z.int(), z.gte(0))
@@ -216,7 +210,7 @@ export class ChatGenerationManager {
       const feedbackModal = useFeedbackModal();
       const feedbackTool = makeTool({
         description: ASK_QUESTIONS_TOOL_PROMPT,
-        handler: async (args: { questions: TFeedbackQuestion[] }) => {
+        handler: async (args) => {
           const { questions } = args;
           for (const question of questions) {
             if (question.options === undefined) continue;
