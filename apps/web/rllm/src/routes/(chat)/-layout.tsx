@@ -112,14 +112,19 @@ export function useChatPage(
 
   function purgeOnlyErrorResponses(tree: TTree<TMessage>) {
     const pathsToRemove = [] as number[][];
+    const latestPath = getLatestPath(tree);
     for (const { node, path } of tree.walk()) {
       if (node.value.isNone()) continue;
       const message = node.value.unwrap();
       if (message.type !== 'llm') continue;
       if (typeof message.error === 'undefined') continue;
       if (message.chunks.length > 0) continue;
-      const isLastMessage = tree.traverse(path).unwrap().children.length === 0;
-      if (!isLastMessage) continue;
+      const isLeafNode = tree.traverse(path).unwrap().children.length === 0;
+      if (!isLeafNode) continue;
+      const isLatestMessage =
+        path.length === latestPath.length &&
+        path.every((value, index) => value === latestPath[index]);
+      if (isLatestMessage) continue;
       pathsToRemove.push(path);
     }
     for (const path of pathsToRemove.toReversed()) {
