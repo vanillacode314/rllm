@@ -51,11 +51,10 @@ function DocumentCard(props: { document: TDocument }) {
     <Card class="flex flex-col">
       <CardHeader>
         <div class="flex items-baseline gap-4">
-          <CardTitle class="text-lg truncate" title={props.document.name}>
+          <CardTitle class="grow text-lg truncate" title={props.document.name}>
             {props.document.name}
           </CardTitle>
-          <span class="grow" />
-          <Button onClick={onDelete} size="icon" variant="ghost" class="shrink-0">
+          <Button class="shrink-0" onClick={onDelete} size="icon" variant="ghost">
             <span class="icon-[heroicons--trash]" />
             <span class="sr-only">Delete Document</span>
           </Button>
@@ -126,13 +125,12 @@ function IndexingCard(props: { progress: TIndexingProgress }) {
     <Card class="flex flex-col">
       <CardHeader>
         <div class="flex items-baseline gap-4">
-          <CardTitle class="text-lg truncate" title={props.progress.name}>
+          <CardTitle class="grow text-lg truncate" title={props.progress.name}>
             {props.progress.name}
           </CardTitle>
-          <span class="grow" />
-          <span class="text-xs text-muted-foreground">
+          <span class="shrink-0 text-xs text-muted-foreground flex gap-1 items-center">
             <span class="shrink-0 icon-[svg-spinners--180-ring-with-bg]" />
-            {(props.progress.current * 100).toFixed(2)}%
+            <span>{(props.progress.current * 100).toFixed(0)}%</span>
           </span>
         </div>
       </CardHeader>
