@@ -317,7 +317,7 @@ function Toolbar(props: {
           <DropdownMenu>
             <DropdownMenuTrigger
               as={Button<'button'>}
-              class="border-px max-sm:hidden"
+              class="border-px"
               disabled={props.isPending}
               size="icon"
               variant="outline"
