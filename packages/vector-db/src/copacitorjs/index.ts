@@ -28,9 +28,11 @@ export function fromCapacitorSqlite(getDb: () => Promise<SQLiteDBConnection>): T
           batch: (statements) => loggerDb.batch(statements, false),
           query: loggerDb.query
         });
+        const db = await getDb();
         await db.commitTransaction();
         return result;
       } catch (e) {
+        const db = await getDb();
         await db.rollbackTransaction();
         throw e;
       } finally {
