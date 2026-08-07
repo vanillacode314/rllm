@@ -14,6 +14,7 @@ export function fromCapacitorSqlite(getDb: () => Promise<SQLiteDBConnection>): T
         tx
       );
     },
+    blobType: 'array',
     async query(statement) {
       const db = await getDb();
       const result = await db.query(statement.sql, statement.params);

@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid';
 
 export interface TSqlDB extends TSqlRunner {
+  blobType: 'array' | 'uint8array';
   transaction<T>(callback: (tx: TSqlRunner) => Promise<T>): Promise<T>;
 }
 
@@ -113,7 +114,9 @@ export async function createVectorDB({ db, embedder }: TConfig): Promise<TVector
             nanoid(),
             documentId,
             offset + index,
-            vector.buffer,
+            db.blobType === 'array'
+              ? Array.from(new Uint8Array(vector.buffer, vector.byteOffset, vector.byteLength))
+              : new Uint8Array(vector.buffer, vector.byteOffset, vector.byteLength),
             item
           ]),
           sql: `INSERT INTO \`documents\` (\`id\`, \`document_id\`, \`index\`, \`vector\`, \`text\`) VALUES ${mappedItems.map(() => '(?, ?, ?, ?, ?)').join(', ')}`
@@ -246,7 +249,5 @@ function sql(strings: TemplateStringsArray, ...values: unknown[]): TStatement {
 }
 
 function toFloat16(vector: Uint8Array): Float16Array {
-  return Float16Array.from(
-    new Float16Array(vector.buffer, vector.byteOffset, vector.byteLength / 2)
-  );
+  return new Float16Array(vector.buffer, vector.byteOffset, vector.byteLength / 2);
 }

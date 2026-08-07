@@ -5,6 +5,7 @@ import type { TSqlDB, TSqlRunner, TStatement } from '..';
 export function fromSQLocal(db: SQLocal): TSqlDB {
   const runner = runnerFromSQLocal(db);
   return {
+    blobType: 'uint8array',
     ...runner,
     transaction(callback) {
       return db.transaction((tx) => callback(runnerFromSQLocal(tx)));
