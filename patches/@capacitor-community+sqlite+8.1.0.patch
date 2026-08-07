@@ -1,0 +1,17 @@
+diff -Naur '--exclude=node_modules' '--exclude=.git' '--exclude=.DS_Store' '--exclude=*.so' '--exclude=*.jar' '--exclude=*.aar' '--exclude=*.class' '--exclude=*.dex' '--exclude=*.apk' '--exclude=*.a' '--exclude=*.framework' '--exclude=*.xcframework' '--exclude=*.dylib' '--exclude=build' '--exclude=.gradle' '--exclude=.transforms' '--exclude=Pods' '--exclude=DerivedData' '--exclude=.cxx' '--exclude=*.png' '--exclude=*.jpg' '--exclude=*.jpeg' '--exclude=*.gif' '--exclude=*.webp' '--exclude=*.ttf' '--exclude=*.otf' '--exclude=*.woff' '--exclude=*.woff2' --no-dereference a/node_modules/@capacitor-community/sqlite/android/src/main/java/com/getcapacitor/community/database/sqlite/SQLite/Database.java b/node_modules/@capacitor-community/sqlite/android/src/main/java/com/getcapacitor/community/database/sqlite/SQLite/Database.java
+--- a/node_modules/@capacitor-community/sqlite/android/src/main/java/com/getcapacitor/community/database/sqlite/SQLite/Database.java	2026-08-08 03:17:50.081901551 +0530
++++ b/node_modules/@capacitor-community/sqlite/android/src/main/java/com/getcapacitor/community/database/sqlite/SQLite/Database.java	2026-08-08 03:18:52.091999464 +0530
+@@ -357,6 +357,13 @@
+     public void close() throws Exception {
+         if (_db.isOpen()) {
+             try {
++                while (_db.inTransaction()) {
++                    _db.endTransaction();
++                }
++            } catch (Exception e) {
++                Log.v(TAG, "close: failed to end open transaction: " + e.getMessage());
++            }
++            try {
+                 _db.close();
+                 _isOpen = false;
+                 return;
