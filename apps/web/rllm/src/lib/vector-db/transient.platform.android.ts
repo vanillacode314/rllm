@@ -7,13 +7,21 @@ import * as rag from '~/workers/rag';
 import { TRANSIENT_VECTOR_DATABASE_PATH } from './transient.constants';
 
 const sqlite = new SQLiteConnection(CapacitorSQLite);
-const { result } = await sqlite.checkConnectionsConsistency();
-const db = result
-  ? await sqlite.retrieveConnection(TRANSIENT_VECTOR_DATABASE_PATH, false)
-  : await sqlite.createConnection(TRANSIENT_VECTOR_DATABASE_PATH, false, 'secret', 1, false);
-await db.open();
+async function getDb() {
+  await sqlite.checkConnectionsConsistency();
+  const { result: hasConnection } = await sqlite.isConnection(
+    TRANSIENT_VECTOR_DATABASE_PATH,
+    false
+  );
+  const db = hasConnection
+    ? await sqlite.retrieveConnection(TRANSIENT_VECTOR_DATABASE_PATH, false)
+    : await sqlite.createConnection(TRANSIENT_VECTOR_DATABASE_PATH, false, 'secret', 1, false);
+  const { result: isOpen } = await db.isDBOpen();
+  if (!isOpen) await db.open();
+  return db;
+}
 
 export const transientDb = await createVectorDB({
-  db: fromCapacitorSqlite(db),
+  db: fromCapacitorSqlite(getDb),
   embedder: { generateEmbeddings: (text) => rag.getEmbedding(text) }
 });

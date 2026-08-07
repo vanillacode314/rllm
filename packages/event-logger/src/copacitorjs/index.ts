@@ -4,20 +4,23 @@ import { Mutex } from 'mutex';
 
 import type { TSqlDB } from '..';
 
-export function fromCapacitorSqlite(db: SQLiteDBConnection): TSqlDB {
+export function fromCapacitorSqlite(getDb: () => Promise<SQLiteDBConnection>): TSqlDB {
   const transactionMutex = new Mutex();
   const loggerDb = {
     async batch(statements, tx = true) {
+      const db = await getDb();
       await db.executeSet(
         statements.map(({ params, sql }) => ({ statement: sql, values: params })),
         tx
       );
     },
     async query(statement) {
+      const db = await getDb();
       const result = await db.query(statement.sql, statement.params);
       return result.values ?? [];
     },
     async transaction(callback) {
+      const db = await getDb();
       await transactionMutex.lock();
       await db.beginTransaction();
       try {
