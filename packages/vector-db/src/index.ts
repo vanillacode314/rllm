@@ -1,7 +1,8 @@
+// oxlint-disable no-await-in-loop
 import { nanoid } from 'nanoid';
 
 export interface TSqlDB extends TSqlRunner {
-  blobType: 'array' | 'uint8array';
+  blobType: 'array' | 'string' | 'uint8array';
   transaction<T>(callback: (tx: TSqlRunner) => Promise<T>): Promise<T>;
 }
 
@@ -92,7 +93,6 @@ export async function createVectorDB({ db, embedder }: TConfig): Promise<TVector
       let offset = 0;
       let lastChunkSize = 0;
       do {
-        // oxlint-disable-next-line no-await-in-loop
         const mappedItems = await Promise.all(
           items.map(async (item) => {
             const vector = new Float16Array(await embedder.generateEmbeddings(item));
@@ -108,17 +108,21 @@ export async function createVectorDB({ db, embedder }: TConfig): Promise<TVector
             );
           }
         }
-        // oxlint-disable-next-line no-await-in-loop
         await tx.query({
-          params: mappedItems.flatMap(([item, vector], index) => [
-            nanoid(),
-            documentId,
-            offset + index,
-            db.blobType === 'array'
-              ? Array.from(new Uint8Array(vector.buffer, vector.byteOffset, vector.byteLength))
-              : new Uint8Array(vector.buffer, vector.byteOffset, vector.byteLength),
-            item
-          ]),
+          params: mappedItems.flatMap(([item, vector], index) => {
+            const bytes = new Uint8Array(vector.buffer, vector.byteOffset, vector.byteLength);
+            return [
+              nanoid(),
+              documentId,
+              offset + index,
+              db.blobType === 'array'
+                ? Array.from(bytes)
+                : db.blobType === 'string'
+                  ? bufToBase64(bytes)
+                  : bytes,
+              item
+            ];
+          }),
           sql: `INSERT INTO \`documents\` (\`id\`, \`document_id\`, \`index\`, \`vector\`, \`text\`) VALUES ${mappedItems.map(() => '(?, ?, ?, ?, ?)').join(', ')}`
         });
 
@@ -163,17 +167,26 @@ export async function createVectorDB({ db, embedder }: TConfig): Promise<TVector
       let minSimilarity = Number.NEGATIVE_INFINITY;
       let cursor = 0;
       do {
-        // oxlint-disable-next-line no-await-in-loop
-        rows = await db.query<{
-          document_id: string;
-          index: number;
-          text: string;
-          vector: Uint8Array;
-        }>({
-          params: [...baseParams, QUERY_CHUNK_SIZE, cursor],
-          sql: `SELECT \`document_id\`, \`index\`, \`text\`, \`vector\` FROM \`documents\`${filterClause} ORDER BY \`id\` LIMIT ? OFFSET ?`
-        });
-        // oxlint-disable-next-line no-await-in-loop
+        rows = (
+          await db.query<{
+            document_id: string;
+            index: number;
+            text: string;
+            vector: Array<number> | string | Uint8Array;
+          }>({
+            params: [...baseParams, QUERY_CHUNK_SIZE, cursor],
+            sql: `SELECT \`document_id\`, \`index\`, \`text\`, \`vector\` FROM \`documents\`${filterClause} ORDER BY \`id\` LIMIT ? OFFSET ?`
+          })
+        ).map((row) =>
+          Object.assign(row, {
+            vector:
+              typeof row.vector === 'string'
+                ? base64ToBuf(row.vector)
+                : Array.isArray(row.vector)
+                  ? Uint8Array.from(row.vector)
+                  : row.vector
+          })
+        );
         for (const row of rows) {
           const rowVector = toFloat16(row.vector);
           if (rowVector.length !== queryVector.length) {
@@ -220,6 +233,21 @@ export async function createVectorDB({ db, embedder }: TConfig): Promise<TVector
     }
   } satisfies TVectorDB;
   return vectorDb;
+}
+
+function base64ToBuf(b64: string): Uint8Array {
+  const binary = atob(b64);
+  const arr = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    arr[i] = binary.charCodeAt(i);
+  }
+  return arr;
+}
+
+function bufToBase64(buf: Uint8Array): string {
+  const arr = Uint16Array.from(buf);
+  const binary = new TextDecoder('UTF-16').decode(arr);
+  return btoa(binary);
 }
 
 function cosineSimilarity(a: Float16Array, b: Float16Array): number {
