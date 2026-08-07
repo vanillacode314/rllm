@@ -75,6 +75,14 @@ export default defineConfig(({ mode }) => {
           mode === 'android'
             ? path.resolve(__dirname, './src/db/client.platform.android.ts')
             : path.resolve(__dirname, './src/db/client.platform.web.ts'),
+        '~/lib/vector-db/client':
+          mode === 'android'
+            ? path.resolve(__dirname, './src/lib/vector-db/client.platform.android.ts')
+            : path.resolve(__dirname, './src/lib/vector-db/client.platform.web.ts'),
+        '~/lib/vector-db/transient':
+          mode === 'android'
+            ? path.resolve(__dirname, './src/lib/vector-db/transient.platform.android.ts')
+            : path.resolve(__dirname, './src/lib/vector-db/transient.platform.web.ts'),
         '~': path.resolve(__dirname, './src')
       }
     },

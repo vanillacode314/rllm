@@ -1,6 +1,6 @@
 {
   "name": "rllm",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "private": true,
   "type": "module",
   "scripts": {
@@ -68,6 +68,7 @@
     "drizzle-zod": "^0.8.3",
     "epubjs": "^0.3.93",
     "eslint-plugin-ts-result-option": "workspace:*",
+    "vector-db": "workspace:*",
     "ethers": "^6.16.0",
     "event-logger": "workspace:*",
     "fuse.js": "^7.4.2",

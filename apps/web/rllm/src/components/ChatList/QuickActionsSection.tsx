@@ -19,6 +19,11 @@ const links = [
     to: '/presets'
   },
   {
+    icon: 'icon-[heroicons--book-open]',
+    title: 'Documents',
+    to: '/documents'
+  },
+  {
     icon: 'icon-[heroicons--cog]',
     title: 'Settings',
     to: '/settings'

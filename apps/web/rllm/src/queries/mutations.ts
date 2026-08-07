@@ -123,6 +123,19 @@ export const validEventSchema = z.discriminatedUnion('type', [
       id: z.string()
     }),
     type: z.literal('deletePreset')
+  }),
+  z.object({
+    data: z.object({
+      id: z.string(),
+      name: z.string()
+    }),
+    type: z.literal('createDocument')
+  }),
+  z.object({
+    data: z.object({
+      id: z.string()
+    }),
+    type: z.literal('deleteDocument')
   })
 ]);
 
@@ -131,10 +144,12 @@ export type TValidEvent = z.infer<typeof validEventSchema>;
 const userIntentToTable = new Map(
   Object.entries({
     createChat: tables.chats,
+    createDocument: tables.documents,
     createMcp: tables.mcps,
     createPreset: tables.chatPresets,
     createProvider: tables.providers,
     deleteChat: tables.chats,
+    deleteDocument: tables.documents,
     deleteMcp: tables.mcps,
     deletePreset: tables.chatPresets,
     deleteProvider: tables.providers,
@@ -153,6 +168,7 @@ export const processMessage: TEventTransformer<TValidEvent> = async (event) => {
   const tableName = getTableName(table);
   switch (event.type) {
     case 'createChat':
+    case 'createDocument':
     case 'createMcp':
     case 'createPreset':
     case 'createProvider': {
@@ -170,6 +186,7 @@ export const processMessage: TEventTransformer<TValidEvent> = async (event) => {
       ];
     }
     case 'deleteChat':
+    case 'deleteDocument':
     case 'deleteMcp':
     case 'deletePreset':
     case 'deleteProvider':

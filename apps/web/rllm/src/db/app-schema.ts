@@ -57,7 +57,13 @@ const mcps = sqliteTable('mcps', {
   updatedAt: updatedAt(),
   url: text().notNull()
 });
-export const tables = { chatPresets, chats, mcps, providers, userMetadata };
+const documents = sqliteTable('documents', {
+  createdAt: timestamp(),
+  id: text().primaryKey().notNull(),
+  name: text().notNull(),
+  updatedAt: updatedAt()
+});
+export const tables = { chatPresets, chats, documents, mcps, providers, userMetadata };
 
 export const providersSchema = createSelectSchema(providers, {
   baseUrl: z.url(),
@@ -71,9 +77,11 @@ export const chatsSchema = createSelectSchema(chats, {
 });
 export const mcpsSchema = createSelectSchema(mcps);
 export const chatPresetsSchema = createSelectSchema(chatPresets);
+export const documentsSchema = createSelectSchema(documents);
 
 export type TChat = typeof chats.$inferSelect;
 export type TChatPreset = typeof chatPresets.$inferSelect;
+export type TDocument = typeof documents.$inferSelect;
 export type TMCP = typeof mcps.$inferSelect;
 export type TProvider = typeof providers.$inferSelect;
 export type TUserMetadata = typeof userMetadata.$inferSelect;

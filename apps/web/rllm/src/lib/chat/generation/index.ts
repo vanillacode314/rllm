@@ -2,7 +2,6 @@ import type { Accessor } from 'solid-js';
 
 import { createDebouncer } from '@tanstack/solid-pacer';
 import { createMemo, from } from 'solid-js';
-import { unwrap } from 'solid-js/store';
 import { Option } from 'ts-result-option';
 import * as z from 'zod/mini';
 
@@ -17,11 +16,12 @@ import {
 } from '~/constants/prompts';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { MCPManager } from '~/lib/mcp/manager';
+import { vectorDb } from '~/lib/vector-db/client';
+import { transientDb } from '~/lib/vector-db/transient';
 import { finalizeChat } from '~/routes/(chat)/-utils';
 import { getMessagesForPath } from '~/utils/chat';
 import { formatError } from '~/utils/errors';
 import { Tree, TreeNode } from '~/utils/tree';
-import * as rag from '~/workers/rag';
 
 import type { ChatGenerationStorage } from './storages';
 
@@ -133,6 +133,14 @@ export class ChatGenerationManager {
     this.emitUpdate(id);
     const messages = getMessagesForPath(newPath, chat.messages).unwrap();
 
+    const attachmentsByTransientStatus = {
+      library: new Set(
+        attachments.filter((attachment) => !attachment.transient).map((attachment) => attachment.id)
+      ),
+      transient: new Set(
+        attachments.filter((attachment) => attachment.transient).map((attachment) => attachment.id)
+      )
+    };
     if (attachments.length > 0) {
       const tool = makeTool({
         description: ATTACHMENT_TOOL_INSTRUCTIONS_PROMPT(
@@ -150,35 +158,41 @@ export class ChatGenerationManager {
               `Attachment with id (${args.ids.join(',')}) not found in the provided attachments`
             );
           }
-          const embedding = await rag.getEmbedding(query);
-          const documents = await Promise.all(
-            attachments
-              .values()
-              .filter((attachment) => args.ids.includes(attachment.id))
-              .flatMap((attachment) =>
-                attachment.documents.map((document) => ({
-                  ...document,
-                  attachment
-                }))
-              )
-              .filter((document) => {
-                if (afterIndex !== undefined && document.index < afterIndex) return false;
-                if (beforeIndex !== undefined && document.index > beforeIndex) return false;
+          const results = (
+            await Promise.all([
+              await transientDb.query(query, {
+                afterIndex,
+                beforeIndex,
+                documentIds: args.ids.filter((id) =>
+                  attachmentsByTransientStatus.transient.has(id)
+                ),
+                limit: offset + limit
+              }),
+              await vectorDb.query(query, {
+                afterIndex,
+                beforeIndex,
+                documentIds: args.ids.filter((id) => attachmentsByTransientStatus.library.has(id)),
+                limit: offset + limit
+              })
+            ])
+          )
+            .flat()
+            .filter((value) => value !== undefined);
+          results.sort((a, b) => a.similarity - b.similarity);
+          return JSON.stringify(
+            results
+              .slice(offset, offset + limit)
+              .filter((result) => {
+                if (afterIndex !== undefined && result.index < afterIndex) return false;
+                if (beforeIndex !== undefined && result.index > beforeIndex) return false;
                 return true;
               })
-              .map(async (document) => ({
-                ...document,
-                similarity: await rag.cosineSimilarity(embedding, unwrap(document.embeddings))
-              }))
-          );
-          documents.sort((a, b) => b.similarity - a.similarity);
-
-          return JSON.stringify(
-            documents.slice(offset, offset + limit).map((document) => ({
-              content: document.content,
-              id: document.attachment.id,
-              index: document.index
-            })),
+              .slice(offset, offset + limit)
+              .map((result) => ({
+                content: result.text,
+                id: result.document_id,
+                index: result.index
+              })),
             null,
             2
           );

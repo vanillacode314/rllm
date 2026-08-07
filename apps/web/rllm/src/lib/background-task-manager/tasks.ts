@@ -8,11 +8,14 @@ import { chatsSchema } from '~/db/app-schema';
 import { logger } from '~/db/client';
 import { ChatGenerationManager } from '~/lib/chat/generation';
 import { generateTitleAndTags } from '~/lib/chat/utils';
+import { indexFile } from '~/lib/vector-db/client.platform.common';
+import { removeIndexingProgress, updateIndexingProgress } from '~/lib/vector-db/progress';
 import { fetchers } from '~/queries';
 import { getMessagesForPath } from '~/utils/chat';
 import { Tree } from '~/utils/tree';
 
 import { BackgroundTaskManager } from '.';
+import { attachmentsSchema } from '~/types/chat';
 
 export interface TTask {
   handler: (signal: AbortSignal) => Promise<unknown> | unknown;
@@ -41,26 +44,19 @@ const ValidTask = z.discriminatedUnion('type', [
   z.object({ type: z.literal('saveScratchpadChat') }),
   z.object({
     arguments: z.object({
-      attachements: z.array(
-        z.object({
-          description: z.string(),
-          documents: z.array(
-            z.object({
-              content: z.string(),
-              embeddings: z.array(z.number()),
-              index: z.int().check(z.minimum(0)),
-              progress: z.number().check(z.minimum(0), z.maximum(1))
-            })
-          ),
-          id: z.string()
-        })
-      ),
+      attachements: z.array(attachmentsSchema),
       chatId: z.string(),
       feedbackEnabled: z.boolean(),
       path: z.array(z.number()),
       scratchpad: z._default(z.boolean(), false)
     }),
     type: z.literal('startLLMGeneration')
+  }),
+  z.object({
+    arguments: z.object({
+      file: z.custom<File>((file) => file instanceof File)
+    }),
+    type: z.literal('indexDocument')
   })
 ]);
 type TValidTask = z.infer<typeof ValidTask>;
@@ -98,6 +94,22 @@ export function createTask(task: TValidTask, priority: TTaskPriority = 'idle', i
             data: { id: chat.id, tags: generated.tags, title: generated.title },
             type: 'updateChat'
           });
+        },
+        id,
+        priority,
+        serialize: () => ({ id, priority, task }),
+        type: task.type
+      };
+    case 'indexDocument':
+      return {
+        async handler() {
+          const { file } = task.arguments;
+          updateIndexingProgress(id, file.name, 0);
+          try {
+            await indexFile(file, (current) => updateIndexingProgress(id, file.name, current));
+          } finally {
+            removeIndexingProgress(id);
+          }
         },
         id,
         priority,

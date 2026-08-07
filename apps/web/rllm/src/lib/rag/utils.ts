@@ -19,7 +19,7 @@ const tokenizerConfig = {};
 let modelPromise: Promise<PreTrainedModel>;
 let tokenizerPromise: Promise<PreTrainedTokenizer>;
 
-async function getEmbedding(text: string): Promise<number[]> {
+export async function getEmbedding(text: string): Promise<number[]> {
   modelPromise ??= AutoModel.from_pretrained(modelName, modelConfig);
   tokenizerPromise ??= AutoTokenizer.from_pretrained(modelName, tokenizerConfig);
   const model = await modelPromise;
@@ -44,11 +44,12 @@ async function getEmbedding(text: string): Promise<number[]> {
   return Array.from(embeddings.data);
 }
 
-const splitter = new IterativeTextSplitter({
+export const splitter = new IterativeTextSplitter({
   chunkOverlap: 256,
   chunkSize: 1024,
   cleanWhitespace: true
 });
+
 const baseRagAdapter = Object.freeze({
   getDocuments(file, opts = {}) {
     return tryBlock(
@@ -74,7 +75,7 @@ const baseRagAdapter = Object.freeze({
   }
 } satisfies Partial<TRAGAdapter>);
 
-const makeRagAdapter = (
+export const makeRagAdapter = (
   adapter: Omit<TRAGAdapter, keyof typeof baseRagAdapter> & Partial<typeof baseRagAdapter>
 ) => {
   return Object.freeze({
@@ -82,4 +83,3 @@ const makeRagAdapter = (
     ...adapter
   });
 };
-export { getEmbedding, makeRagAdapter };

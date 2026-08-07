@@ -29,6 +29,13 @@
       "when": 1780336472656,
       "tag": "20260601175432_right_hydra",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1786100041710,
+      "tag": "20260807105401_little_diamondback",
+      "breakpoints": true
     }
   ]
 }

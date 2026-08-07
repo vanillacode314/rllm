@@ -1,0 +1,56 @@
+{
+  "name": "vector-db",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "license": "MIT",
+  "author": "Raqueebuddin Aziz",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*/index.d.ts",
+      "import": "./dist/*/index.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./dist/*/index.d.ts",
+        "./dist/index.d.ts"
+      ]
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown --out-dir ./dist",
+    "dev": "npm run build -- --watch src",
+    "lint": "oxlint --fix",
+    "format": "oxfmt"
+  },
+  "dependencies": {
+    "mutex": "workspace:*",
+    "nanoid": "^6.0.1"
+  },
+  "devDependencies": {
+    "sqlocal": "^0.18.0",
+    "@capacitor-community/sqlite": "^8.1.0"
+  },
+  "peerDependencies": {
+    "sqlocal": "^0.18.0",
+    "@capacitor-community/sqlite": "^8.1.0"
+  },
+  "peerDependenciesMeta": {
+    "sqlocal": {
+      "optional": true
+    },
+    "@capacitor-community/sqlite": {
+      "optional": true
+    }
+  }
+}

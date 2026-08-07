@@ -20,6 +20,7 @@ import { getFile } from '~/utils/files';
 import { useAppDrawer } from './AppDrawer';
 import { ExpandableTextField } from './ExpandableTextField';
 import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
+import { useLibraryPicker } from './modals/auto-import/LibraryPickerModal';
 import { setChatSettingsDrawerOpen } from './TheChatSettingsDrawer';
 import { setCommandPromptOpen } from './TheCommandPrompt';
 
@@ -35,6 +36,7 @@ type Props = Omit<JSX.HTMLAttributes<HTMLDivElement>, 'onInput'> & {
   onAttachment: (file: File) => void;
   onFeedbackEnabledChange: (enabled: boolean) => void;
   onInput: (value: string) => void;
+  onLibraryAttach?: (attachments: TAttachment[]) => void;
   onMessage: (value: string) => void;
   onRemoveAttachment: (id: string) => void;
   onReset?: () => void;
@@ -60,7 +62,8 @@ export function PromptBox(props: Props) {
     'onRemoveAttachment',
     'onAttachment',
     'feedbackEnabled',
-    'onFeedbackEnabledChange'
+    'onFeedbackEnabledChange',
+    'onLibraryAttach'
   ]);
 
   const appDrawer = useAppDrawer();
@@ -111,7 +114,7 @@ export function PromptBox(props: Props) {
                 </h4>
                 <Button
                   class="size-6"
-                  disabled={attachment.progress < 1}
+                  // disabled={attachment.progress < 1}
                   onClick={() => props.onRemoveAttachment(attachment.id)}
                   size="icon"
                   type="button"
@@ -132,6 +135,7 @@ export function PromptBox(props: Props) {
         onAbort={local.onAbort}
         onAttachment={props.onAttachment}
         onFeedbackEnabledChange={local.onFeedbackEnabledChange}
+        onLibraryAttach={local.onLibraryAttach}
         onRemoveAttachment={props.onRemoveAttachment}
         onReset={local.onReset}
         onSave={local.onSave}
@@ -156,6 +160,7 @@ function Toolbar(props: {
   onAbort: () => void;
   onAttachment: (file: File) => void;
   onFeedbackEnabledChange: (enabled: boolean) => void;
+  onLibraryAttach?: (attachments: TAttachment[]) => void;
   onRemoveAttachment: (id: string) => void;
   onReset?: () => void;
   onSave?: () => void;
@@ -167,6 +172,7 @@ function Toolbar(props: {
 
   const navigate = useNavigate();
   const confirmDialog = useConfirmDialog();
+  const libraryPicker = useLibraryPicker();
 
   function simplifyModelId(id: string): string {
     if (!id.includes('/')) return id;
@@ -327,6 +333,14 @@ function Toolbar(props: {
                 onSelect={() => onLoadAttachment('application/epub+zip application/pdf')}
               >
                 <span>PDF/Epub</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={async () => {
+                  const result = await libraryPicker.pick();
+                  if (result) props.onLibraryAttach?.(result);
+                }}
+              >
+                <span>Library</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

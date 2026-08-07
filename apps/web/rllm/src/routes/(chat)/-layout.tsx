@@ -23,7 +23,7 @@ import { Option } from 'ts-result-option';
 import { tryBlock } from 'ts-result-option/utils';
 import { SidebarTrigger, useSidebar } from 'ui/sidebar';
 
-import type { TChat, TMessage, TUserMessageChunk } from '~/types/chat';
+import type { TAttachment, TChat, TMessage, TUserMessageChunk } from '~/types/chat';
 
 import { Chat } from '~/components/Chat';
 import ThePromptBox from '~/components/ThePromptBox';
@@ -37,6 +37,7 @@ import { ChatGenerationManager } from '~/lib/chat/generation';
 import { chatSettingsSchema, type TChatSettings } from '~/lib/chat/settings';
 import { epubRAGAdapter } from '~/lib/rag/epub';
 import { pdfRAGAdapter } from '~/lib/rag/pdf';
+import { transientDb } from '~/lib/vector-db/transient';
 import { fetchers, queries } from '~/queries';
 import { isMobile } from '~/signals';
 import { formatError } from '~/utils/errors';
@@ -59,6 +60,7 @@ import {
   setPrompt
 } from './-state';
 import { getLatestPath } from './-utils';
+import { splitter } from '~/lib/rag/utils';
 
 export function useChatPage(
   opts: Accessor<{
@@ -450,32 +452,39 @@ export function useChatPage(
       }
     } else if (file.type === 'application/pdf' || file.type === 'application/epub+zip') {
       const id = nanoid();
-      const attachment = { description: file.name, documents: [], id, progress: 0 };
-      const adapter = file.type === 'application/epub+zip' ? epubRAGAdapter : pdfRAGAdapter;
+      const attachment: TAttachment = {
+        description: file.name,
+        id,
+        progress: 0,
+        transient: true
+      };
       const idx = attachments.length;
       setAttachments(
         produce((attachments) => {
           attachments.push(attachment);
         })
       );
+      const adapter = file.type === 'application/epub+zip' ? epubRAGAdapter : pdfRAGAdapter;
+      const text = (await adapter.getText(file)).unwrap();
+      const chunks = splitter.splitText(text);
       await tryBlock(
         async function* () {
           const description = yield* adapter.getDescription(file);
-          const documents = yield* adapter.getDocuments(file, {
-            onProgress(progress) {
+          setAttachments(
+            produce((attachments) => {
+              attachments[idx].description = description;
+            })
+          );
+          await transientDb.indexDocument(chunks.values(), {
+            id,
+            onProgress(n) {
               setAttachments(
                 produce((attachments) => {
-                  attachments[idx].progress = progress;
+                  attachments[idx].progress = n / chunks.length;
                 })
               );
             }
           });
-          setAttachments(
-            produce((attachments) => {
-              attachments[idx].description = description;
-              attachments[idx].documents = documents;
-            })
-          );
         },
         (e) => e
       )
@@ -487,6 +496,21 @@ export function useChatPage(
     } else {
       toast.error('Unsupported file type');
     }
+  }
+
+  function onRemoveAttachment(id: string) {
+    setAttachments((attachments) =>
+      produce(attachments, (attachments) => {
+        const index = attachments.findIndex((attachment) => attachment.id === id);
+        attachments.splice(index, 1);
+      })
+    );
+    void transientDb.deleteDocument(id);
+  }
+
+  function onLibraryAttach(newAttachments: TAttachment[]) {
+    const transientAttachments = attachments.filter((attachment) => attachment.transient);
+    setAttachments(transientAttachments.concat(newAttachments));
   }
 
   createShortcut(
@@ -619,15 +643,9 @@ export function useChatPage(
             onAttachment={onAttachment}
             onFeedbackEnabledChange={setFeedbackEnabled}
             onInput={setPrompt}
+            onLibraryAttach={onLibraryAttach}
             onMessage={handlePrompt}
-            onRemoveAttachment={(id) => {
-              setAttachments((attachments) =>
-                produce(attachments, (attachments) => {
-                  const index = attachments.findIndex((attachment) => attachment.id === id);
-                  attachments.splice(index, 1);
-                })
-              );
-            }}
+            onRemoveAttachment={onRemoveAttachment}
             onReset={props.onReset}
             onSave={props.onSave}
             prompt={prompt()}

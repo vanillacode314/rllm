@@ -321,9 +321,38 @@ const chatPresets = {
   }
 };
 
+const documents = {
+  fetchers: {
+    all: () =>
+      db.select().from(tables.documents).orderBy(desc(tables.documents.createdAt)),
+    byId: (id: string) =>
+      db
+        .select()
+        .from(tables.documents)
+        .where(eq(tables.documents.id, id))
+        .then((rows) => rows[0] ?? null)
+  },
+  queries: {
+    all: () =>
+      queryOptions({
+        queryFn: () => documents.fetchers.all(),
+        queryKey: [...documents.queries.base(), 'all'],
+        staleTime: Infinity
+      }),
+    base: () => ['db', 'documents'],
+    byId: (id: string) =>
+      queryOptions({
+        queryFn: () => documents.fetchers.byId(id),
+        queryKey: [...documents.queries.base(), 'byId', id],
+        staleTime: Infinity
+      })
+  }
+};
+
 export const queries = {
   chatPresets: chatPresets.queries,
   chats: chats.queries,
+  documents: documents.queries,
   events: events.queries,
   mcps: mcps.queries,
   models: models.queries,
@@ -334,6 +363,7 @@ export const queries = {
 export const fetchers = {
   chatPresets: chatPresets.fetchers,
   chats: chats.fetchers,
+  documents: documents.fetchers,
   events: events.fetchers,
   mcps: mcps.fetchers,
   providers: providers.fetchers,

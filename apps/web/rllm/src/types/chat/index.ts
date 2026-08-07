@@ -84,14 +84,8 @@ export type TChat = Omit<z.infer<typeof chatSchema>, 'messages'> & { messages: T
 
 export const attachmentsSchema = z.object({
   description: z.string(),
-  documents: z.array(
-    z.object({
-      content: z.string(),
-      embeddings: z.array(z.number()),
-      index: z.number().check(z.int(), z.gt(0)),
-      progress: z.number().check(z.minimum(0), z.maximum(1))
-    })
-  ),
-  id: z.string()
+  id: z.string(),
+  progress: z.number().check(z.minimum(0), z.maximum(1)),
+  transient: z.boolean()
 });
 export type TAttachment = z.infer<typeof attachmentsSchema>;

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as PresetsRouteImport } from './routes/presets'
+import { Route as DocumentsRouteImport } from './routes/documents'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
@@ -33,6 +34,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const PresetsRoute = PresetsRouteImport.update({
   id: '/presets',
   path: '/presets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocumentsRoute = DocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SplatRoute = SplatRouteImport.update({
@@ -104,6 +110,7 @@ const chatChatSplatRoute = chatChatSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/documents': typeof DocumentsRoute
   '/presets': typeof PresetsRoute
   '/settings': typeof SettingsRouteWithChildren
   '/scratchpad': typeof chatScratchpadRoute
@@ -121,6 +128,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/documents': typeof DocumentsRoute
   '/presets': typeof PresetsRoute
   '/scratchpad': typeof chatScratchpadRoute
   '/settings/account': typeof SettingsAccountRoute
@@ -138,6 +146,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/documents': typeof DocumentsRoute
   '/presets': typeof PresetsRoute
   '/settings': typeof SettingsRouteWithChildren
   '/(chat)/scratchpad': typeof chatScratchpadRoute
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$'
+    | '/documents'
     | '/presets'
     | '/settings'
     | '/scratchpad'
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$'
+    | '/documents'
     | '/presets'
     | '/scratchpad'
     | '/settings/account'
@@ -190,6 +201,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$'
+    | '/documents'
     | '/presets'
     | '/settings'
     | '/(chat)/scratchpad'
@@ -208,6 +220,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
+  DocumentsRoute: typeof DocumentsRoute
   PresetsRoute: typeof PresetsRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   chatScratchpadRoute: typeof chatScratchpadRoute
@@ -228,6 +241,13 @@ declare module '@tanstack/solid-router' {
       path: '/presets'
       fullPath: '/presets'
       preLoaderRoute: typeof PresetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/documents': {
+      id: '/documents'
+      path: '/documents'
+      fullPath: '/documents'
+      preLoaderRoute: typeof DocumentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$': {
@@ -355,6 +375,7 @@ const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
+  DocumentsRoute: DocumentsRoute,
   PresetsRoute: PresetsRoute,
   SettingsRoute: SettingsRouteWithChildren,
   chatScratchpadRoute: chatScratchpadRoute,
