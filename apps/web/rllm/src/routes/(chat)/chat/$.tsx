@@ -1,4 +1,3 @@
-import { createEventListenerMap } from '@solid-primitives/event-listener';
 import { createFileRoute, redirect, useRouter } from '@tanstack/solid-router';
 import { nanoid } from 'nanoid';
 import { onCleanup, onMount } from 'solid-js';
@@ -13,17 +12,14 @@ import { queryClient } from '~/utils/query-client';
 
 import ChatAppDrawer from '../-ChatAppDrawer';
 import { INCREMENT_ACCESS_COUNT_THRESHOLD_MILLISECONDS } from '../-constants';
-import { useChatPage, useChatPageLoader } from '../-layout';
-import { messages, setPrompt } from '../-state';
+import { useChatPage, useChatPageBeforeLoad, useChatPageLoader } from '../-layout';
+import { messages } from '../-state';
 import { getLatestPath } from '../-utils';
 
 console.error('FIX OPTIMIZE STORAGE');
 
 export const Route = createFileRoute('/(chat)/chat/$')({
-  beforeLoad: async () => {
-    const numberOfProviders = await fetchers.providers.countProviders();
-    if (numberOfProviders === 0) throw redirect({ to: '/settings/providers' });
-  },
+  beforeLoad: useChatPageBeforeLoad,
   component: ChatPageComponent,
   loaderDeps: ({ search: { id } }) => ({ id: id ?? nanoid(), isNewChat: id === undefined }),
   // oxlint-disable-next-line perfectionist/sort-objects

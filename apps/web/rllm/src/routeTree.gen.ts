@@ -20,6 +20,7 @@ import { Route as SettingsProxyRouteImport } from './routes/settings/proxy'
 import { Route as SettingsProvidersRouteImport } from './routes/settings/providers'
 import { Route as SettingsModelsRouteImport } from './routes/settings/models'
 import { Route as SettingsMcpRouteImport } from './routes/settings/mcp'
+import { Route as SettingsGeneralRouteImport } from './routes/settings/general'
 import { Route as SettingsDataRouteImport } from './routes/settings/data'
 import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
 import { Route as SettingsAccountRouteImport } from './routes/settings/account'
@@ -81,6 +82,11 @@ const SettingsMcpRoute = SettingsMcpRouteImport.update({
   path: '/mcp',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsGeneralRoute = SettingsGeneralRouteImport.update({
+  id: '/general',
+  path: '/general',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsDataRoute = SettingsDataRouteImport.update({
   id: '/data',
   path: '/data',
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/data': typeof SettingsDataRoute
+  '/settings/general': typeof SettingsGeneralRoute
   '/settings/mcp': typeof SettingsMcpRoute
   '/settings/models': typeof SettingsModelsRoute
   '/settings/providers': typeof SettingsProvidersRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/data': typeof SettingsDataRoute
+  '/settings/general': typeof SettingsGeneralRoute
   '/settings/mcp': typeof SettingsMcpRoute
   '/settings/models': typeof SettingsModelsRoute
   '/settings/providers': typeof SettingsProvidersRoute
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/data': typeof SettingsDataRoute
+  '/settings/general': typeof SettingsGeneralRoute
   '/settings/mcp': typeof SettingsMcpRoute
   '/settings/models': typeof SettingsModelsRoute
   '/settings/providers': typeof SettingsProvidersRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/data'
+    | '/settings/general'
     | '/settings/mcp'
     | '/settings/models'
     | '/settings/providers'
@@ -190,6 +200,7 @@ export interface FileRouteTypes {
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/data'
+    | '/settings/general'
     | '/settings/mcp'
     | '/settings/models'
     | '/settings/providers'
@@ -208,6 +219,7 @@ export interface FileRouteTypes {
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/data'
+    | '/settings/general'
     | '/settings/mcp'
     | '/settings/models'
     | '/settings/providers'
@@ -306,6 +318,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof SettingsMcpRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/general': {
+      id: '/settings/general'
+      path: '/general'
+      fullPath: '/settings/general'
+      preLoaderRoute: typeof SettingsGeneralRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/data': {
       id: '/settings/data'
       path: '/data'
@@ -348,6 +367,7 @@ interface SettingsRouteChildren {
   SettingsAccountRoute: typeof SettingsAccountRoute
   SettingsAppearanceRoute: typeof SettingsAppearanceRoute
   SettingsDataRoute: typeof SettingsDataRoute
+  SettingsGeneralRoute: typeof SettingsGeneralRoute
   SettingsMcpRoute: typeof SettingsMcpRoute
   SettingsModelsRoute: typeof SettingsModelsRoute
   SettingsProvidersRoute: typeof SettingsProvidersRoute
@@ -360,6 +380,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsAccountRoute: SettingsAccountRoute,
   SettingsAppearanceRoute: SettingsAppearanceRoute,
   SettingsDataRoute: SettingsDataRoute,
+  SettingsGeneralRoute: SettingsGeneralRoute,
   SettingsMcpRoute: SettingsMcpRoute,
   SettingsModelsRoute: SettingsModelsRoute,
   SettingsProvidersRoute: SettingsProvidersRoute,

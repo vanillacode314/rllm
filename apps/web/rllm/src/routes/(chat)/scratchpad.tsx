@@ -20,15 +20,12 @@ import { slugify } from '~/utils/string';
 import { Tree } from '~/utils/tree';
 
 import ChatAppDrawer from './-ChatAppDrawer';
-import { useChatPage, useChatPageLoader } from './-layout';
+import { useChatPage, useChatPageLoader, useChatPageBeforeLoad } from './-layout';
 
 console.error('FIX OPTIMIZE STORAGE');
 
 export const Route = createFileRoute('/(chat)/scratchpad')({
-  beforeLoad: async () => {
-    const numberOfProviders = await fetchers.providers.countProviders();
-    if (numberOfProviders === 0) throw redirect({ to: '/settings/providers' });
-  },
+  beforeLoad: useChatPageBeforeLoad,
   component: ChatPageComponent,
   // oxlint-disable-next-line perfectionist/sort-objects
   loader: async () => {

@@ -38,7 +38,7 @@ const providers = {
         .then((rows) => rows[0] ?? null),
     countProviders: () =>
       db
-        .select({ value: sql`count(*)`.as('value') })
+        .select({ value: sql<number>`count(*)`.as('value') })
         .from(tables.providers)
         .then((rows) => rows[0]?.value ?? 0),
     getAllProviders: () => db.select().from(tables.providers)
@@ -323,8 +323,7 @@ const chatPresets = {
 
 const documents = {
   fetchers: {
-    all: () =>
-      db.select().from(tables.documents).orderBy(desc(tables.documents.createdAt)),
+    all: () => db.select().from(tables.documents).orderBy(desc(tables.documents.createdAt)),
     byId: (id: string) =>
       db
         .select()

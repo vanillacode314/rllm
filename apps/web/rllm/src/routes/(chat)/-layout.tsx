@@ -3,7 +3,7 @@ import { createShortcut } from '@solid-primitives/keyboard';
 import { createWritableMemo } from '@solid-primitives/memo';
 import { createElementSize } from '@solid-primitives/resize-observer';
 import { useMutation } from '@tanstack/solid-query';
-import { type NavigateFn, useBlocker, useRouter } from '@tanstack/solid-router';
+import { type NavigateFn, redirect, useBlocker, useRouter } from '@tanstack/solid-router';
 import { HLC } from 'hlc';
 import { animate } from 'motion';
 import { nanoid } from 'nanoid';
@@ -37,6 +37,7 @@ import { ChatGenerationManager } from '~/lib/chat/generation';
 import { chatSettingsSchema, type TChatSettings } from '~/lib/chat/settings';
 import { epubRAGAdapter } from '~/lib/rag/epub';
 import { pdfRAGAdapter } from '~/lib/rag/pdf';
+import { splitter } from '~/lib/rag/utils';
 import { transientDb } from '~/lib/vector-db/transient';
 import { fetchers, queries } from '~/queries';
 import { isMobile } from '~/signals';
@@ -60,7 +61,8 @@ import {
   setPrompt
 } from './-state';
 import { getLatestPath } from './-utils';
-import { splitter } from '~/lib/rag/utils';
+import { env } from '~/utils/env';
+import { account } from '~/signals/account';
 
 export function useChatPage(
   opts: Accessor<{
@@ -97,6 +99,20 @@ export function useChatPage(
   });
   onMount(() => {
     setChatSettings(Option.Some(chatSettingsSchema.parse(opts().chatSettings)));
+  });
+  onMount(() => {
+    void logger.dispatch({
+      data: {
+        id: USER_METADATA_KEYS.LAST_OPENED_PAGE,
+        value: opts().scratchpad
+          ? JSON.stringify({ type: 'scratchpad' })
+          : opts().isNewChat
+            ? JSON.stringify({ type: 'new-chat' })
+            : JSON.stringify({ id: opts().id, title: chat().title, type: 'chat' })
+      },
+      dontLog: true,
+      type: 'setUserMetadata'
+    });
   });
   createRenderEffect(() =>
     onCleanup(
@@ -684,6 +700,13 @@ export function useChatPage(
   };
 }
 
+export async function useChatPageBeforeLoad() {
+  const numberOfProviders = await fetchers.providers.countProviders();
+  if (numberOfProviders > 0) return;
+  if (env.VITE_SYNC_SERVER_BASE_URL && untrack(account) === null)
+    throw redirect({ to: '/settings/account' });
+  throw redirect({ to: '/settings/providers' });
+}
 export function useChatPageLoader(opts: { scratchpad?: boolean }) {
   async function ensureValidChatProvider(chat: TDBChat) {
     const provider = await queryClient.ensureQueryData(
@@ -709,7 +732,10 @@ export function useChatPageLoader(opts: { scratchpad?: boolean }) {
   async function ensureQueryData() {
     const promises = [
       queryClient.ensureQueryData(queries.userMetadata.byId(USER_METADATA_KEYS.SELECTED_MODEL_ID)),
-      queryClient.ensureQueryData(queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME))
+      queryClient.ensureQueryData(queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME)),
+      queryClient.ensureQueryData(
+        queries.userMetadata.byId(USER_METADATA_KEYS.HIDE_REASONING_DURING_GENERATION)
+      )
     ] as Promise<unknown>[];
     let scratchpadPromise;
     if (opts.scratchpad) {

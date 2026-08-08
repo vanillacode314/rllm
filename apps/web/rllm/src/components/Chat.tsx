@@ -391,7 +391,12 @@ function LLMReasoningChunk(props: {
   chunk: TLLMMessageChunk & { type: 'reasoning' };
   inProgress: boolean;
 }) {
-  const [open, setOpen] = createWritableMemo(() => props.inProgress);
+  const hideReasoningDuringGeneration = useQuery(() =>
+    queries.userMetadata.byId(USER_METADATA_KEYS.HIDE_REASONING_DURING_GENERATION)
+  );
+  const [open, setOpen] = createWritableMemo(() =>
+    hideReasoningDuringGeneration.data === 'false' ? props.inProgress : false
+  );
 
   return (
     <Collapsible class="space-y-1.5" onOpenChange={(value) => setOpen(value)} open={open()}>
