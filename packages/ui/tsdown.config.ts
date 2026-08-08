@@ -1,11 +1,10 @@
 import { defineConfig } from 'tsdown';
 
-export default defineConfig({
-  clean: true,
-  entry: ['src/**/*.{ts,tsx}'],
+export default defineConfig((options) => ({
+  clean: !options.watch,
+  entry: 'src/**/*.ts',
   format: 'esm',
-  platform: 'browser',
-  sourcemap: true,
-  // onSuccess: 'tsc --emitDeclarationOnly --declaration',
-  unbundle: true
-});
+  dts: true,
+  platform: 'neutral',
+  sourcemap: true
+}));

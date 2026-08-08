@@ -19,37 +19,50 @@
         overlays = [ ];
       };
       jdk = pkgs-unstable.jdk21;
+      bun = pkgs-unstable.bun;
+      devDeps = with pkgs; [
+        turso-cli
+        just
+      ];
+      webDeps = with pkgs; [
+        buf
+        nodejs
+        bun
+        typescript-language-server
+        caddy
+      ];
+      androidDeps = [
+        jdk
+        pkgs-unstable.android-studio
+      ];
     in
     {
-      devShells.${system} = {
+      devShells.${system} = rec {
         default = pkgs.mkShellNoCC {
-          packages = with pkgs; [
-            buf
-            nodejs
-            bun
-            eslint_d
-            prettierd
-            typescript-language-server
-            turso-cli
-            caddy
-            just
-            jdk
-            pkgs-unstable.android-studio
-          ];
+          packages = devDeps ++ webDeps ++ androidDeps;
           shellHook = ''
             export PATH="$JAVA_HOME/bin:$PATH";
 
             echo "node_version: $(${pkgs.nodejs}/bin/node --version)"
-            echo "bun_version: $(${pkgs.bun}/bin/bun --version)"
+            echo "bun_version: $(${bun}/bin/bun --version)"
             echo "caddy_version: $(${pkgs.caddy}/bin/caddy --version)"
           '';
           CAPACITOR_ANDROID_STUDIO_PATH = "${pkgs-unstable.android-studio}/bin/android-studio";
           JAVA_HOME = "${jdk.home}";
         };
+        web = pkgs.mkShellNoCC {
+          packages = devDeps ++ webDeps;
+          shellHook = ''
+            echo "node_version: $(${pkgs.nodejs}/bin/node --version)"
+            echo "bun_version: $(${bun}/bin/bun --version)"
+            echo "caddy_version: $(${pkgs.caddy}/bin/caddy --version)"
+          '';
+        };
+        android = default;
       };
       packages.${system} = {
-        inherit (pkgs) bun caddy;
-        # inherit (pkgs-2505) caddy;
+        inherit (pkgs) caddy;
+        inherit bun;
       };
     };
 }

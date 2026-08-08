@@ -16,9 +16,7 @@
   ],
   "packageManager": "bun@1.2.5",
   "devDependencies": {
-    "turbo": "^2.6.1"
-  },
-  "dependencies": {
-    "ajv": "^8.20.0"
+    "bunch-package": "^1.1.2",
+    "turbo": "^2.10.9"
   }
 }

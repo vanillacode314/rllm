@@ -9,7 +9,6 @@ import AutoImport from 'unplugin-auto-import/vite';
 import { defineConfig, type PluginOption } from 'vite';
 import { comlink } from 'vite-plugin-comlink';
 import { compression } from 'vite-plugin-compression2';
-import VitePluginDbg from 'vite-plugin-dbg';
 import solidPlugin from 'vite-plugin-solid';
 
 import pkgJson from './package.json' with { type: 'json' };
@@ -18,9 +17,6 @@ import pkgJson from './package.json' with { type: 'json' };
 export default defineConfig(({ mode }) => {
   const plugins: PluginOption[] = [
     // analyzer(),
-    VitePluginDbg({
-      enabled: process.env.NODE_ENV === 'development'
-    }),
     AutoImport({
       dirs: [{ glob: './src/utils/debug.ts' }],
       include: [/\.[tj]sx?$/]
@@ -63,27 +59,27 @@ export default defineConfig(({ mode }) => {
     plugins,
     resolve: {
       alias: {
-        'decode-named-character-reference': path.resolve(
-          __dirname,
-          '../../../node_modules/decode-named-character-reference/index.js'
-        ),
-        'hast-util-from-html-isomorphic': path.resolve(
-          __dirname,
-          '../../../node_modules/hast-util-from-html-isomorphic/index.js'
-        ),
+        // 'decode-named-character-reference': path.resolve(
+        //   import.meta.dirname,
+        //   '../../../node_modules/decode-named-character-reference/index.js'
+        // ),
+        // 'hast-util-from-html-isomorphic': path.resolve(
+        //   import.meta.dirname,
+        //   '../../../node_modules/hast-util-from-html-isomorphic/index.js'
+        // ),
         '~/db/client':
           mode === 'android'
-            ? path.resolve(__dirname, './src/db/client.platform.android.ts')
-            : path.resolve(__dirname, './src/db/client.platform.web.ts'),
+            ? path.resolve(import.meta.dirname, './src/db/client.platform.android.ts')
+            : path.resolve(import.meta.dirname, './src/db/client.platform.web.ts'),
         '~/lib/vector-db/client':
           mode === 'android'
-            ? path.resolve(__dirname, './src/lib/vector-db/client.platform.android.ts')
-            : path.resolve(__dirname, './src/lib/vector-db/client.platform.web.ts'),
+            ? path.resolve(import.meta.dirname, './src/lib/vector-db/client.platform.android.ts')
+            : path.resolve(import.meta.dirname, './src/lib/vector-db/client.platform.web.ts'),
         '~/lib/vector-db/transient':
           mode === 'android'
-            ? path.resolve(__dirname, './src/lib/vector-db/transient.platform.android.ts')
-            : path.resolve(__dirname, './src/lib/vector-db/transient.platform.web.ts'),
-        '~': path.resolve(__dirname, './src')
+            ? path.resolve(import.meta.dirname, './src/lib/vector-db/transient.platform.android.ts')
+            : path.resolve(import.meta.dirname, './src/lib/vector-db/transient.platform.web.ts'),
+        '~': path.resolve(import.meta.dirname, './src')
       }
     },
     server: {
