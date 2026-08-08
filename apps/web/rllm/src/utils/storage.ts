@@ -1,6 +1,7 @@
 import type { Transaction } from 'sqlocal';
 
 import { asc, count, inArray } from 'drizzle-orm';
+import localforage from 'localforage';
 import { type AsyncResult, Result } from 'ts-result-option';
 import { tryBlock } from 'ts-result-option/utils';
 
@@ -14,7 +15,6 @@ import { TRANSIENT_VECTOR_DATABASE_NAME } from '~/lib/vector-db/transient.consta
 import { type TValidMessage } from '~/queries/mutations';
 
 import { withTransaction } from './db';
-import localforage from 'localforage';
 
 type TOptimizationState = {
   alreadySetUserMetadataKeys: Set<string>;

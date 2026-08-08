@@ -20,7 +20,7 @@ import { slugify } from '~/utils/string';
 import { Tree } from '~/utils/tree';
 
 import ChatAppDrawer from './-ChatAppDrawer';
-import { useChatPage, useChatPageLoader, useChatPageBeforeLoad } from './-layout';
+import { useChatPage, useChatPageBeforeLoad, useChatPageLoader } from './-layout';
 
 console.error('FIX OPTIMIZE STORAGE');
 

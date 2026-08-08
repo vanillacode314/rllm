@@ -41,6 +41,8 @@ import { splitter } from '~/lib/rag/utils';
 import { transientDb } from '~/lib/vector-db/transient';
 import { fetchers, queries } from '~/queries';
 import { isMobile } from '~/signals';
+import { account } from '~/signals/account';
+import { env } from '~/utils/env';
 import { formatError } from '~/utils/errors';
 import { compressImageFile, fileToBase64 } from '~/utils/files';
 import { produce } from '~/utils/immer';
@@ -61,8 +63,6 @@ import {
   setPrompt
 } from './-state';
 import { getLatestPath } from './-utils';
-import { env } from '~/utils/env';
-import { account } from '~/signals/account';
 
 export function useChatPage(
   opts: Accessor<{

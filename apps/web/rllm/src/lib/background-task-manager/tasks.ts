@@ -11,11 +11,11 @@ import { generateTitleAndTags } from '~/lib/chat/utils';
 import { indexFile } from '~/lib/vector-db/client.platform.common';
 import { removeIndexingProgress, updateIndexingProgress } from '~/lib/vector-db/progress';
 import { fetchers } from '~/queries';
+import { attachmentsSchema } from '~/types/chat';
 import { getMessagesForPath } from '~/utils/chat';
 import { Tree } from '~/utils/tree';
 
 import { BackgroundTaskManager } from '.';
-import { attachmentsSchema } from '~/types/chat';
 
 export interface TTask {
   handler: (signal: AbortSignal) => Promise<unknown> | unknown;
