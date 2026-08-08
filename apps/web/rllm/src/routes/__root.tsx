@@ -12,7 +12,7 @@ import AppDrawer from '~/components/AppDrawer';
 import TheChatSettingsDrawer from '~/components/TheChatSettingsDrawer';
 import TheCommandPrompt from '~/components/TheCommandPrompt';
 import TheSidebar from '~/components/TheSidebar';
-import { deleteDatabaseFile, logger } from '~/db/client';
+import { logger } from '~/db/client';
 import { setupDb } from '~/db/client.platform.common';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { ChatGenerationManager } from '~/lib/chat/generation';
@@ -24,6 +24,7 @@ import { initSocket } from '~/sockets/messages';
 import { syncColorMode } from '~/utils/color-mode';
 import { once } from '~/utils/functions';
 import { queryClient } from '~/utils/query-client';
+import { clearData } from '~/utils/storage';
 
 export const Route = createRootRouteWithContext()({
   beforeLoad: once(async () => {
@@ -64,7 +65,7 @@ function ErrorComponent(props: { error: unknown }) {
     <div class="grid place-content-center h-full">
       <Button
         onClick={() => {
-          deleteDatabaseFile().then(() => location.reload());
+          clearData().then(() => location.reload());
         }}
         type="button"
       >

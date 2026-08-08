@@ -1,5 +1,4 @@
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
-import { Filesystem } from '@capacitor/filesystem';
 import { hashKey } from '@tanstack/solid-query';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import { createEventLogger } from 'event-logger';
@@ -8,7 +7,7 @@ import { fromCapacitorSqlite } from 'event-logger/copacitorjs';
 import { processMessage, type TValidEvent, validEventSchema } from '~/queries/mutations';
 import { queryClient } from '~/utils/query-client';
 
-import { DATABASE_PATH } from './client.constants';
+import { MAIN_DATABASE_PATH } from './client.constants';
 import { tables } from './schema';
 
 async function loadCapacitorSqliteDb() {
@@ -16,10 +15,10 @@ async function loadCapacitorSqliteDb() {
   const sqlite = new SQLiteConnection(CapacitorSQLite);
   async function getDb() {
     await sqlite.checkConnectionsConsistency();
-    const { result: hasConnection } = await sqlite.isConnection(DATABASE_PATH, false);
+    const { result: hasConnection } = await sqlite.isConnection(MAIN_DATABASE_PATH, false);
     const db = hasConnection
-      ? await sqlite.retrieveConnection(DATABASE_PATH, false)
-      : await sqlite.createConnection(DATABASE_PATH, false, 'secret', 1, false);
+      ? await sqlite.retrieveConnection(MAIN_DATABASE_PATH, false)
+      : await sqlite.createConnection(MAIN_DATABASE_PATH, false, 'secret', 1, false);
     const { result: isOpen } = await db.isDBOpen();
     if (!isOpen) await db.open();
     return db;
@@ -59,27 +58,13 @@ async function loadCapacitorSqliteDb() {
     { schema: tables }
   );
   async function getDatabaseSize() {
-    const info = await Filesystem.stat({
-      path: '/data/data/com.raqueeb.rllm/databases/' + DATABASE_PATH.slice(0, -3) + 'SQLite.db'
-    });
-    return info.size;
+    throw new Error('Remove this later');
   }
 
-  function deleteDatabaseFile() {
-    return Filesystem.deleteFile({
-      path: '/data/data/com.raqueeb.rllm/databases/' + DATABASE_PATH.slice(0, -3) + 'SQLite.db'
-    });
-  }
-
-  return { deleteDatabaseFile, drizzleDb, getDatabaseSize, loggerDb };
+  return { drizzleDb, getDatabaseSize, loggerDb };
 }
 
-const {
-  deleteDatabaseFile,
-  drizzleDb: db,
-  getDatabaseSize,
-  loggerDb
-} = await loadCapacitorSqliteDb();
+const { drizzleDb: db, getDatabaseSize, loggerDb } = await loadCapacitorSqliteDb();
 
 const logger = await createEventLogger<TValidEvent>({
   db: loggerDb,
@@ -99,4 +84,4 @@ const logger = await createEventLogger<TValidEvent>({
   validateEvent: (event) => validEventSchema.parse(event)
 });
 
-export { db, deleteDatabaseFile, getDatabaseSize, logger };
+export { db, getDatabaseSize, logger };

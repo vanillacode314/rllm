@@ -4,17 +4,27 @@ import { Button } from 'ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'ui/card';
 
 import { USER_METADATA_KEYS } from '~/constants/user-metadata';
-import { db, deleteDatabaseFile, getDatabaseSize, logger } from '~/db/client';
+import { db, logger } from '~/db/client';
+import { MAIN_DATABASE_NAME } from '~/db/client.constants';
 import * as schema from '~/db/schema';
+import { VECTOR_DATABASE_NAME } from '~/lib/vector-db/client.constants';
+import { TRANSIENT_VECTOR_DATABASE_NAME } from '~/lib/vector-db/transient.constants';
 import { setAccount } from '~/signals/account';
 import { getFile } from '~/utils/files';
 import { round } from '~/utils/math';
+import { clearData } from '~/utils/storage';
 
 export const Route = createFileRoute('/settings/data')({
   component: SettingsStorageComponent,
   async loader() {
-    const size = await getDatabaseSize();
-    return { size: size ?? null };
+    const size = (
+      await Promise.all([
+        getDatabaseSize(MAIN_DATABASE_NAME),
+        getDatabaseSize(VECTOR_DATABASE_NAME),
+        getDatabaseSize(TRANSIENT_VECTOR_DATABASE_NAME)
+      ])
+    ).reduce((sum, n) => sum + n, 0);
+    return { size };
   }
 });
 
@@ -33,6 +43,20 @@ function formatBytes(value: number): string {
 
   value = round(value, 2);
   return `${value} ${units[i]}`;
+}
+
+async function getDatabaseSize(name: string): Promise<number> {
+  if (import.meta.env.VITE_MODE === 'android') {
+    const { Filesystem } = await import('@capacitor/filesystem');
+    const info = await Filesystem.stat({
+      path: `/data/data/com.raqueeb.rllm/databases/${name}SQLite.db`
+    });
+    return info.size;
+  }
+  const root = await navigator.storage.getDirectory();
+  const fileHandle = await root.getFileHandle(`${name}.db`);
+  const file = await fileHandle.getFile();
+  return file.size;
 }
 
 function SettingsStorageComponent() {
@@ -131,8 +155,7 @@ function SettingsStorageComponent() {
     );
     if (!yes) return;
     setAccount(null);
-    localStorage.clear();
-    await deleteDatabaseFile();
+    await clearData();
     location.reload();
   }
 

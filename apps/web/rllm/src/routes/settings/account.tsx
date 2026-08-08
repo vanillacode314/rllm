@@ -17,11 +17,12 @@ import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog'
 import { usePromptDialog } from '~/components/modals/auto-import/PromptDialog';
 import { setSaveMnemonicModalOpen } from '~/components/modals/auto-import/SaveMnemonicModal';
 import { USER_METADATA_KEYS } from '~/constants/user-metadata';
-import { deleteDatabaseFile, logger } from '~/db/client';
+import { logger } from '~/db/client';
 import { queries } from '~/queries';
 import { account, setAccount } from '~/signals/account';
 import { withTransaction } from '~/utils/db';
 import { queryClient } from '~/utils/query-client';
+import { clearData } from '~/utils/storage';
 import {
   createAuthenticatedSyncServerFetcher,
   parseEventsFromServer,
@@ -203,8 +204,7 @@ function SettingsAccountComponent() {
     });
     if (!yes) return;
     setAccount(null);
-    localStorage.clear();
-    await deleteDatabaseFile();
+    await clearData();
     location.reload();
   }
 
@@ -223,8 +223,7 @@ function SettingsAccountComponent() {
       const accountId = account()!.id;
       await syncServerApi.json({ accountId }).delete('/api/v1/account').res();
       setAccount(null);
-      localStorage.clear();
-      await deleteDatabaseFile();
+      await clearData();
       toast.success('Account deleted', { id: toastId });
       location.reload();
     } catch (error) {

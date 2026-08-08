@@ -7,10 +7,14 @@ import { tryBlock } from 'ts-result-option/utils';
 import type { TEvent } from '~/db/schema';
 
 import { db } from '~/db/client';
+import { MAIN_DATABASE_NAME } from '~/db/client.constants';
 import { tables } from '~/db/schema';
+import { VECTOR_DATABASE_NAME } from '~/lib/vector-db/client.constants';
+import { TRANSIENT_VECTOR_DATABASE_NAME } from '~/lib/vector-db/transient.constants';
 import { type TValidMessage } from '~/queries/mutations';
 
 import { withTransaction } from './db';
+import localforage from 'localforage';
 
 type TOptimizationState = {
   alreadySetUserMetadataKeys: Set<string>;
@@ -62,6 +66,27 @@ const optimizeStorage = ({
     },
     (e) => new Error(`Failed to optimize storage`, { cause: e })
   );
+
+export async function clearData(): Promise<void> {
+  await Promise.all([
+    deleteDatabaseFile(MAIN_DATABASE_NAME),
+    deleteDatabaseFile(VECTOR_DATABASE_NAME),
+    deleteDatabaseFile(TRANSIENT_VECTOR_DATABASE_NAME),
+    localforage.clear()
+  ]);
+  localStorage.clear();
+}
+
+export async function deleteDatabaseFile(name: string) {
+  if (import.meta.env.VITE_MODE === 'android') {
+    const { Filesystem } = await import('@capacitor/filesystem');
+    await Filesystem.deleteFile({
+      path: `/data/data/com.raqueeb.rllm/databases/${name}SQLite.db`
+    });
+  }
+  const root = await navigator.storage.getDirectory();
+  await root.removeEntry(`${name}.db`);
+}
 
 async function produceMessagesOptimizationState(events: TEvent[]): Promise<TOptimizationState> {
   const state = {

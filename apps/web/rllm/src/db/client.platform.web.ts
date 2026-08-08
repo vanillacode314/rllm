@@ -8,20 +8,20 @@ import { SQLocalDrizzle } from 'sqlocal/drizzle';
 import { processMessage, type TValidEvent, validEventSchema } from '~/queries/mutations';
 import { queryClient } from '~/utils/query-client';
 
-import { DATABASE_PATH } from './client.constants';
+import { MAIN_DATABASE_PATH } from './client.constants';
 import { tables } from './schema';
 
 async function loadSQLocalDb() {
   console.debug('[DB] Loading SQLocal Instance');
-  const { batchDriver, deleteDatabaseFile, driver, getDatabaseInfo } = new SQLocalDrizzle({
-    databasePath: DATABASE_PATH,
+  const { batchDriver, driver, getDatabaseInfo } = new SQLocalDrizzle({
+    databasePath: MAIN_DATABASE_PATH,
     onInit: (sql) => [sql`PRAGMA journal_mode=MEMORY;`]
   });
   console.debug('[DB] SQLocal Instance Info', await getDatabaseInfo());
   const drizzleDb = drizzle(driver, batchDriver, { schema: tables });
   const loggerDb = fromSQLocal(
     new SQLocal({
-      databasePath: DATABASE_PATH,
+      databasePath: MAIN_DATABASE_PATH,
       onInit: (sql) => [sql`PRAGMA journal_mode=MEMORY;`]
     })
   );
@@ -29,10 +29,10 @@ async function loadSQLocalDb() {
     const info = await getDatabaseInfo();
     return info.databaseSizeBytes;
   }
-  return { deleteDatabaseFile, drizzleDb, getDatabaseSize, loggerDb };
+  return { drizzleDb, getDatabaseSize, loggerDb };
 }
 
-const { deleteDatabaseFile, drizzleDb: db, getDatabaseSize, loggerDb } = await loadSQLocalDb();
+const { drizzleDb: db, getDatabaseSize, loggerDb } = await loadSQLocalDb();
 
 const logger = await createEventLogger<TValidEvent>({
   db: loggerDb,
@@ -52,4 +52,4 @@ const logger = await createEventLogger<TValidEvent>({
   validateEvent: (event) => validEventSchema.parse(event)
 });
 
-export { db, deleteDatabaseFile, getDatabaseSize, logger };
+export { db, getDatabaseSize, logger };
