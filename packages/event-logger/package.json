@@ -39,8 +39,9 @@
     "mutex": "workspace:*"
   },
   "devDependencies": {
+    "@capacitor-community/sqlite": "^8.1.0",
     "sqlocal": "^0.18.0",
-    "@capacitor-community/sqlite": "^8.1.0"
+    "tsdown": "^0.22.14"
   },
   "peerDependencies": {
     "sqlocal": "^0.18.0",

@@ -9,7 +9,6 @@ import AutoImport from 'unplugin-auto-import/vite';
 import { defineConfig, type PluginOption } from 'vite';
 import { comlink } from 'vite-plugin-comlink';
 import { compression } from 'vite-plugin-compression2';
-import VitePluginDbg from 'vite-plugin-dbg';
 import solidPlugin from 'vite-plugin-solid';
 
 import pkgJson from './package.json' with { type: 'json' };
@@ -18,9 +17,6 @@ import pkgJson from './package.json' with { type: 'json' };
 export default defineConfig(({ mode }) => {
   const plugins: PluginOption[] = [
     // analyzer(),
-    VitePluginDbg({
-      enabled: process.env.NODE_ENV === 'development'
-    }),
     AutoImport({
       dirs: [{ glob: './src/utils/debug.ts' }],
       include: [/\.[tj]sx?$/]

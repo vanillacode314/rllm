@@ -2,13 +2,13 @@ FROM ghcr.io/lix-project/lix:latest AS base
 RUN echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf;
 COPY . /app
 WORKDIR /app
-RUN nix build .#devShells.x86_64-linux.default;
+RUN nix build .#devShells.x86_64-linux.web;
 
 FROM base AS build
-RUN nix develop --command bun install --frozen-lockfile
+RUN nix develop .#web --command bun install --frozen-lockfile
 ARG VITE_SYNC_SERVER_BASE_URL
 ARG VITE_MODE
-RUN nix develop --command bun run build --filter rllm
+RUN nix develop .#web --command bun run build --filter rllm
 
 
 FROM base AS prod

@@ -1,6 +1,10 @@
 .git
 data
 node_modules
+**/node_modules
+apps/web/rllm/android/app/build
 local.db*
 .aider*
 .turbo
+.env*
+.envrc*
