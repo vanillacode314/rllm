@@ -1,6 +1,6 @@
 # What's New
 
-## v0.0.22
+## v0.0.23
 
 ### 🐛 Bug Fixes
 

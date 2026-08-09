@@ -9,6 +9,7 @@ import { animate } from 'motion';
 import { nanoid } from 'nanoid';
 import {
   type Accessor,
+  batch,
   createMemo,
   createRenderEffect,
   createSignal,
@@ -90,7 +91,7 @@ export function useChatPage(
   });
   const isPending = ChatGenerationManager.createIsPending(() => opts().id);
 
-  const [currentPath, setCurrentPath] = createSignal<number[]>(getLatestPath(messages()));
+  const [currentPath, setCurrentPath] = createSignal<number[]>([]);
   const [, { createNotification, removeNotification }] = useNotifications();
 
   useBlocker({
@@ -114,16 +115,19 @@ export function useChatPage(
       type: 'setUserMetadata'
     });
   });
+
   createRenderEffect(() =>
     onCleanup(
       ChatGenerationManager.subscribe(opts().id, ($chat, newPath) => {
-        setChat({ ...$chat });
-        setMessages($chat.messages);
-        const $currentPath = currentPath();
-        const newPathFollowsCurrentPath =
-          newPath.length >= $currentPath.length &&
-          newPath.slice(0, $currentPath.length).every((v, i) => v === $currentPath[i]);
-        if (newPathFollowsCurrentPath) setCurrentPath(newPath);
+        batch(() => {
+          setChat({ ...$chat });
+          setMessages($chat.messages);
+          const $currentPath = currentPath();
+          const newPathFollowsCurrentPath =
+            newPath.length >= $currentPath.length &&
+            newPath.slice(0, $currentPath.length).every((v, i) => v === $currentPath[i]);
+          if (newPathFollowsCurrentPath) setCurrentPath(newPath);
+        });
       })
     )
   );
@@ -171,13 +175,11 @@ export function useChatPage(
       const tree = ReactiveTree.fromJSON(messages);
       purgeOnlyErrorResponses(tree);
       flushOldToolCalls(tree);
-      setMessages(tree);
-      setCurrentPath(getLatestPath(tree));
+      batch(() => {
+        setCurrentPath(getLatestPath(tree));
+        setMessages(tree);
+      });
     });
-  });
-  onCleanup(() => {
-    setMessages(new ReactiveTree<TMessage>());
-    setCurrentPath([]);
   });
 
   const sendPrompt = useMutation(() => ({
