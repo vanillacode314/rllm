@@ -169,8 +169,7 @@ export function useChatPage(
   }
 
   createRenderEffect(() => {
-    const messages = opts().loaderChat?.messages;
-    if (!messages) return;
+    const messages = opts().loaderChat?.messages ?? { children: [], value: null };
     untrack(() => {
       const tree = ReactiveTree.fromJSON(messages);
       purgeOnlyErrorResponses(tree);

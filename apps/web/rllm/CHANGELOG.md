@@ -1,7 +1,7 @@
 # What's New
 
-## v0.0.23
+## v0.0.24
 
 ### 🐛 Bug Fixes
 
-- **Chat switching no longer crashes** — Fixed an issue where switching chats sometimes could crash the app.
+- **Stale messages no longer appear when opening a chat** — Fixed an issue where a previous chat's messages could linger on screen while a newly opened chat was still loading. Chats now start from a clean state.
