@@ -38,6 +38,7 @@ const toSql = (value: unknown) => {
 
 export interface TVectorDB {
   deleteDocument(id: string, tx?: TSqlRunner): Promise<void>;
+  getText(id: string, documentId: string): Promise<null | string>;
   getVersion: () => Promise<string | undefined>;
   indexDocument(
     document: IteratorObject<string, void, void>,
@@ -53,7 +54,8 @@ export interface TVectorDB {
       offset: number;
     }>
   ): Promise<
-    Array<{ document_id: string; index: number; similarity: number; text: string }> | undefined
+    | Array<{ document_id: string; id: string; index: number; similarity: number; text: string }>
+    | undefined
   >;
   setVersion: (version: string, tx?: TSqlRunner) => Promise<void>;
   updateDocument(id: string, document: IteratorObject<string, void, void>): Promise<void>;
@@ -78,6 +80,12 @@ export async function createVectorDB({ db, embedder }: TConfig): Promise<TVector
   const vectorDb = {
     async deleteDocument(id, tx = db) {
       await tx.query(sql`DELETE FROM \`documents\` WHERE \`document_id\` = ${id}`);
+    },
+    async getText(id, documentId) {
+      const rows = await db.query<{ text: string }>(
+        sql`SELECT \`text\` FROM \`documents\` WHERE \`id\` = ${id} AND \`document_id\` = ${documentId}`
+      );
+      return rows[0]?.text ?? null;
     },
     async getVersion(tx = db) {
       const rows = await tx.query<{ value: string }>(
@@ -143,39 +151,47 @@ export async function createVectorDB({ db, embedder }: TConfig): Promise<TVector
 
       const baseParams: unknown[] = [];
 
-      let filterClause = '';
+      let filterClause = ' WHERE 1';
       if (documentIds) {
-        filterClause += ` WHERE \`document_id\` IN (${documentIds.map(() => '?').join(', ')})`;
+        filterClause += ` AND \`document_id\` IN (${documentIds.map(() => '?').join(', ')})`;
         baseParams.push(...documentIds);
       }
       if (afterIndex !== undefined) {
-        filterClause += ` \`index\` >= ?`;
+        filterClause += ` AND \`index\` >= ?`;
         baseParams.push(afterIndex);
       }
       if (beforeIndex !== undefined) {
-        filterClause += ` \`index\` < ?`;
+        filterClause += ` AND \`index\` < ?`;
         baseParams.push(beforeIndex);
       }
 
       const top: {
         document_id: string;
+        id: string;
         index: number;
         similarity: number;
         text: string;
       }[] = [];
-      let rows: { document_id: string; index: number; text: string; vector: Uint8Array }[];
+      let rows: {
+        document_id: string;
+        id: string;
+        index: number;
+        text: string;
+        vector: Uint8Array;
+      }[];
       let minSimilarity = Number.NEGATIVE_INFINITY;
       let cursor = 0;
       do {
         rows = (
           await db.query<{
             document_id: string;
+            id: string;
             index: number;
             text: string;
             vector: Array<number> | string | Uint8Array;
           }>({
             params: [...baseParams, QUERY_CHUNK_SIZE, cursor],
-            sql: `SELECT \`document_id\`, \`index\`, \`text\`, \`vector\` FROM \`documents\`${filterClause} ORDER BY \`id\` LIMIT ? OFFSET ?`
+            sql: `SELECT \`id\`, \`document_id\`, \`index\`, \`text\`, \`vector\` FROM \`documents\`${filterClause} ORDER BY \`id\` LIMIT ? OFFSET ?`
           })
         ).map((row) =>
           Object.assign(row, {

@@ -8,7 +8,8 @@ export const USER_METADATA_KEYS = Object.freeze({
   STARTUP_PAGE: 'startup-page',
   TITLE_GENERATION_MODEL_ID: 'title-generation-model-id',
   TITLE_GENERATION_PROVIDER_ID: 'title-generation-provider-id',
-  USER_DISPLAY_NAME: 'user-display-name'
+  USER_DISPLAY_NAME: 'user-display-name',
+  WEB_SEARCH_MCP_ID: 'web-search-mcp-id'
 });
 
 export type TUserMetadataKey = (typeof USER_METADATA_KEYS)[keyof typeof USER_METADATA_KEYS];

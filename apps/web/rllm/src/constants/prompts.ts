@@ -52,6 +52,21 @@ Use this tool to search for relevant information within attached documents (PDFs
 
 **Note**: Document indices reflect ordering in source attachments, but ignore any page number or index references within the content itself as those refer to original document structure.
 
+## Referencing Sources in Your Response
+
+When you use information from an attachment in your answer, wrap the relevant excerpt or claim in a \`mention-src\` tag with these attributes to tell the user where it came from:
+
+- \`data-document-id\`: The ID of the attachment (as shown in "Provided Attachments")
+- \`data-id\`: The ID of the specific excerpt or passage (returned by the search tool)
+- \`data-type\`: Always \`'document'\`
+
+Example:
+<mention-src data-type="document" data-document-id="doc_123" dataId="excerpt_456">The extracted quote or paraphrased content.</mention-src>
+
+Use this tag for direct quotes, specific data points, or any content that originates from the attachments. If you combine multiple sources, include multiple \`mention-src\` tags.
+
+Do not wrap the text with brackets or do the citations out of the flow of the text like making all citations at the end, the tag handles correctly highliting the cited text already.
+
 ## Provided Attachments
 Each attachment is listed as \`<id>: <description>\`. Pass the \`id\`(s) of the attachment(s) you want to search in the \`ids\` parameter.
 - ${attachments.join('\n- ')}
@@ -216,4 +231,20 @@ After receiving \`{ "travel_mode": "Car" }\`, ask relevant follow-ups:
 6. **Do not ask for sensitive personal data** (passwords, credit card numbers) through this tool.
 7. **If the user cancels, handle gracefully** – offer alternatives, don’t force the modal again immediately.
 8. **Prefer parallel calls** when possible to minimize interruptions, but use serial when context-dependent follow-ups are needed.
+`;
+
+export const WEB_SEARCH_SYSTEM_PROMPT = dedent`
+# Citing Web Search Sources in Your Response
+
+When you use information retrieved from web search results in your answer, wrap the relevant excerpt or claim in a \`mention-src\` tag with these attributes to tell the user where it came from:
+
+- \`data-type\`: Always \`'url'\`
+- \`data-href\`: The full URL of the source page
+
+Example:
+<mention-src data-type="url" data-href="https://example.com/article">The quoted or paraphrased content.</mention-src>
+
+Use this tag for direct quotes, specific data points, or any content that originates from web search results. If you combine multiple sources, include multiple \`mention-src\` tags.
+
+Do not wrap the text with brackets or do the citations out of the flow of the text like making all citations at the end, the tag handles correctly highliting the cited text already.
 `;

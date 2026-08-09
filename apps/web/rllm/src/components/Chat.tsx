@@ -43,7 +43,7 @@ import { formatToPercentage, formatToTokens } from '~/utils/number';
 import { formatAsKeyValuePair } from '~/utils/object';
 import { lowlightWorkerPool } from '~/workers/lowlight';
 
-import Markdown from './Markdown';
+import Markdown from './markdown/Markdown';
 import { useAlertDialog } from './modals/auto-import/AlertDialog';
 import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
 

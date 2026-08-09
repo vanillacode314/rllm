@@ -12,12 +12,15 @@ import { useFeedbackModal } from '~/components/modals/auto-import/FeedbackModal'
 import {
   ASK_QUESTIONS_TOOL_PROMPT,
   ATTACHMENT_TOOL_INSTRUCTIONS_PROMPT,
-  HANDOFF_TOOL_INSTRUCTIONS_PROMPT
+  HANDOFF_TOOL_INSTRUCTIONS_PROMPT,
+  WEB_SEARCH_SYSTEM_PROMPT
 } from '~/constants/prompts';
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { MCPManager } from '~/lib/mcp/manager';
 import { vectorDb } from '~/lib/vector-db/client';
 import { transientDb } from '~/lib/vector-db/transient';
+import { fetchers } from '~/queries';
 import { finalizeChat } from '~/routes/(chat)/-utils';
 import { getMessagesForPath } from '~/utils/chat';
 import { formatError } from '~/utils/errors';
@@ -190,7 +193,8 @@ export class ChatGenerationManager {
               .slice(offset, offset + limit)
               .map((result) => ({
                 content: result.text,
-                id: result.document_id,
+                documentId: result.document_id,
+                id: result.id,
                 index: result.index
               })),
             null,
@@ -312,6 +316,12 @@ export class ChatGenerationManager {
     if (chat.settings.includeDateTimeInSystemPrompt)
       prompts.push(`Current date and time: ${this.formatCurrentDateTime()}`);
     if (chat.settings.systemPrompt) prompts.push(chat.settings.systemPrompt);
+    const webSearchMcpId = await fetchers.userMetadata.byId(
+      USER_METADATA_KEYS.WEB_SEARCH_MCP_ID
+    );
+    if (webSearchMcpId && MCPManager.getClient(webSearchMcpId)?.status === 'connected') {
+      prompts.push(WEB_SEARCH_SYSTEM_PROMPT);
+    }
     const system = prompts.join('\n\n');
 
     const debouncedOnUpdate = createDebouncer(

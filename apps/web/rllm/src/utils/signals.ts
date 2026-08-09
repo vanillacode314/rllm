@@ -12,7 +12,7 @@ import {
   type Signal,
   untrack
 } from 'solid-js';
-import { createStore } from 'solid-js/store';
+import { createStore, reconcile } from 'solid-js/store';
 
 const isOnline = createConnectivitySignal();
 const pageVisible = createPageVisibility();
@@ -66,7 +66,7 @@ function createLatestAsync<T, S>(source: () => S, fetcher: (source: S) => Promis
         if (state.finishedAt > finishedAt) return;
 
         batch(() => {
-          mutate(value);
+          mutate(reconcile(value)(data.latest));
           setState({ error: undefined, finishedAt });
 
           if (state.startedAt > startedAt) return;

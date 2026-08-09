@@ -57,8 +57,8 @@ function App() {
   );
 }
 
-const rootElement = document.getElementById('app');
-if (rootElement) {
+const rootElement = document.getElementById('app')!;
+if (!rootElement.innerHTML) {
   render(() => <App />, rootElement);
 }
 

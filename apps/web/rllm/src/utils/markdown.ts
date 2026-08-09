@@ -3,7 +3,7 @@ import { all } from 'lowlight';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
-import rehypeSanitize from 'rehype-sanitize';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 // import rehypeStarryNight from 'rehype-starry-night';
 import rehypeStringify from 'rehype-stringify';
 import remarkGfm from 'remark-gfm';
@@ -14,6 +14,7 @@ import { type PluggableList, unified } from 'unified';
 // import onigUrl from 'vscode-oniguruma/release/onig.wasm?url';
 
 import { dedent } from './string';
+import { produce } from './immer';
 
 function remarkDedentCodeBlocks() {
   return (tree) => {
@@ -33,7 +34,14 @@ const remarkPlugins = [
 
 const rehypePlugins = [
   rehypeRaw,
-  rehypeSanitize,
+  [
+    rehypeSanitize,
+    produce(defaultSchema, (draft) => {
+      draft.tagNames?.push('mention-src');
+      if (draft.attributes)
+        draft.attributes['mention-src'] = ['dataDocumentId', 'dataId', 'dataType', 'dataHref'];
+    })
+  ],
   rehypeKatex,
   [rehypeHighlight, { languages: all }]
   // [rehypeStarryNight, { grammars: all, getOnigurumaUrlFetch: () => onigUrl }]
