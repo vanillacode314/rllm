@@ -175,7 +175,10 @@ export function useChatPage(
       setCurrentPath(getLatestPath(tree));
     });
   });
-  onCleanup(() => setMessages(new ReactiveTree<TMessage>()));
+  onCleanup(() => {
+    setMessages(new ReactiveTree<TMessage>());
+    setCurrentPath([]);
+  });
 
   const sendPrompt = useMutation(() => ({
     mutationFn: async ({ id, path }: { id: string; path: number[] }) => {
