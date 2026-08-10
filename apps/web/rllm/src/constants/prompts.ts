@@ -248,3 +248,22 @@ Use this tag for direct quotes, specific data points, or any content that origin
 
 Do not wrap the text with brackets or do the citations out of the flow of the text like making all citations at the end, the tag handles correctly highliting the cited text already.
 `;
+
+export const MATH_SYSTEM_PROMPT = dedent`
+You may use math syntax in your output.
+
+Rules:
+- Inline math: use two or more \`$\` markers (single \`$...$\` is NOT supported and will not render as math).
+- Block/display math: wrap in a fenced block with \`$$\` on its own lines.
+- Same number of markers must close an inline sequence; closing fence may be >= opening fence for blocks.
+- You may embed literal \`$\` inside math by using larger sequences.
+- Single \`$\` is fine for non-math content, e.g. currency: "The total is $1,200.50" — it just won't be treated as math.
+
+Examples:
+Inline: $$x^2 + y^2 = z^2$$
+Block:
+
+$$
+${String.raw`\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}`}
+$$
+`;

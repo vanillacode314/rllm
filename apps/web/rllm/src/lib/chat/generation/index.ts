@@ -13,6 +13,7 @@ import {
   ASK_QUESTIONS_TOOL_PROMPT,
   ATTACHMENT_TOOL_INSTRUCTIONS_PROMPT,
   HANDOFF_TOOL_INSTRUCTIONS_PROMPT,
+  MATH_SYSTEM_PROMPT,
   WEB_SEARCH_SYSTEM_PROMPT
 } from '~/constants/prompts';
 import { USER_METADATA_KEYS } from '~/constants/user-metadata';
@@ -312,7 +313,7 @@ export class ChatGenerationManager {
     }
 
     this.addChat(id, chat, controller, newPath);
-    const prompts = [] as string[];
+    const prompts = [MATH_SYSTEM_PROMPT] as string[];
     if (chat.settings.includeDateTimeInSystemPrompt)
       prompts.push(`Current date and time: ${this.formatCurrentDateTime()}`);
     if (chat.settings.systemPrompt) prompts.push(chat.settings.systemPrompt);
