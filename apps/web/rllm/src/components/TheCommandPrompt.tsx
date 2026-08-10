@@ -1,4 +1,4 @@
-import { createShortcut } from '@solid-primitives/keyboard';
+import { createHotkeys } from '@tanstack/solid-hotkeys';
 import { useQuery } from '@tanstack/solid-query';
 import {
   type ParsedLocation,
@@ -65,8 +65,10 @@ function TheCommandPrompt() {
     return 'default';
   });
 
-  createShortcut(['Control', 'k'], () => setCommandPromptOpen((open) => !open));
-  createShortcut(['Meta', 'k'], () => setCommandPromptOpen((open) => !open));
+  createHotkeys([
+    { callback: () => setCommandPromptOpen((open) => !open), hotkey: { ctrl: true, key: 'K' } },
+    { callback: () => setCommandPromptOpen((open) => !open), hotkey: { key: 'K', meta: true } }
+  ]);
 
   const navigate = useNavigate();
   const location = useLocation();

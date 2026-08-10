@@ -1,9 +1,9 @@
 import { createEventListener } from '@solid-primitives/event-listener';
 import { createImmutable } from '@solid-primitives/immutable';
-import { createShortcut } from '@solid-primitives/keyboard';
 import { createWritableMemo } from '@solid-primitives/memo';
 import { createResizeObserver } from '@solid-primitives/resize-observer';
 import { createTimer } from '@solid-primitives/timer';
+import { createHotkey } from '@tanstack/solid-hotkeys';
 import { useQuery } from '@tanstack/solid-query';
 import {
   createMemo,
@@ -46,6 +46,7 @@ import { lowlightWorkerPool } from '~/workers/lowlight';
 import Markdown from './markdown/Markdown';
 import { useAlertDialog } from './modals/auto-import/AlertDialog';
 import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
+import { createActiveElement } from '@solid-primitives/active-element';
 
 type Props = JSX.HTMLAttributes<HTMLDivElement> & {
   chat: Omit<TChat, 'createdAt' | 'updatedAt'>;
@@ -708,23 +709,20 @@ function UserTextChunk(props: {
   const [editing, setEditing] = createSignal(false);
   const id = createUniqueId(); // [1]
   const confirmDialog = useConfirmDialog();
+  const activeElement = createActiveElement();
 
-  createShortcut(
-    ['Control', 'Enter'],
-    (event) => {
-      if (!event) return;
-      if (document.activeElement?.id === `prompt:${id}`) {
-        event.preventDefault();
-        const input = document.activeElement as HTMLTextAreaElement;
-        input.blur();
-        setEditing(false);
-        props.onEdit({
-          ...props.chunk,
-          content: content()
-        });
-      }
+  createHotkey(
+    { ctrl: true, key: 'Enter' },
+    () => {
+      const input = activeElement() as HTMLTextAreaElement;
+      input.blur();
+      setEditing(false);
+      props.onEdit({
+        ...props.chunk,
+        content: content()
+      });
     },
-    { preventDefault: false }
+    () => ({ enabled: activeElement()?.id === `prompt:${id}` })
   );
 
   return (

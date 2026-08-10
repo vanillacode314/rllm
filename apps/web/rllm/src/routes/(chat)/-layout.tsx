@@ -64,6 +64,8 @@ import {
   setPrompt
 } from './-state';
 import { getLatestPath } from './-utils';
+import { createHotkey } from '@tanstack/solid-hotkeys';
+import { createActiveElement } from '@solid-primitives/active-element';
 
 export function useChatPage(
   opts: Accessor<{
@@ -533,22 +535,20 @@ export function useChatPage(
     setAttachments(transientAttachments.concat(newAttachments));
   }
 
-  createShortcut(
-    ['Control', 'Enter'],
-    (event) => {
-      if (!event) return;
-      if (document.activeElement?.id === 'prompt') {
-        event.preventDefault();
-        const button = document.getElementById('prompt-submit-button') as HTMLButtonElement;
-        if (!button) {
-          console.error('submit button missing');
-          toast.error('An Error Occurred');
-          return;
-        }
-        button.click();
+  const activeElement = createActiveElement();
+
+  createHotkey(
+    { ctrl: true, key: 'Enter' },
+    () => {
+      const button = document.getElementById('prompt-submit-button') as HTMLButtonElement;
+      if (!button) {
+        console.error('submit button missing');
+        toast.error('An Error Occurred');
+        return;
       }
+      button.click();
     },
-    { preventDefault: false }
+    () => ({ enabled: activeElement()?.id === 'prompt' })
   );
 
   function ChatPage(props: { onReset?: () => void; onSave?: () => void }) {
