@@ -316,9 +316,7 @@ export class ChatGenerationManager {
     if (chat.settings.includeDateTimeInSystemPrompt)
       prompts.push(`Current date and time: ${this.formatCurrentDateTime()}`);
     if (chat.settings.systemPrompt) prompts.push(chat.settings.systemPrompt);
-    const webSearchMcpId = await fetchers.userMetadata.byId(
-      USER_METADATA_KEYS.WEB_SEARCH_MCP_ID
-    );
+    const webSearchMcpId = await fetchers.userMetadata.byId(USER_METADATA_KEYS.WEB_SEARCH_MCP_ID);
     if (webSearchMcpId && MCPManager.getClient(webSearchMcpId)?.status === 'connected') {
       prompts.push(WEB_SEARCH_SYSTEM_PROMPT);
     }

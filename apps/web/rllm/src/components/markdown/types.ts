@@ -27,12 +27,12 @@ export type NormalComponents = {
 export type Options = {
   components: Components;
   includeElementIndex: boolean;
-  linkTarget: TransformLinkTargetType | TransformLinkTarget;
+  linkTarget: TransformLinkTarget | TransformLinkTargetType;
   rawSourcePos: boolean;
   skipHtml: boolean;
   sourcePos: boolean;
   transformImageUri?: TransformImage;
-  transformLinkUri: null | false | TransformLink;
+  transformLinkUri: false | null | TransformLink;
 };
 export type Raw = {
   type: 'raw';

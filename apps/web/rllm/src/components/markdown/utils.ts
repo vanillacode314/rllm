@@ -43,8 +43,8 @@ export function flattenPosition(
   pos:
     | Position
     | {
-        end: { line: null; column: null; offset: null };
-        start: { line: null; column: null; offset: null };
+        end: { column: null; line: null; offset: null };
+        start: { column: null; line: null; offset: null };
       }
 ): string {
   return [pos.start.line, ':', pos.start.column, '-', pos.end.line, ':', pos.end.column]

@@ -13,8 +13,8 @@ import remarkRehype from 'remark-rehype';
 import { type PluggableList, unified } from 'unified';
 // import onigUrl from 'vscode-oniguruma/release/onig.wasm?url';
 
-import { dedent } from './string';
 import { produce } from './immer';
+import { dedent } from './string';
 
 function remarkDedentCodeBlocks() {
   return (tree) => {
