@@ -1,6 +1,7 @@
 # What's New
 
-## v0.0.25
+## v0.0.26 — August 10, 2026
 
-- **Math in chat answers now renders properly** — The AI now knows the app's math formatting rules, so formulas in its responses show up as clean, formatted math instead of raw symbols.
-- **More reliable keyboard shortcuts** — Ctrl+Enter (finish editing a message) and Ctrl+K / Cmd+K (open the command palette) work more consistently.
+### 🐛 Bug Fixes
+
+- **Source citations work better** — When the AI cites an attachment or web source in its answer, the source link now appears right where it should, next to the cited text — no more duplicated text or misplaced links.

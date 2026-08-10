@@ -54,18 +54,25 @@ Use this tool to search for relevant information within attached documents (PDFs
 
 ## Referencing Sources in Your Response
 
-When you use information from an attachment in your answer, wrap the relevant excerpt or claim in a \`mention-src\` tag with these attributes to tell the user where it came from:
+When you use information from an attachment — whether you quote, paraphrase, or infer — wrap the sentence/phrase you wrote in a \`mention-src\` tag with these attributes:
 
-- \`data-document-id\`: The ID of the attachment (as shown in "Provided Attachments")
-- \`data-id\`: The ID of the specific excerpt or passage (returned by the search tool)
+- \`data-document-id\`: The ID of the attachment
+- \`data-id\`: The ID of the specific excerpt or passage
 - \`data-type\`: Always \`'document'\`
 
-Example:
-<mention-src data-type="document" data-document-id="doc_123" dataId="excerpt_456">The extracted quote or paraphrased content.</mention-src>
+The tag is inline: the text inside the tag is your actual response text, and it will be rendered with a source chip next to it. Do **not** duplicate the source text anywhere else, and do **not** place the tag after your sentence as a separate citation. The chip uses the attributes to show the source, so the only text you need is what you want displayed.
 
-Use this tag for direct quotes, specific data points, or any content that originates from the attachments. If you combine multiple sources, include multiple \`mention-src\` tags.
+✅ Correct — the tagged text is the response itself, no extra quote:
 
-Do not wrap the text with brackets or do the citations out of the flow of the text like making all citations at the end, the tag handles correctly highliting the cited text already.
+<mention-src data-type="document" data-document-id="doc_123" data-id="excerpt_456">The company's net profit increased by 12% in Q3.</mention-src>
+
+❌ Incorrect — writing the sentence and then appending a tagged duplicate:
+
+The company's net profit increased by 12% in Q3.
+
+<mention-src data-type="document" data-document-id="doc_123" data-id="excerpt_456">The company's net profit increased by 12% in Q3.</mention-src>
+
+That would render the sentence twice with a chip on the second copy. Just wrap the original sentence once — that's all that's needed.
 
 ## Provided Attachments
 Each attachment is listed as \`<id>: <description>\`. Pass the \`id\`(s) of the attachment(s) you want to search in the \`ids\` parameter.
@@ -236,17 +243,24 @@ After receiving \`{ "travel_mode": "Car" }\`, ask relevant follow-ups:
 export const WEB_SEARCH_SYSTEM_PROMPT = dedent`
 # Citing Web Search Sources in Your Response
 
-When you use information retrieved from web search results in your answer, wrap the relevant excerpt or claim in a \`mention-src\` tag with these attributes to tell the user where it came from:
+When you use information from web search results in your answer — whether you quote, paraphrase, or infer — wrap the sentence/phrase you wrote in a \`mention-src\` tag with these attributes:
 
 - \`data-type\`: Always \`'url'\`
 - \`data-href\`: The full URL of the source page
 
-Example:
-<mention-src data-type="url" data-href="https://example.com/article">The quoted or paraphrased content.</mention-src>
+The tag is inline: the text inside the tag is your actual response text, and it will be rendered with a source chip next to it. Do **not** duplicate the source text anywhere else, and do **not** place the tag after your sentence as a separate citation. The chip uses the attributes to show the source, so the only text you need is what you want displayed.
 
-Use this tag for direct quotes, specific data points, or any content that originates from web search results. If you combine multiple sources, include multiple \`mention-src\` tags.
+✅ Correct — the tagged text is the response itself, no extra quote:
 
-Do not wrap the text with brackets or do the citations out of the flow of the text like making all citations at the end, the tag handles correctly highliting the cited text already.
+<mention-src data-type="url" data-href="https://example.com/article">The company's net profit increased by 12% in Q3.</mention-src>
+
+❌ Incorrect — writing the sentence and then appending a tagged duplicate:
+
+The company's net profit increased by 12% in Q3.
+
+<mention-src data-type="url" data-href="https://example.com/article">The company's net profit increased by 12% in Q3.</mention-src>
+
+That would render the sentence twice with a chip on the second copy. Just wrap the original sentence once — that's all that's needed.
 `;
 
 export const MATH_SYSTEM_PROMPT = dedent`
