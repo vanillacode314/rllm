@@ -6,4 +6,7 @@ inputs:
 plugins:
   - local: protoc-gen-es
     opt: target=ts
-    out: src
+    out: src/ts
+  - local: protoc-gen-go
+    opt: module=proto
+    out: src/go/proto

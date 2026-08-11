@@ -1,0 +1,8 @@
+go 1.26.5
+
+use (
+  ./apps/sync-server-go
+  ./packages/hlc-go
+  ./packages/merkle-tree-go
+  ./packages/proto/src/go/proto
+)

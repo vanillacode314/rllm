@@ -1,0 +1,20 @@
+FROM golang:bookworm AS builder
+WORKDIR /app
+COPY . .
+RUN go mod download;
+RUN cd apps/sync-server-go && \
+    CGO_ENABLED=0 GOOS=linux go build \
+      -ldflags="-w -s" \
+      -o /app/server .;
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    libgcc-s1 \
+    && rm -rf /var/lib/apt/lists/*
+RUN useradd -m -u 1000 appuser;
+WORKDIR /home/appuser
+COPY --from=builder /app/server ./server
+USER appuser
+EXPOSE $PORT
+CMD ["./server"]

@@ -4,6 +4,8 @@ package events.v1;
 
 import "google/protobuf/struct.proto";
 
+option go_package = "proto/rllm/events";
+
 message Event {
   string version = 1;
   EventData data = 3;

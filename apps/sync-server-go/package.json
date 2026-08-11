@@ -1,0 +1,20 @@
+{
+  "name": "sync-server-go",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "test": "go test ./...",
+    "dev": "fd -e go | PORT=$SYNC_SERVER_PORT entr -cnr -- bun run start",
+    "build": "go build .",
+    "start": "go run .",
+    "format": "go fmt ./...",
+    "lint": "go vet ./..."
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "hlc-go": "workspace:*",
+    "merkle-tree-go": "workspace:*"
+  },
+  "module": "src/index.js"
+}

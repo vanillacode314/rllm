@@ -44,9 +44,17 @@
         "typescript-eslint": "^8.61.0",
       },
     },
+    "apps/sync-server-go": {
+      "name": "sync-server-go",
+      "version": "0.0.0",
+      "devDependencies": {
+        "hlc-go": "workspace:*",
+        "merkle-tree-go": "workspace:*",
+      },
+    },
     "apps/web/rllm": {
       "name": "rllm",
-      "version": "0.0.24",
+      "version": "0.0.26",
       "dependencies": {
         "@bufbuild/protobuf": "^2.12.0",
         "@capacitor-community/sqlite": "^8.1.0",
@@ -249,6 +257,10 @@
         "vitest": "^4.1.8",
       },
     },
+    "packages/hlc-go": {
+      "name": "hlc-go",
+      "version": "0.0.0",
+    },
     "packages/merkle-tree": {
       "name": "merkle-tree",
       "dependencies": {
@@ -263,6 +275,10 @@
         "typescript": "^6.0.3",
         "vitest": "^4.1.8",
       },
+    },
+    "packages/merkle-tree-go": {
+      "name": "merkle-tree-go",
+      "version": "0.0.0",
     },
     "packages/mutex": {
       "name": "mutex",
@@ -2197,6 +2213,8 @@
 
     "hlc": ["hlc@workspace:packages/hlc"],
 
+    "hlc-go": ["hlc-go@workspace:packages/hlc-go"],
+
     "hookable": ["hookable@6.1.1", "", {}, "sha512-U9LYDy1CwhMCnprUfeAZWZGByVbhd54hwepegYTK7Pi5NvqEj63ifz5z+xukznehT7i6NIZRu89Ay1AZmRsLEQ=="],
 
     "hosted-git-info": ["hosted-git-info@4.1.0", "", { "dependencies": { "lru-cache": "^6.0.0" } }, "sha512-kyCuEOWjJqZuDbRHzL8V93NzQhwIB71oFWSyzVo+KPZI+pnQPPxucdkrOZvkLRnrf5URsQM+IJ09Dw29cRALIA=="],
@@ -2512,6 +2530,8 @@
     "merge-anything": ["merge-anything@5.1.7", "", { "dependencies": { "is-what": "^4.1.8" } }, "sha512-eRtbOb1N5iyH0tkQDAoQ4Ipsp/5qSR79Dzrz8hEPxRX10RWWR/iQXdoKmBSRCThY1Fh5EhISDtpSc93fpxUniQ=="],
 
     "merkle-tree": ["merkle-tree@workspace:packages/merkle-tree"],
+
+    "merkle-tree-go": ["merkle-tree-go@workspace:packages/merkle-tree-go"],
 
     "micromark": ["micromark@4.0.2", "", { "dependencies": { "@types/debug": "^4.0.0", "debug": "^4.0.0", "decode-named-character-reference": "^1.0.0", "devlop": "^1.0.0", "micromark-core-commonmark": "^2.0.0", "micromark-factory-space": "^2.0.0", "micromark-util-character": "^2.0.0", "micromark-util-chunked": "^2.0.0", "micromark-util-combine-extensions": "^2.0.0", "micromark-util-decode-numeric-character-reference": "^2.0.0", "micromark-util-encode": "^2.0.0", "micromark-util-normalize-identifier": "^2.0.0", "micromark-util-resolve-all": "^2.0.0", "micromark-util-sanitize-uri": "^2.0.0", "micromark-util-subtokenize": "^2.0.0", "micromark-util-symbol": "^2.0.0", "micromark-util-types": "^2.0.0" } }, "sha512-zpe98Q6kvavpCr1NPVSCMebCKfD7CA2NqZ+rykeNhONIJBpc1tFKt9hucLGwha3jNTNI8lHpctWJWoimVF4PfA=="],
 
@@ -3038,6 +3058,8 @@
     "svgo": ["svgo@4.0.1", "", { "dependencies": { "commander": "^11.1.0", "css-select": "^5.1.0", "css-tree": "^3.0.1", "css-what": "^6.1.0", "csso": "^5.0.5", "picocolors": "^1.1.1", "sax": "^1.5.0" }, "bin": "./bin/svgo.js" }, "sha512-XDpWUOPC6FEibaLzjfe0ucaV0YrOjYotGJO1WpF0Zd+n6ZGEQUsSugaoLq9QkEZtAfQIxT42UChcssDVPP3+/w=="],
 
     "sync-server": ["sync-server@workspace:apps/sync-server"],
+
+    "sync-server-go": ["sync-server-go@workspace:apps/sync-server-go"],
 
     "tagged-tag": ["tagged-tag@1.0.0", "", {}, "sha512-yEFYrVhod+hdNyx7g5Bnkkb0G6si8HJurOoOEgC8B/O0uXLHlaey/65KRv6cuWBNhBgHKAROVpc7QyYqE5gFng=="],
 

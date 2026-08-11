@@ -18,22 +18,31 @@
       "dependsOn": [
         "^build"
       ],
-      "env": [
+      "passThroughEnv": [
         "DATABASE_CONNECTION_URL",
         "DATABASE_AUTH_TOKEN"
       ]
+    },
+
+    "sync-server-go#dev": {
+      "cache": false,
+      "persistent": true,
+      "interactive": false,
+      "passThroughEnv": [
+        "SYNC_SERVER_PORT",
+        "DATABASE_CONNECTION_URL",
+        "DATABASE_AUTH_TOKEN"
+      ],
     },
     "sync-server#dev": {
       "cache": false,
       "persistent": true,
       "interactive": false,
       "passThroughEnv": [
-        "SYNC_SERVER_PORT"
-      ],
-      "env": [
+        "SYNC_SERVER_PORT",
         "DATABASE_CONNECTION_URL",
         "DATABASE_AUTH_TOKEN"
-      ]
+      ],
     },
     "rllm#build": {
       "outputs": [
