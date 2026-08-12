@@ -1,5 +1,5 @@
+import { createActiveElement } from '@solid-primitives/active-element';
 import { createEventListener } from '@solid-primitives/event-listener';
-import { createImmutable } from '@solid-primitives/immutable';
 import { createWritableMemo } from '@solid-primitives/memo';
 import { createResizeObserver } from '@solid-primitives/resize-observer';
 import { createTimer } from '@solid-primitives/timer';
@@ -9,7 +9,7 @@ import {
   createMemo,
   createSignal,
   createUniqueId,
-  Index,
+  For,
   type JSX,
   type JSXElement,
   Match,
@@ -18,6 +18,7 @@ import {
   Suspense,
   Switch
 } from 'solid-js';
+import { unwrap } from 'solid-js/store';
 import { toast } from 'solid-sonner';
 import { Button } from 'ui/button';
 import { Callout, CalloutContent, CalloutTitle } from 'ui/callout';
@@ -41,12 +42,12 @@ import { ChatGenerationManager } from '~/lib/chat/generation';
 import { queries } from '~/queries';
 import { formatToPercentage, formatToTokens } from '~/utils/number';
 import { formatAsKeyValuePair } from '~/utils/object';
+import { createDerivedStore } from '~/utils/stores';
 import { lowlightWorkerPool } from '~/workers/lowlight';
 
 import Markdown from './markdown/Markdown';
 import { useAlertDialog } from './modals/auto-import/AlertDialog';
 import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
-import { createActiveElement } from '@solid-primitives/active-element';
 
 type Props = JSX.HTMLAttributes<HTMLDivElement> & {
   chat: Omit<TChat, 'createdAt' | 'updatedAt'>;
@@ -77,23 +78,24 @@ export function Chat(props: Props): JSXElement {
   // NOTE: needed because typescript cannot tell this is being used as a directive in the markup
   void autoScroll;
 
-  const nodes = createImmutable(
-    () => {
+  const nodes = createDerivedStore(
+    () => structuredClone(unwrap({ messages: props.chat.messages, path: props.path })),
+    ({ messages, path }) => {
       const result = [];
-      let prev = props.chat.messages;
-      for (const index of props.path) {
-        const node = prev.children[index];
-        const siblings = prev.children;
+      let parent = messages;
+      for (const index of path) {
+        const node = parent.children[index];
         result.push({
+          id: index,
           node,
-          numberOfSiblings: siblings.length - 1,
+          numberOfSiblings: parent.children.length - 1,
           pathIndex: index
         });
-        prev = node;
+        parent = node;
       }
       return result;
     },
-    { key: 'id' }
+    { key: 'id', name: 'chat-nodes' }
   );
 
   const [offsetBottomPixels, setOffsetBottomPixels] = createSignal(0);
@@ -135,10 +137,10 @@ export function Chat(props: Props): JSXElement {
         use:autoScroll
         {...others}
       >
-        <Index each={nodes}>
+        <For each={nodes}>
           {(data, index) => {
-            const message = () => data().node.value!;
-            const currentPath = createMemo(() => props.path.slice(0, index + 1));
+            const message = () => data.node.value!;
+            const currentPath = createMemo(() => props.path.slice(0, index() + 1));
 
             return (
               <Show
@@ -146,15 +148,15 @@ export function Chat(props: Props): JSXElement {
                   <UserChat
                     canDelete={
                       message().chunks.length > 1 &&
-                      (index !== 0 || data().numberOfSiblings > 0 || props.path[0] !== 0)
+                      (index() !== 0 || data.numberOfSiblings > 0 || props.path[0] !== 0)
                     }
                     displayName={
                       displayName.isSuccess && displayName.data ? displayName.data : 'user'
                     }
-                    id={`user-chat-${index}`}
-                    index={data().pathIndex}
+                    id={`user-chat-${index()}`}
+                    index={data.pathIndex}
                     message={message() as TMessage & { type: 'user' }}
-                    numberOfSiblings={data().numberOfSiblings}
+                    numberOfSiblings={data.numberOfSiblings}
                     onDelete={props.onDelete.bind(null, currentPath())}
                     onEdit={props.onEdit.bind(null, currentPath())}
                     onTraversal={props.onTraversal.bind(null, currentPath())}
@@ -163,10 +165,10 @@ export function Chat(props: Props): JSXElement {
                 when={message().type === 'llm'}
               >
                 <LLMChat
-                  index={data().pathIndex}
-                  isPending={isPending() && index === nodes.length - 1}
+                  index={data.pathIndex}
+                  isPending={isPending() && index() === nodes.length - 1}
                   message={message() as TMessage & { type: 'llm' }}
-                  numberOfSiblings={data().numberOfSiblings}
+                  numberOfSiblings={data.numberOfSiblings}
                   onDelete={props.onDelete.bind(null, currentPath())}
                   onRegenerate={props.onRegenerate.bind(null, currentPath())}
                   onTraversal={props.onTraversal.bind(null, currentPath())}
@@ -174,7 +176,7 @@ export function Chat(props: Props): JSXElement {
               </Show>
             );
           }}
-        </Index>
+        </For>
         <div
           class={cn('w-full shrink-0', offsetBottomPixels() <= 0 && 'hidden')}
           style={{ height: `${Math.ceil(offsetBottomPixels())}px` }}
@@ -349,30 +351,30 @@ function LLMChat(props: {
         </CardHeader>
         <CollapsibleContent>
           <CardContent class="space-y-4 p-2 overflow-x-auto">
-            <Index each={props.message.chunks}>
+            <For each={props.message.chunks}>
               {(chunk, index) => (
                 <Switch>
-                  <Match when={chunk().type === 'reasoning'}>
+                  <Match when={chunk.type === 'reasoning'}>
                     <LLMReasoningChunk
-                      chunk={chunk() as TLLMMessageChunk & { type: 'reasoning' }}
-                      inProgress={props.isPending && index === props.message.chunks.length - 1}
+                      chunk={chunk as TLLMMessageChunk & { type: 'reasoning' }}
+                      inProgress={props.isPending && index() === props.message.chunks.length - 1}
                     />
                   </Match>
-                  <Match when={chunk().type === 'tool_call'}>
+                  <Match when={chunk.type === 'tool_call'}>
                     <LLMToolCallChunk
-                      chunk={chunk() as TLLMMessageChunk & { type: 'tool_call' }}
-                      isPending={props.isPending && index === props.message.chunks.length - 1}
+                      chunk={chunk as TLLMMessageChunk & { type: 'tool_call' }}
+                      isPending={props.isPending && index() === props.message.chunks.length - 1}
                     />
                   </Match>
                   <Match when={true}>
                     <LLMTextChunk
-                      chunk={chunk() as TLLMMessageChunk & { type: 'text' }}
-                      inProgress={props.isPending && index === props.message.chunks.length - 1}
+                      chunk={chunk as TLLMMessageChunk & { type: 'text' }}
+                      inProgress={props.isPending && index() === props.message.chunks.length - 1}
                     />
                   </Match>
                 </Switch>
               )}
-            </Index>
+            </For>
             <Show when={props.message.error}>
               <Callout variant="error">
                 <CalloutTitle>Error</CalloutTitle>
@@ -395,12 +397,24 @@ function LLMReasoningChunk(props: {
   const hideReasoningDuringGeneration = useQuery(() =>
     queries.userMetadata.byId(USER_METADATA_KEYS.HIDE_REASONING_DURING_GENERATION)
   );
-  const [open, setOpen] = createWritableMemo(() =>
-    hideReasoningDuringGeneration.data === 'false' ? props.inProgress : false
+  let openChangedByUser = false;
+  const [open, setOpen] = createWritableMemo((prev: boolean | undefined) =>
+    openChangedByUser
+      ? prev
+      : hideReasoningDuringGeneration.data === 'false'
+        ? props.inProgress
+        : false
   );
 
   return (
-    <Collapsible class="space-y-1.5" onOpenChange={(value) => setOpen(value)} open={open()}>
+    <Collapsible
+      class="space-y-1.5"
+      onOpenChange={(value) => {
+        openChangedByUser = true;
+        setOpen(value);
+      }}
+      open={open()}
+    >
       <CollapsibleTrigger class="text-sm opacity-90 flex w-full items-center gap-2">
         <span class="font-mono text-xs tracking-wider uppercase flex gap-1 items-baseline">
           <span class="icon-[heroicons--light-bulb] text-xs" />
@@ -646,25 +660,25 @@ function UserChat(props: {
           </div>
           <CollapsibleContent>
             <CardContent class="p-4 pt-0 flex flex-col gap-4 h-full max-h-[30vh] overflow-auto">
-              <Index each={filteredChunks()}>
+              <For each={filteredChunks()}>
                 {(chunk, index) => (
                   <Switch>
-                    <Match when={chunk().type === 'text'}>
+                    <Match when={chunk.type === 'text'}>
                       <UserTextChunk
-                        chunk={chunk() as TUserMessageChunk & { type: 'text' }}
-                        onDelete={props.onDelete.bind(null, index)}
-                        onEdit={props.onEdit.bind(null, index)}
+                        chunk={chunk as TUserMessageChunk & { type: 'text' }}
+                        onDelete={props.onDelete.bind(null, index())}
+                        onEdit={props.onEdit.bind(null, index())}
                       />
                     </Match>
-                    <Match when={chunk().type === 'image_url'}>
+                    <Match when={chunk.type === 'image_url'}>
                       <UserImageChunk
-                        chunk={chunk() as TUserMessageChunk & { type: 'image' }}
-                        onDelete={props.onDelete.bind(null, index)}
+                        chunk={chunk as TUserMessageChunk & { type: 'image' }}
+                        onDelete={props.onDelete.bind(null, index())}
                       />
                     </Match>
                   </Switch>
                 )}
-              </Index>
+              </For>
             </CardContent>
           </CollapsibleContent>
         </Collapsible>

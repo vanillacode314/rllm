@@ -314,11 +314,11 @@ export function useChatPage(
         });
       }
     }
+    document.dispatchEvent(new CustomEvent('chat:updated'));
     sendPrompt.mutate({
       id: $chat.id,
       path: currentPath()
     });
-    document.dispatchEvent(new CustomEvent('chat:updated'));
   };
 
   async function onEdit(path: number[], chunkIndex: number, chunk: TUserMessageChunk) {

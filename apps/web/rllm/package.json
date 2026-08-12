@@ -1,6 +1,6 @@
 {
   "name": "rllm",
-  "version": "0.0.29",
+  "version": "0.0.30",
   "private": true,
   "type": "module",
   "scripts": {
@@ -36,7 +36,6 @@
     "@solid-primitives/active-element": "^2.1.6",
     "@solid-primitives/connectivity": "^0.4.5",
     "@solid-primitives/event-listener": "^2.4.5",
-    "@solid-primitives/immutable": "^1.1.4",
     "@solid-primitives/map": "^0.7.3",
     "@solid-primitives/media": "^2.3.5",
     "@solid-primitives/memo": "^1.5.0",
