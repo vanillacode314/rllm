@@ -22,6 +22,7 @@ require (
 require (
 	github.com/ethereum/go-ethereum v1.17.5
 	turso.tech/database/tursogo v0.7.2
+	turso.tech/database/tursogo-serverless v0.0.0-20260812050313-78864a17952f
 )
 
 require (
@@ -37,5 +38,4 @@ require (
 	github.com/tursodatabase/turso-go-platform-libs v0.7.2 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
-	turso.tech/database/tursogo-serverless v0.0.0-20260812050313-78864a17952f // indirect
 )

@@ -8,11 +8,8 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"sync"
 	client "sync-server/db"
 	"time"
-
-	"sync-server/crypto"
 
 	"google.golang.org/protobuf/proto"
 	eventspb "proto/rllm/events"
@@ -109,21 +106,6 @@ func (s EventsHandler) GetId(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(clock.ClientID))
 }
 
-type tokenData struct {
-	accountId string
-	expiresAt uint
-}
-
-const AUTH_HEADER_PREFIX_LENGTH = len("BEARER ")
-
-var tokens = struct {
-	mu    sync.Mutex
-	items map[string]tokenData
-}{
-	mu:    sync.Mutex{},
-	items: map[string]tokenData{},
-}
-
 func (s EventsHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	tokens.mu.Lock()
 	defer tokens.mu.Unlock()
@@ -188,85 +170,4 @@ func (s EventsHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-}
-
-type challengeData struct {
-	nonce     string
-	expiresAt uint
-}
-
-var challenges = struct {
-	mu    sync.Mutex
-	items map[string]challengeData
-}{
-	mu:    sync.Mutex{},
-	items: map[string]challengeData{},
-}
-
-func (s EventsHandler) GetRequestChallenge(w http.ResponseWriter, r *http.Request) {
-	challenges.mu.Lock()
-	defer challenges.mu.Unlock()
-	accountId := r.URL.Query().Get("accountId")
-	if accountId == "" {
-		http.Error(w, "accountId is required", http.StatusBadRequest)
-		return
-	}
-	challenge := challengeData{
-		nonce:     fmt.Sprintf("%x", time.Now().UnixNano()),
-		expiresAt: uint(time.Now().Unix()) + 60*2,
-	}
-	challenges.items[accountId] = challenge
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(struct {
-		Nonce string `json:"nonce"`
-	}{Nonce: challenge.nonce})
-}
-
-func (s EventsHandler) PostVerifyChallenge(w http.ResponseWriter, r *http.Request) {
-	challenges.mu.Lock()
-	defer challenges.mu.Unlock()
-	tokens.mu.Lock()
-	defer tokens.mu.Unlock()
-	var body struct {
-		AccountId string `json:"accountId"`
-		Nonce     string `json:"nonce"`
-		Signature string `json:"signature"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, fmt.Sprintf("failed to decode JSON body: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	challenge, ok := challenges.items[body.AccountId]
-	if !ok {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-	delete(challenges.items, body.AccountId)
-
-	if challenge.nonce != body.Nonce {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-	if challenge.expiresAt < uint(time.Now().Unix()) {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	if !crypto.VerifyData([]byte(body.Nonce), body.Signature, body.AccountId) {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	token := fmt.Sprintf("%x", time.Now().UnixNano())
-	tokens.items[token] = tokenData{
-		accountId: body.AccountId,
-		expiresAt: uint(time.Now().Unix()) + 60*5,
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(struct {
-		Token string `json:"token"`
-	}{Token: token})
 }
