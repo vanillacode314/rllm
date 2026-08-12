@@ -35,6 +35,7 @@ func (s SocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%v", err)
 		return
 	}
+	c.SetReadLimit(10 * 1024 * 1024)
 	clock, err := client.GetLocalClock(s.Db)
 	if err != nil {
 		log.Printf("[WS Open] Failed to get local clock: %v", err)
