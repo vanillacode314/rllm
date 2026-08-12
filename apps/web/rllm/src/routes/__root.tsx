@@ -19,6 +19,7 @@ import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { ChatGenerationManager } from '~/lib/chat/generation';
 import { dbStorage, scratchpadStorage } from '~/lib/chat/generation/storages';
 import { initChatSettings } from '~/lib/chat/settings';
+import { retryFailedTitleAndTags } from '~/lib/chat/tasks';
 import { MCPManager } from '~/lib/mcp/manager';
 import { ProxyManager } from '~/lib/proxy';
 import { initSocket } from '~/sockets/messages';
@@ -39,12 +40,16 @@ export const Route = createRootRouteWithContext()({
     void initSocket().unwrap();
     void ProxyManager.initialize().finally(() => void MCPManager.initialize());
     void BackgroundTaskManager.init();
+
     const debouncedMcpInitialized = debounce(() => MCPManager.initialize(), { wait: 1000 });
     logger.on('updateMcp', debouncedMcpInitialized, { self: true });
     logger.on('createMcp', debouncedMcpInitialized, { self: true });
     logger.on('deleteMcp', debouncedMcpInitialized, { self: true });
+
     ChatGenerationManager.registerStorage(dbStorage);
     ChatGenerationManager.registerStorage(scratchpadStorage);
+
+    setTimeout(() => void retryFailedTitleAndTags(), 1000 * 30);
   }),
   component: RootComponent,
   errorComponent: ErrorComponent

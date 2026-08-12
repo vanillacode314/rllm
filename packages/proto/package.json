@@ -12,9 +12,10 @@
     }
   },
   "scripts": {
-    "build": "npm run proto:generate && tsdown --out-dir ./dist",
+    "build": "tsdown --out-dir ./dist",
+    "build:generate": "npm run proto:generate && tsdown --out-dir ./dist",
     "proto:generate": "buf generate",
-    "dev": "npm run build -- --watch src",
+    "dev": "npm run build:generate -- --watch src",
     "lint": "oxlint --fix",
     "format": "buf format --write"
   },

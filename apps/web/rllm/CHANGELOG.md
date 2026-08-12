@@ -1,7 +1,7 @@
 # What's New
 
-## v0.0.26 — August 10, 2026
+## v0.0.27 — August 12, 2026
 
 ### 🐛 Bug Fixes
 
-- **Source citations work better** — When the AI cites an attachment or web source in its answer, the source link now appears right where it should, next to the cited text — no more duplicated text or misplaced links.
+- **Stuck "Untitled Chat" titles get fixed** — Sometimes automatic title and tag generation would fail (temporary network or service hiccup), leaving a chat stuck with the default "Untitled Chat" title forever. Now, when you open the app, it finds those chats and retries generating a title and tags for them automatically — no action needed on your part.
