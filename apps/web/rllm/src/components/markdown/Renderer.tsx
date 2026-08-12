@@ -30,7 +30,7 @@ export const MarkdownChildren: Component<{
               parent={props.node}
             />
           </Match>
-          <Match when={child.type === 'text' && child.value !== '\n'}>
+          <Match when={child.type === 'text'}>
             <MarkdownText
               context={props.context}
               index={index()}

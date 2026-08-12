@@ -1,7 +1,7 @@
 # What's New
 
-## v0.0.28 — August 12, 2026
+## v0.0.29 — August 12, 2026
 
-### 🎨 Improvements
+### 🐛 Bug Fixes
 
-- **More reliable auto-titles** — The app now uses a more dependable method for generating chat titles and tags. Previously these could occasionally fail when the AI model's reply wasn't formatted exactly right; now that's handled automatically, so chats are far less likely to stay stuck as "Untitled Chat".
+- **Line breaks in chat are now preserved** — Multi-line replies from the AI now display with proper line breaks instead of being squished together, making longer responses much easier to read.
