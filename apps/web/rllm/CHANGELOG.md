@@ -1,7 +1,7 @@
 # What's New
 
-## v0.0.27 — August 12, 2026
+## v0.0.28 — August 12, 2026
 
-### 🐛 Bug Fixes
+### 🎨 Improvements
 
-- **Stuck "Untitled Chat" titles get fixed** — Sometimes automatic title and tag generation would fail (temporary network or service hiccup), leaving a chat stuck with the default "Untitled Chat" title forever. Now, when you open the app, it finds those chats and retries generating a title and tags for them automatically — no action needed on your part.
+- **More reliable auto-titles** — The app now uses a more dependable method for generating chat titles and tags. Previously these could occasionally fail when the AI model's reply wasn't formatted exactly right; now that's handled automatically, so chats are far less likely to stay stuck as "Untitled Chat".

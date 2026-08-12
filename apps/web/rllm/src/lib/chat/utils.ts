@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
-import { AsyncResult } from 'ts-result-option';
-import { safeParseJson, tryBlock } from 'ts-result-option/utils';
+import { AsyncResult, Option } from 'ts-result-option';
+import { tryBlock } from 'ts-result-option/utils';
 import * as z from 'zod/mini';
 
 import type { TMessage } from '~/types/chat';
@@ -10,7 +10,7 @@ import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { fetchers } from '~/queries';
 import { type TTool } from '~/types';
 import { produce } from '~/utils/immer';
-import { dedent, extractFirstJson } from '~/utils/string';
+import { dedent } from '~/utils/string';
 
 import { handleCompletion } from '.';
 
@@ -23,7 +23,6 @@ export const generateTitleAndTags = (config: {
 }) =>
   tryBlock<{ tags: string[]; title: string }, Error>(
     async function* () {
-      const outputSchema = z.object({ tags: z.array(z.string()), title: z.string() });
       const { signal } = config;
       const [{ provider, providerId }, model] = await Promise.all([
         fetchers.userMetadata
@@ -66,7 +65,7 @@ export const generateTitleAndTags = (config: {
           }
         }
       });
-      let output = '';
+      let titleAndTags = Option.None<{ tags: string[]; title: string }>();
       yield* handleCompletion({
         adapter,
         messages: [
@@ -90,18 +89,23 @@ export const generateTitleAndTags = (config: {
           }
         ],
         model,
-        onUpdate: async ({ chunks }) => {
-          if (!chunks || chunks.length === 0) return;
-          const chunk = chunks.at(-1)!;
-          if (chunk.type !== 'text') return;
-          output = chunk.content;
-        },
-        signal
+        signal,
+        tools: [
+          makeTool({
+            description: '',
+            handler: ({ tags, title }) => {
+              titleAndTags = Option.Some({ tags, title });
+              return 'Success';
+            },
+            inputSchema: z.object({ tags: z.array(z.string()), title: z.string() }),
+            name: 'setTitleAndTags'
+          })
+        ]
       });
-      const json = extractFirstJson(output);
-      if (!json) throw new Error(`Failed to extract json from output: ${output}`);
-      const { tags, title } = yield* safeParseJson(json, { validate: outputSchema.parse });
-      return AsyncResult.Ok({ tags, title });
+      if (titleAndTags.isNone()) {
+        return AsyncResult.Err(new Error(`Title and tags not set by tool`));
+      }
+      return AsyncResult.Ok(titleAndTags.unwrap());
     },
     (e) => new Error(`Failed to generate title`, { cause: e })
   );
@@ -114,7 +118,6 @@ export const summarizeChat = (config: {
 }) =>
   tryBlock<string, Error>(
     async function* () {
-      const outputSchema = z.object({ summary: z.string() });
       const { model, providerId, signal } = config;
       const provider = await fetchers.providers.byId(providerId);
       if (!provider) throw new Error(`Provider ${providerId} not found`);
@@ -132,7 +135,7 @@ export const summarizeChat = (config: {
           }
         }
       });
-      let output = '';
+      let summary = Option.None<string>();
       yield* handleCompletion({
         adapter,
         messages: [
@@ -156,20 +159,23 @@ export const summarizeChat = (config: {
           }
         ],
         model,
-        onUpdate: async ({ chunks }) => {
-          if (!chunks || chunks.length === 0) return;
-          const chunk = chunks.at(-1)!;
-          if (chunk.type !== 'text') return;
-          output = chunk.content;
-        },
-        signal
+        signal,
+        tools: [
+          makeTool({
+            description: '',
+            handler: ({ summary: summaryText }) => {
+              summary = Option.Some(summaryText);
+              return 'Success';
+            },
+            inputSchema: z.object({ summary: z.string() }),
+            name: 'setSummary'
+          })
+        ]
       });
-      const json = extractFirstJson(output);
-      if (!json) throw new Error(`Failed to extract json from output: ${output}`);
-      const { summary } = yield* safeParseJson(json, {
-        validate: outputSchema.parse
-      });
-      return AsyncResult.Ok(summary);
+      if (summary.isNone()) {
+        return AsyncResult.Err(new Error(`Summary not set by tool`));
+      }
+      return AsyncResult.Ok(summary.unwrap());
     },
     (e) => new Error(`Failed to summarize chat`, { cause: e })
   );
