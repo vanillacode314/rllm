@@ -22,9 +22,13 @@ type SocketHandler struct {
 	Hub *Hub
 }
 
-const wsReadTimeout = 30 * time.Second
+const wsPingInterval = 20 * time.Second
+const wsPingTimeout = 5 * time.Second
+const wsReadLimitBytes = 10 * 1024 * 1024
 
 func (s SocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	accountID := r.URL.Query().Get("accountId")
 	if accountID == "" {
 		http.Error(w, "missing accountId query parameter", http.StatusBadRequest)
@@ -35,7 +39,8 @@ func (s SocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%v", err)
 		return
 	}
-	c.SetReadLimit(10 * 1024 * 1024)
+	go s.keepAlive(ctx, c)
+	c.SetReadLimit(wsReadLimitBytes)
 	clock, err := client.GetLocalClock(s.Db)
 	if err != nil {
 		log.Printf("[WS Open] Failed to get local clock: %v", err)
@@ -53,11 +58,8 @@ func (s SocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[WS Open] Client connected: accountId=%s", accountID)
 	m.write(m.createHandshake("__any__"))
 
-	ctx := context.Background()
 	for {
-		readCtx, cancel := context.WithTimeout(ctx, wsReadTimeout)
-		typ, message, err := c.Read(readCtx)
-		cancel()
+		typ, message, err := c.Read(ctx)
 		if err != nil {
 			if errors.Is(err, io.EOF) || websocket.CloseStatus(err) != -1 {
 				log.Println("Client disconnected cleanly")
@@ -192,5 +194,24 @@ func (s SocketHandler) handleMessage(v *peers.SyncWireMessage, m *ConnectionMana
 		m.recomputeMerkleTree()
 
 	default:
+	}
+}
+
+func (s SocketHandler) keepAlive(ctx context.Context, c *websocket.Conn) {
+	t := time.NewTicker(wsPingInterval)
+	defer t.Stop()
+	for {
+		select {
+		case <-t.C:
+			pctx, cancel := context.WithTimeout(ctx, wsPingTimeout)
+			err := c.Ping(pctx)
+			cancel()
+			if err != nil {
+				c.CloseNow()
+				return
+			}
+		case <-ctx.Done():
+			return
+		}
 	}
 }
