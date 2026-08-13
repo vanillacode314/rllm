@@ -13,7 +13,7 @@ const events = sqliteTable('events', {
   data: text({ mode: 'json' }).notNull(),
   timestamp: timestamp().primaryKey().notNull(),
   type: text().notNull(),
-  version: text()
+  version: text().notNull()
 });
 export const tables = { events, metadata };
 

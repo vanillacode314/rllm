@@ -88,8 +88,13 @@ type ConnectionManager struct {
 	sendTimestampBatch *batch.Batcher[string]
 	askTimestampBatch  *batch.Batcher[string]
 	hasQueryBatch      *batch.Batcher[string]
-	hasUpdateBatch     *batch.Batcher[string]
 	recomputeDebouncer *batch.Debouncer
+
+	// pendingDigestUpdates counts digest queries we sent that have not yet
+	// been answered. It is only mutated from the socket read loop; the mutex
+	// keeps it safe if future callers come from other goroutines.
+	digestMu             sync.Mutex
+	pendingDigestUpdates int
 }
 
 // newConnectionManager wires the batchers and debouncer with the same
@@ -103,9 +108,8 @@ func newConnectionManager(db *sql.DB, accountID string, clientID string, conn *w
 		hub:       hub,
 	}
 	m.sendTimestampBatch = batch.NewBatcher(30, 5*time.Second, func(timestamps []string) { m.flushSendTimestamp(timestamps) })
-	m.askTimestampBatch = batch.NewBatcher(30, 5*time.Second, func(timestamps []string) { m.flushSendEventWithTimestamp(timestamps) })
+	m.askTimestampBatch = batch.NewBatcher(100, 5*time.Second, func(timestamps []string) { m.flushSendEventWithTimestamp(timestamps) })
 	m.hasQueryBatch = batch.NewBatcher(100, 5*time.Second, func(timestamps []string) { m.flushHasEventQuery(timestamps) })
-	m.hasUpdateBatch = batch.NewBatcher(100, 5*time.Second, func(timestamps []string) { m.flushHasEventUpdate(timestamps) })
 	m.recomputeDebouncer = batch.NewDebouncer(time.Second, func() {
 		log.Printf("[WS Debouncer] Recomputing Merkle tree: accountId=%s", m.accountID)
 		if err := client.RecomputeMerkleTree(m.db, m.accountID); err != nil {
@@ -118,25 +122,73 @@ func newConnectionManager(db *sql.DB, accountID string, clientID string, conn *w
 // close stops batchers and runs any pending recompute.
 func (m *ConnectionManager) close() {
 	m.sendTimestampBatch.Cancel()
+	m.askTimestampBatch.Cancel()
 	m.hasQueryBatch.Cancel()
-	m.hasUpdateBatch.Cancel()
 	m.recomputeDebouncer.Flush()
 }
 
-func (m *ConnectionManager) sendTimestamp(timestamp string) {
-	m.sendTimestampBatch.Add(timestamp)
+// addPendingDigestUpdates records n digest queries sent to the peer.
+func (m *ConnectionManager) addPendingDigestUpdates(n int) {
+	m.digestMu.Lock()
+	m.pendingDigestUpdates += n
+	m.digestMu.Unlock()
 }
 
-func (m *ConnectionManager) sendSendEventWithTimestamp(timestamp string) {
-	m.askTimestampBatch.Add(timestamp)
+// subPendingDigestUpdates records n digest updates received from the peer.
+func (m *ConnectionManager) subPendingDigestUpdates(n int) {
+	m.digestMu.Lock()
+	m.pendingDigestUpdates -= n
+	m.digestMu.Unlock()
 }
 
-func (m *ConnectionManager) sendHasEventWithTimestampQuery(timestamp string) {
-	m.hasQueryBatch.Add(timestamp)
+// pendingDigestUpdatesDone reports whether every digest query we sent has been
+// answered, i.e. the current reconciliation round has settled.
+func (m *ConnectionManager) pendingDigestUpdatesDone() bool {
+	m.digestMu.Lock()
+	defer m.digestMu.Unlock()
+	return m.pendingDigestUpdates == 0
 }
 
-func (m *ConnectionManager) sendHasEventWithTimestampUpdate(timestamp string) {
-	m.hasUpdateBatch.Add(timestamp)
+// addSendTimestamp queues a stored event for timestamp, flushing immediately
+// once the reconciliation round settles.
+func (m *ConnectionManager) addSendTimestamp(timestamps []string) {
+	if len(timestamps) == 0 {
+		return
+	}
+	for _, timestamp := range timestamps {
+		m.sendTimestampBatch.Add(timestamp)
+	}
+	if m.pendingDigestUpdatesDone() {
+		m.sendTimestampBatch.Flush()
+	}
+}
+
+// addAskTimestamp queues a sendEventWithTimestamp request for timestamp,
+// flushing immediately once the reconciliation round settles.
+func (m *ConnectionManager) addAskTimestamp(timestamps []string) {
+	if len(timestamps) == 0 {
+		return
+	}
+	for _, timestamp := range timestamps {
+		m.askTimestampBatch.Add(timestamp)
+	}
+	if m.pendingDigestUpdatesDone() {
+		m.askTimestampBatch.Flush()
+	}
+}
+
+// addHasEventQuery queues a hasEventWithTimestampQuery for timestamp,
+// flushing immediately once the reconciliation round settles.
+func (m *ConnectionManager) addHasEventQuery(timestamps []string) {
+	if len(timestamps) == 0 {
+		return
+	}
+	for _, timestamp := range timestamps {
+		m.hasQueryBatch.Add(timestamp)
+	}
+	if m.pendingDigestUpdatesDone() {
+		m.hasQueryBatch.Flush()
+	}
 }
 
 func (m *ConnectionManager) recomputeMerkleTree() {
@@ -221,6 +273,9 @@ func (m *ConnectionManager) createHasEventWithTimestampUpdates(updates []*peers.
 // flushSendTimestamp sends stored events for the requested timestamps.
 func (m *ConnectionManager) flushSendTimestamp(timestamps []string) {
 	timestamps = digest.Unique(timestamps)
+	if len(timestamps) == 0 {
+		return
+	}
 	events, err := client.GetMessagesByTimestamps(m.db, m.accountID, timestamps)
 	if err != nil {
 		log.Printf("[WS Batcher] Failed to query events: %v", err)
@@ -254,12 +309,12 @@ func (m *ConnectionManager) flushHasEventQuery(timestamps []string) {
 	m.write(m.createHasEventWithTimestampQuery(timestamps))
 }
 
-// flushHasEventUpdate answers hasEventWithTimestampQuery by checking the
-// local merkle tree.
+// flushHasEventUpdate answers a hasEventWithTimestampQuery by checking the
+// local merkle tree, sending all updates in a single message.
 func (m *ConnectionManager) flushHasEventUpdate(timestamps []string) {
 	tree, err := client.GetMerkleTreeByAccountId(m.db, m.accountID)
 	if err != nil {
-		log.Printf("[WS HasEventQueryBatch] Failed to load tree: %v", err)
+		log.Printf("[WS HasEventUpdate] Failed to load tree: %v", err)
 		return
 	}
 	updates := make([]*peers.HasEventWithTimestampUpdate, 0, len(timestamps))
@@ -276,7 +331,7 @@ func (m *ConnectionManager) flushHasEventUpdate(timestamps []string) {
 		}) > -1
 		updates = append(updates, &peers.HasEventWithTimestampUpdate{Timestamp: timestamp, Yes: yes})
 	}
-	log.Printf("[WS HasEventQueryBatch] accountId=%s updates=%d", m.accountID, len(updates))
+	log.Printf("[WS HasEventUpdate] accountId=%s updates=%d", m.accountID, len(updates))
 	m.write(m.createHasEventWithTimestampUpdates(updates))
 }
 

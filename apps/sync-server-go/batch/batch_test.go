@@ -87,6 +87,35 @@ func TestBatcherTimerResetsPerBatch(t *testing.T) {
 	}
 }
 
+func TestBatcherFlush(t *testing.T) {
+	flushed := make(chan []string, 1)
+	b := NewBatcher(100, time.Hour, func(items []string) {
+		select {
+		case flushed <- items:
+		default:
+		}
+	})
+	b.Add("a")
+	b.Add("b")
+	b.Flush()
+	select {
+	case items := <-flushed:
+		if len(items) != 2 || items[0] != "a" || items[1] != "b" {
+			t.Fatalf("unexpected batch: %v", items)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for Flush")
+	}
+	// Flush with nothing pending must not call the flush function.
+	b.Flush()
+	time.Sleep(20 * time.Millisecond)
+	select {
+	case items := <-flushed:
+		t.Fatalf("expected no extra flush, got %v", items)
+	default:
+	}
+}
+
 func TestBatcherCancelDropsPending(t *testing.T) {
 	var mu sync.Mutex
 	count := 0

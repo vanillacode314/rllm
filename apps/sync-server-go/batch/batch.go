@@ -45,6 +45,12 @@ func (b *Batcher[T]) Add(item T) {
 	b.mu.Unlock()
 }
 
+// Flush immediately flushes any pending items, without waiting for maxSize
+// or the batch window. The batcher remains usable afterwards.
+func (b *Batcher[T]) Flush() {
+	b.flushPending()
+}
+
 // Cancel stops the timer and drops any pending items without flushing.
 func (b *Batcher[T]) Cancel() {
 	b.mu.Lock()

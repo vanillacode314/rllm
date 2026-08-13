@@ -123,10 +123,11 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 		}
 		if mismatch {
 			log.Printf("[WS Handshake] Root digest mismatch")
-			paths := make([][]uint32, 16)
+			paths := make([][]uint32, tree.Arity())
 			for i := range tree.Arity() {
 				paths[i] = []uint32{uint32(i)}
 			}
+			connectionManager.addPendingDigestUpdates(len(paths))
 			connectionManager.write(connectionManager.createDigestQuery(uint32(tree.MaxDepth()), paths))
 			return
 		}
@@ -154,9 +155,7 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 	case *peers.SyncWireMessage_SendEventWithTimestamp:
 		log.Printf("[WS SendEventWithTimestampQuery] accountId=%s", accountID)
 		timestamps := payload.SendEventWithTimestamp.Timestamps
-		for _, timestamp := range timestamps {
-			connectionManager.sendTimestamp(timestamp)
-		}
+		connectionManager.addSendTimestamp(timestamps)
 
 	case *peers.SyncWireMessage_DigestUpdate:
 		u := payload.DigestUpdate
@@ -166,34 +165,43 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 			log.Printf("[WS Error] Failed to load tree: %v", err)
 			return
 		}
+		connectionManager.subPendingDigestUpdates(len(u.GetDigests()))
+		timestampsToSend := []string{}
+		timestampsToAsk := []string{}
+		timestampsToQuery := []string{}
 		for _, action := range digest.HandleDigestUpdate(tree, u.GetMerkleDepth(), u.GetDigests()) {
 			switch action.Kind {
 			case digest.KindQueryChildren:
+				connectionManager.addPendingDigestUpdates(len(action.Children))
 				connectionManager.write(connectionManager.createDigestQuery(uint32(tree.MaxDepth()), action.Children))
 			case digest.KindSendTimestamp:
-				connectionManager.sendTimestamp(action.Timestamp)
+				timestampsToSend = append(timestampsToSend, action.Timestamp)
 			case digest.KindAskTimestamp:
-				connectionManager.sendSendEventWithTimestamp(action.Timestamp)
+				timestampsToAsk = append(timestampsToAsk, action.Timestamp)
 			case digest.KindHasEventQuery:
-				connectionManager.sendHasEventWithTimestampQuery(action.Timestamp)
+				timestampsToQuery = append(timestampsToQuery, action.Timestamp)
 			}
 		}
+		connectionManager.addSendTimestamp(timestampsToSend)
+		connectionManager.addAskTimestamp(timestampsToAsk)
+		connectionManager.addHasEventQuery(timestampsToQuery)
 
 	case *peers.SyncWireMessage_HasEventWithTimestampQuery:
 		q := payload.HasEventWithTimestampQuery
 		log.Printf("[WS HasEventQuery] accountId=%s timestamps=%v", accountID, q.GetTimestamps())
-		for _, timestamp := range q.GetTimestamps() {
-			connectionManager.sendHasEventWithTimestampUpdate(timestamp)
-		}
+		connectionManager.flushHasEventUpdate(q.GetTimestamps())
 
 	case *peers.SyncWireMessage_HasEventWithTimestampUpdates:
 		u := payload.HasEventWithTimestampUpdates
 		log.Printf("[WS HasEventUpdate] accountId=%s updates=%d", accountID, len(u.GetUpdates()))
-		for _, update := range u.GetUpdates() {
+		updates := u.GetUpdates()
+		timestamps := make([]string, 0, len(updates))
+		for _, update := range updates {
 			if !update.GetYes() {
-				connectionManager.sendTimestamp(update.GetTimestamp())
+				timestamps = append(timestamps, update.Timestamp)
 			}
 		}
+		connectionManager.addSendTimestamp(timestamps)
 
 	case *peers.SyncWireMessage_EventBatch:
 		events := payload.EventBatch.GetEvents()

@@ -133,14 +133,15 @@ func HandleDigestUpdate(tree *merkletree.MerkleTree[string, string], merkleDepth
 		}
 		isLeafNode := len(path) == maxDepth
 		if isLeafNode {
+			if IsZeroDigest(ourDigest) {
+				actions = append(actions, Action{Kind: KindAskTimestamp, Timestamp: d.Timestamp})
+			}
 			timestamp := tree.GetMetaByPath(SegmentsToInts(path[prefixLen:]))
 			if timestamp == nil {
 				log.Printf("[WS Error] data integrity error: path=%v", path)
 				continue
 			}
-			if IsZeroDigest(ourDigest) {
-				actions = append(actions, Action{Kind: KindAskTimestamp, Timestamp: d.Timestamp})
-			} else if IsZeroDigest(theirDigest) {
+			if IsZeroDigest(theirDigest) {
 				actions = append(actions, Action{Kind: KindSendTimestamp, Timestamp: *timestamp})
 			} else {
 				actions = append(actions, Action{Kind: KindHasEventQuery, Timestamp: *timestamp})
