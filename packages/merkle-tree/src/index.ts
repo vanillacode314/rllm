@@ -117,7 +117,7 @@ export class MerkleTree<T, TMeta = unknown> {
 
   getHash(path: number[]): null | Uint8Array {
     let node = this.#tree.root;
-    if (!node) throw new Error('Tree is empty');
+    if (!node) return new Uint8Array(0);
     for (const index of path) {
       if (index >= node.width) return null;
       node = node.getNthChild(index);
@@ -161,6 +161,10 @@ export class MerkleTree<T, TMeta = unknown> {
   getMetaByPath(path: number[]) {
     const index = this.getIndexFromPath(path);
     return this.getMeta(index);
+  }
+
+  getRootHash(): Uint8Array {
+    return this.#tree.root === null ? new Uint8Array(0) : this.#tree.root.value.digest;
   }
 
   insert(values: Array<{ meta: TMeta; value: T }>) {

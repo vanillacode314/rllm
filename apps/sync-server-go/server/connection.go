@@ -86,6 +86,7 @@ type ConnectionManager struct {
 	hub       *Hub
 
 	sendTimestampBatch *batch.Batcher[string]
+	askTimestampBatch  *batch.Batcher[string]
 	hasQueryBatch      *batch.Batcher[string]
 	hasUpdateBatch     *batch.Batcher[string]
 	recomputeDebouncer *batch.Debouncer
@@ -102,6 +103,7 @@ func newConnectionManager(db *sql.DB, accountID string, clientID string, conn *w
 		hub:       hub,
 	}
 	m.sendTimestampBatch = batch.NewBatcher(30, 5*time.Second, func(timestamps []string) { m.flushSendTimestamp(timestamps) })
+	m.askTimestampBatch = batch.NewBatcher(30, 5*time.Second, func(timestamps []string) { m.flushSendEventWithTimestamp(timestamps) })
 	m.hasQueryBatch = batch.NewBatcher(100, 5*time.Second, func(timestamps []string) { m.flushHasEventQuery(timestamps) })
 	m.hasUpdateBatch = batch.NewBatcher(100, 5*time.Second, func(timestamps []string) { m.flushHasEventUpdate(timestamps) })
 	m.recomputeDebouncer = batch.NewDebouncer(time.Second, func() {
@@ -122,8 +124,11 @@ func (m *ConnectionManager) close() {
 }
 
 func (m *ConnectionManager) sendTimestamp(timestamp string) {
-	log.Printf("[WS Batcher] Adding timestamp: accountId=%s timestamp=%s", m.accountID, timestamp)
 	m.sendTimestampBatch.Add(timestamp)
+}
+
+func (m *ConnectionManager) sendSendEventWithTimestamp(timestamp string) {
+	m.askTimestampBatch.Add(timestamp)
 }
 
 func (m *ConnectionManager) sendHasEventWithTimestampQuery(timestamp string) {
@@ -150,12 +155,12 @@ func (m *ConnectionManager) write(data []byte) {
 	}
 }
 
-func (m *ConnectionManager) createHandshake(version string, rootDigest []byte) []byte {
+func (m *ConnectionManager) createHandshake(version string, rootDigest []byte, clientId string) []byte {
 	return marshalMessage(&peers.SyncWireMessage{
 		AccountId: m.accountID,
 		ClientId:  m.clientID,
 		Payload: &peers.SyncWireMessage_Handshake{
-			Handshake: &peers.SyncHandshake{Version: version, RootDigest: rootDigest},
+			Handshake: &peers.SyncHandshake{Version: version, RootDigest: rootDigest, ClientId: &clientId},
 		},
 	})
 }
@@ -182,6 +187,15 @@ func (m *ConnectionManager) createEventBatch(events []*peers.PeerEvent) []byte {
 			EventBatch: &peers.EventBatch{Events: events},
 		},
 	})
+}
+
+func (m *ConnectionManager) createSendEventWithTimestamp(timestamps []string) []byte {
+	return marshalMessage(&peers.SyncWireMessage{
+		AccountId: m.accountID,
+		ClientId:  m.clientID,
+		Payload: &peers.SyncWireMessage_SendEventWithTimestamp{
+			SendEventWithTimestamp: &peers.SendEventWithTimestamp{Timestamps: timestamps},
+		}})
 }
 
 func (m *ConnectionManager) createHasEventWithTimestampQuery(timestamps []string) []byte {
@@ -226,6 +240,12 @@ func (m *ConnectionManager) flushSendTimestamp(timestamps []string) {
 		})
 	}
 	m.write(m.createEventBatch(peerEvents))
+}
+
+// flushSendEventWithTimestamp sends a sendEventWithTimestamp for the timestamps.
+func (m *ConnectionManager) flushSendEventWithTimestamp(timestamps []string) {
+	timestamps = digest.Unique(timestamps)
+	m.write(m.createSendEventWithTimestamp(timestamps))
 }
 
 // flushHasEventQuery sends a hasEventWithTimestampQuery for the timestamps.

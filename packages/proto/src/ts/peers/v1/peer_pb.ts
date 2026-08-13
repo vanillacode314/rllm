@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file peers/v1/peer.proto.
  */
 export const file_peers_v1_peer: GenFile = /*@__PURE__*/
-  fileDesc("ChNwZWVycy92MS9wZWVyLnByb3RvEghwZWVycy52MSIcCghUcmVlUGF0aBIQCghzZWdtZW50cxgBIAMoDSJKCg1TeW5jSGFuZHNoYWtlEg8KB3ZlcnNpb24YAiABKAkSGAoLcm9vdF9kaWdlc3QYAyABKAxIAIgBAUIOCgxfcm9vdF9kaWdlc3QiTAoRTWVya2xlRGlnZXN0UXVlcnkSFAoMbWVya2xlX2RlcHRoGAEgASgNEiEKBXBhdGhzGAIgAygLMhIucGVlcnMudjEuVHJlZVBhdGgiLgoORGlnZXN0V2l0aFBhdGgSDAoEcGF0aBgBIAMoDRIOCgZkaWdlc3QYAiABKAwiVQoSTWVya2xlRGlnZXN0VXBkYXRlEhQKDG1lcmtsZV9kZXB0aBgBIAEoDRIpCgdkaWdlc3RzGAIgAygLMhgucGVlcnMudjEuRGlnZXN0V2l0aFBhdGgiPwoJUGVlckV2ZW50EhEKCXRpbWVzdGFtcBgBIAEoCRIRCglzaWduYXR1cmUYAiABKAkSDAoEZGF0YRgDIAEoDCIwChpIYXNFdmVudFdpdGhUaW1lc3RhbXBRdWVyeRISCgp0aW1lc3RhbXBzGAEgAygJIj0KG0hhc0V2ZW50V2l0aFRpbWVzdGFtcFVwZGF0ZRILCgN5ZXMYASABKAgSEQoJdGltZXN0YW1wGAIgASgJIlYKHEhhc0V2ZW50V2l0aFRpbWVzdGFtcFVwZGF0ZXMSNgoHdXBkYXRlcxgBIAMoCzIlLnBlZXJzLnYxLkhhc0V2ZW50V2l0aFRpbWVzdGFtcFVwZGF0ZSIxCgpFdmVudEJhdGNoEiMKBmV2ZW50cxgBIAMoCzITLnBlZXJzLnYxLlBlZXJFdmVudCKuAwoPU3luY1dpcmVNZXNzYWdlEhIKCmFjY291bnRfaWQYASABKAkSEQoJY2xpZW50X2lkGAIgASgJEiwKCWhhbmRzaGFrZRgDIAEoCzIXLnBlZXJzLnYxLlN5bmNIYW5kc2hha2VIABIzCgxkaWdlc3RfcXVlcnkYBCABKAsyGy5wZWVycy52MS5NZXJrbGVEaWdlc3RRdWVyeUgAEjUKDWRpZ2VzdF91cGRhdGUYBSABKAsyHC5wZWVycy52MS5NZXJrbGVEaWdlc3RVcGRhdGVIABIrCgtldmVudF9iYXRjaBgGIAEoCzIULnBlZXJzLnYxLkV2ZW50QmF0Y2hIABJOCh5oYXNfZXZlbnRfd2l0aF90aW1lc3RhbXBfcXVlcnkYByABKAsyJC5wZWVycy52MS5IYXNFdmVudFdpdGhUaW1lc3RhbXBRdWVyeUgAElIKIGhhc19ldmVudF93aXRoX3RpbWVzdGFtcF91cGRhdGVzGAggASgLMiYucGVlcnMudjEuSGFzRXZlbnRXaXRoVGltZXN0YW1wVXBkYXRlc0gAQgkKB3BheWxvYWRCDVoLcHJvdG8vcGVlcnNiBnByb3RvMw");
+  fileDesc("ChNwZWVycy92MS9wZWVyLnByb3RvEghwZWVycy52MSIcCghUcmVlUGF0aBIQCghzZWdtZW50cxgBIAMoDSJdCg1TeW5jSGFuZHNoYWtlEg8KB3ZlcnNpb24YAiABKAkSGAoLcm9vdF9kaWdlc3QYAyABKAxIAIgBARIRCgljbGllbnRfaWQYBCABKAlCDgoMX3Jvb3RfZGlnZXN0IkwKEU1lcmtsZURpZ2VzdFF1ZXJ5EhQKDG1lcmtsZV9kZXB0aBgBIAEoDRIhCgVwYXRocxgCIAMoCzISLnBlZXJzLnYxLlRyZWVQYXRoIi4KDkRpZ2VzdFdpdGhQYXRoEgwKBHBhdGgYASADKA0SDgoGZGlnZXN0GAIgASgMIlUKEk1lcmtsZURpZ2VzdFVwZGF0ZRIUCgxtZXJrbGVfZGVwdGgYASABKA0SKQoHZGlnZXN0cxgCIAMoCzIYLnBlZXJzLnYxLkRpZ2VzdFdpdGhQYXRoIj8KCVBlZXJFdmVudBIRCgl0aW1lc3RhbXAYASABKAkSEQoJc2lnbmF0dXJlGAIgASgJEgwKBGRhdGEYAyABKAwiMAoaSGFzRXZlbnRXaXRoVGltZXN0YW1wUXVlcnkSEgoKdGltZXN0YW1wcxgBIAMoCSIsChZTZW5kRXZlbnRXaXRoVGltZXN0YW1wEhIKCnRpbWVzdGFtcHMYASADKAkiPQobSGFzRXZlbnRXaXRoVGltZXN0YW1wVXBkYXRlEgsKA3llcxgBIAEoCBIRCgl0aW1lc3RhbXAYAiABKAkiVgocSGFzRXZlbnRXaXRoVGltZXN0YW1wVXBkYXRlcxI2Cgd1cGRhdGVzGAEgAygLMiUucGVlcnMudjEuSGFzRXZlbnRXaXRoVGltZXN0YW1wVXBkYXRlIjEKCkV2ZW50QmF0Y2gSIwoGZXZlbnRzGAEgAygLMhMucGVlcnMudjEuUGVlckV2ZW50IvUDCg9TeW5jV2lyZU1lc3NhZ2USEgoKYWNjb3VudF9pZBgBIAEoCRIRCgljbGllbnRfaWQYAiABKAkSLAoJaGFuZHNoYWtlGAMgASgLMhcucGVlcnMudjEuU3luY0hhbmRzaGFrZUgAEjMKDGRpZ2VzdF9xdWVyeRgEIAEoCzIbLnBlZXJzLnYxLk1lcmtsZURpZ2VzdFF1ZXJ5SAASNQoNZGlnZXN0X3VwZGF0ZRgFIAEoCzIcLnBlZXJzLnYxLk1lcmtsZURpZ2VzdFVwZGF0ZUgAEisKC2V2ZW50X2JhdGNoGAYgASgLMhQucGVlcnMudjEuRXZlbnRCYXRjaEgAEk4KHmhhc19ldmVudF93aXRoX3RpbWVzdGFtcF9xdWVyeRgHIAEoCzIkLnBlZXJzLnYxLkhhc0V2ZW50V2l0aFRpbWVzdGFtcFF1ZXJ5SAASUgogaGFzX2V2ZW50X3dpdGhfdGltZXN0YW1wX3VwZGF0ZXMYCCABKAsyJi5wZWVycy52MS5IYXNFdmVudFdpdGhUaW1lc3RhbXBVcGRhdGVzSAASRQoZc2VuZF9ldmVudF93aXRoX3RpbWVzdGFtcBgJIAEoCzIgLnBlZXJzLnYxLlNlbmRFdmVudFdpdGhUaW1lc3RhbXBIAEIJCgdwYXlsb2FkQg1aC3Byb3RvL3BlZXJzYgZwcm90bzM");
 
 /**
  * @generated from message peers.v1.TreePath
@@ -42,6 +42,11 @@ export type SyncHandshake = Message<"peers.v1.SyncHandshake"> & {
    * @generated from field: optional bytes root_digest = 3;
    */
   rootDigest?: Uint8Array | undefined;
+
+  /**
+   * @generated from field: string client_id = 4;
+   */
+  clientId: string;
 };
 
 /**
@@ -162,6 +167,23 @@ export const HasEventWithTimestampQuerySchema: GenMessage<HasEventWithTimestampQ
   messageDesc(file_peers_v1_peer, 6);
 
 /**
+ * @generated from message peers.v1.SendEventWithTimestamp
+ */
+export type SendEventWithTimestamp = Message<"peers.v1.SendEventWithTimestamp"> & {
+  /**
+   * @generated from field: repeated string timestamps = 1;
+   */
+  timestamps: string[];
+};
+
+/**
+ * Describes the message peers.v1.SendEventWithTimestamp.
+ * Use `create(SendEventWithTimestampSchema)` to create a new message.
+ */
+export const SendEventWithTimestampSchema: GenMessage<SendEventWithTimestamp> = /*@__PURE__*/
+  messageDesc(file_peers_v1_peer, 7);
+
+/**
  * @generated from message peers.v1.HasEventWithTimestampUpdate
  */
 export type HasEventWithTimestampUpdate = Message<"peers.v1.HasEventWithTimestampUpdate"> & {
@@ -181,7 +203,7 @@ export type HasEventWithTimestampUpdate = Message<"peers.v1.HasEventWithTimestam
  * Use `create(HasEventWithTimestampUpdateSchema)` to create a new message.
  */
 export const HasEventWithTimestampUpdateSchema: GenMessage<HasEventWithTimestampUpdate> = /*@__PURE__*/
-  messageDesc(file_peers_v1_peer, 7);
+  messageDesc(file_peers_v1_peer, 8);
 
 /**
  * @generated from message peers.v1.HasEventWithTimestampUpdates
@@ -198,7 +220,7 @@ export type HasEventWithTimestampUpdates = Message<"peers.v1.HasEventWithTimesta
  * Use `create(HasEventWithTimestampUpdatesSchema)` to create a new message.
  */
 export const HasEventWithTimestampUpdatesSchema: GenMessage<HasEventWithTimestampUpdates> = /*@__PURE__*/
-  messageDesc(file_peers_v1_peer, 8);
+  messageDesc(file_peers_v1_peer, 9);
 
 /**
  * @generated from message peers.v1.EventBatch
@@ -215,7 +237,7 @@ export type EventBatch = Message<"peers.v1.EventBatch"> & {
  * Use `create(EventBatchSchema)` to create a new message.
  */
 export const EventBatchSchema: GenMessage<EventBatch> = /*@__PURE__*/
-  messageDesc(file_peers_v1_peer, 9);
+  messageDesc(file_peers_v1_peer, 10);
 
 /**
  * @generated from message peers.v1.SyncWireMessage
@@ -270,6 +292,12 @@ export type SyncWireMessage = Message<"peers.v1.SyncWireMessage"> & {
      */
     value: HasEventWithTimestampUpdates;
     case: "hasEventWithTimestampUpdates";
+  } | {
+    /**
+     * @generated from field: peers.v1.SendEventWithTimestamp send_event_with_timestamp = 9;
+     */
+    value: SendEventWithTimestamp;
+    case: "sendEventWithTimestamp";
   } | { case: undefined; value?: undefined };
 };
 
@@ -278,5 +306,5 @@ export type SyncWireMessage = Message<"peers.v1.SyncWireMessage"> & {
  * Use `create(SyncWireMessageSchema)` to create a new message.
  */
 export const SyncWireMessageSchema: GenMessage<SyncWireMessage> = /*@__PURE__*/
-  messageDesc(file_peers_v1_peer, 10);
+  messageDesc(file_peers_v1_peer, 11);
 

@@ -7,14 +7,16 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
-	"github.com/coder/websocket"
-	"google.golang.org/protobuf/proto"
 	"proto/peers"
 	sigcrypto "sync-server/crypto"
 	client "sync-server/db"
 	"sync-server/digest"
+
+	"github.com/coder/websocket"
+	"google.golang.org/protobuf/proto"
 )
 
 type SocketHandler struct {
@@ -61,12 +63,8 @@ func (s SocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[WS Open] Failed to get merkle tree: %v", err)
 		return
 	}
-	rootDigest, err := tree.GetHash([]int{})
-	if err != nil {
-		log.Printf("[WS Open] Failed to get root digest: %v", err)
-		return
-	}
-	connectionManager.write(connectionManager.createHandshake("__any__", rootDigest))
+	rootDigest := tree.GetRootHash()
+	connectionManager.write(connectionManager.createHandshake("__any__", rootDigest, clock.ClientID))
 
 	for {
 		typ, rawMessage, err := conn.Read(ctx)
@@ -91,32 +89,40 @@ func (s SocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Printf("[WS Warn] accountId mismatch: expected=%s got=%s", accountID, message.AccountId)
 			continue
 		}
-		s.handleMessage(&message, connectionManager)
+		s.handleMessage(&message, connectionManager, clock.ClientID)
 	}
 }
 
-func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionManager *ConnectionManager) {
+func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionManager *ConnectionManager, clientId string) {
 	accountID := connectionManager.accountID
 	log.Printf("[WS Received Message] accountId=%s case=%T", accountID, message.Payload)
 
 	switch payload := message.Payload.(type) {
 	case *peers.SyncWireMessage_Handshake:
 		log.Printf("[WS Handshake] accountId=%s clientId=%s version=%s", accountID, message.ClientId, payload.Handshake.GetVersion())
+		if payload.Handshake.GetRootDigest() == nil {
+			log.Printf("[WS Handshake] Invalid handshake root digest missing")
+			return
+		}
+		if payload.Handshake.GetClientId() == "" {
+			log.Printf("[WS Handshake] Invalid handshake clientId missing")
+			return
+		}
 		tree, err := client.GetMerkleTreeByAccountId(s.Db, accountID)
 		if err != nil {
 			log.Printf("[WS Error] Failed to load tree: %v", err)
 			return
 		}
-		ourRootDigest, err := tree.GetHash([]int{})
-		if err != nil {
-			log.Printf("[WS Handshake] Failed to get root digest: %v", err)
+		shouldQuery := strings.Compare(clientId, *payload.Handshake.ClientId) == 1
+		ourRootDigest := tree.GetRootHash()
+		mismatch := digest.DigestsDiffer(ourRootDigest, payload.Handshake.RootDigest)
+		if !mismatch {
+			log.Printf("[WS Handshake] Root digest matches")
+		}
+		if !shouldQuery {
 			return
 		}
-		if payload.Handshake.GetRootDigest() == nil {
-			log.Printf("[WS Handshake] Invalid handshake root digest missing")
-			return
-		}
-		if digest.DigestsDiffer(ourRootDigest, payload.Handshake.RootDigest) {
+		if mismatch {
 			log.Printf("[WS Handshake] Root digest mismatch")
 			paths := make([][]uint32, 16)
 			for i := range tree.Arity() {
@@ -125,7 +131,6 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 			connectionManager.write(connectionManager.createDigestQuery(uint32(tree.MaxDepth()), paths))
 			return
 		}
-		log.Printf("[WS Handshake] Root digest matches")
 
 	case *peers.SyncWireMessage_DigestQuery:
 		q := payload.DigestQuery
@@ -147,6 +152,13 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 			},
 		}))
 
+	case *peers.SyncWireMessage_SendEventWithTimestamp:
+		log.Printf("[WS SendEventWithTimestampQuery] accountId=%s", accountID)
+		timestamps := payload.SendEventWithTimestamp.Timestamps
+		for _, timestamp := range timestamps {
+			connectionManager.sendTimestamp(timestamp)
+		}
+
 	case *peers.SyncWireMessage_DigestUpdate:
 		u := payload.DigestUpdate
 		log.Printf("[WS DigestUpdate] accountId=%s digests=%d merkleDepth=%d", accountID, len(u.GetDigests()), u.GetMerkleDepth())
@@ -161,6 +173,8 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 				connectionManager.write(connectionManager.createDigestQuery(uint32(tree.MaxDepth()), action.Children))
 			case digest.KindSendTimestamp:
 				connectionManager.sendTimestamp(action.Timestamp)
+			case digest.KindAskTimestamp:
+				connectionManager.sendSendEventWithTimestamp(action.Timestamp)
 			case digest.KindHasEventQuery:
 				connectionManager.sendHasEventWithTimestampQuery(action.Timestamp)
 			}

@@ -11,6 +11,7 @@ message TreePath {
 message SyncHandshake {
   string version = 2;
   optional bytes root_digest = 3;
+  string client_id = 4;
 }
 
 message MerkleDigestQuery {
@@ -38,6 +39,10 @@ message HasEventWithTimestampQuery {
   repeated string timestamps = 1;
 }
 
+message SendEventWithTimestamp {
+  repeated string timestamps = 1;
+}
+
 message HasEventWithTimestampUpdate {
   bool yes = 1;
   string timestamp = 2;
@@ -61,5 +66,6 @@ message SyncWireMessage {
     EventBatch event_batch = 6;
     HasEventWithTimestampQuery has_event_with_timestamp_query = 7;
     HasEventWithTimestampUpdates has_event_with_timestamp_updates = 8;
+    SendEventWithTimestamp send_event_with_timestamp = 9;
   }
 }

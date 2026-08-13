@@ -159,6 +159,15 @@ func (t *MerkleTree[T, TMeta]) GetChildrenHashes(path []int) [][]byte {
 	return hashes
 }
 
+// GetRootHash returns the digest of the root node.
+func (t *MerkleTree[T, TMeta]) GetRootHash() []byte {
+	node := t.tree.Root
+	if node == nil {
+		return []byte{}
+	}
+	return node.Value.digest
+}
+
 // GetHash returns the digest of the node at path. It returns an error when
 // the tree is empty, and a nil digest with a nil error when the path is out
 // of bounds.

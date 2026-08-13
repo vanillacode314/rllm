@@ -69,6 +69,7 @@ type SyncHandshake struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
 	RootDigest    []byte                 `protobuf:"bytes,3,opt,name=root_digest,json=rootDigest,proto3,oneof" json:"root_digest,omitempty"`
+	ClientId      string                 `protobuf:"bytes,4,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -115,6 +116,13 @@ func (x *SyncHandshake) GetRootDigest() []byte {
 		return x.RootDigest
 	}
 	return nil
+}
+
+func (x *SyncHandshake) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
 }
 
 type MerkleDigestQuery struct {
@@ -377,6 +385,50 @@ func (x *HasEventWithTimestampQuery) GetTimestamps() []string {
 	return nil
 }
 
+type SendEventWithTimestamp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Timestamps    []string               `protobuf:"bytes,1,rep,name=timestamps,proto3" json:"timestamps,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SendEventWithTimestamp) Reset() {
+	*x = SendEventWithTimestamp{}
+	mi := &file_peers_v1_peer_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SendEventWithTimestamp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SendEventWithTimestamp) ProtoMessage() {}
+
+func (x *SendEventWithTimestamp) ProtoReflect() protoreflect.Message {
+	mi := &file_peers_v1_peer_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SendEventWithTimestamp.ProtoReflect.Descriptor instead.
+func (*SendEventWithTimestamp) Descriptor() ([]byte, []int) {
+	return file_peers_v1_peer_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *SendEventWithTimestamp) GetTimestamps() []string {
+	if x != nil {
+		return x.Timestamps
+	}
+	return nil
+}
+
 type HasEventWithTimestampUpdate struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Yes           bool                   `protobuf:"varint,1,opt,name=yes,proto3" json:"yes,omitempty"`
@@ -387,7 +439,7 @@ type HasEventWithTimestampUpdate struct {
 
 func (x *HasEventWithTimestampUpdate) Reset() {
 	*x = HasEventWithTimestampUpdate{}
-	mi := &file_peers_v1_peer_proto_msgTypes[7]
+	mi := &file_peers_v1_peer_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -399,7 +451,7 @@ func (x *HasEventWithTimestampUpdate) String() string {
 func (*HasEventWithTimestampUpdate) ProtoMessage() {}
 
 func (x *HasEventWithTimestampUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_peers_v1_peer_proto_msgTypes[7]
+	mi := &file_peers_v1_peer_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -412,7 +464,7 @@ func (x *HasEventWithTimestampUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HasEventWithTimestampUpdate.ProtoReflect.Descriptor instead.
 func (*HasEventWithTimestampUpdate) Descriptor() ([]byte, []int) {
-	return file_peers_v1_peer_proto_rawDescGZIP(), []int{7}
+	return file_peers_v1_peer_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *HasEventWithTimestampUpdate) GetYes() bool {
@@ -438,7 +490,7 @@ type HasEventWithTimestampUpdates struct {
 
 func (x *HasEventWithTimestampUpdates) Reset() {
 	*x = HasEventWithTimestampUpdates{}
-	mi := &file_peers_v1_peer_proto_msgTypes[8]
+	mi := &file_peers_v1_peer_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -450,7 +502,7 @@ func (x *HasEventWithTimestampUpdates) String() string {
 func (*HasEventWithTimestampUpdates) ProtoMessage() {}
 
 func (x *HasEventWithTimestampUpdates) ProtoReflect() protoreflect.Message {
-	mi := &file_peers_v1_peer_proto_msgTypes[8]
+	mi := &file_peers_v1_peer_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -463,7 +515,7 @@ func (x *HasEventWithTimestampUpdates) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HasEventWithTimestampUpdates.ProtoReflect.Descriptor instead.
 func (*HasEventWithTimestampUpdates) Descriptor() ([]byte, []int) {
-	return file_peers_v1_peer_proto_rawDescGZIP(), []int{8}
+	return file_peers_v1_peer_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *HasEventWithTimestampUpdates) GetUpdates() []*HasEventWithTimestampUpdate {
@@ -482,7 +534,7 @@ type EventBatch struct {
 
 func (x *EventBatch) Reset() {
 	*x = EventBatch{}
-	mi := &file_peers_v1_peer_proto_msgTypes[9]
+	mi := &file_peers_v1_peer_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -494,7 +546,7 @@ func (x *EventBatch) String() string {
 func (*EventBatch) ProtoMessage() {}
 
 func (x *EventBatch) ProtoReflect() protoreflect.Message {
-	mi := &file_peers_v1_peer_proto_msgTypes[9]
+	mi := &file_peers_v1_peer_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -507,7 +559,7 @@ func (x *EventBatch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventBatch.ProtoReflect.Descriptor instead.
 func (*EventBatch) Descriptor() ([]byte, []int) {
-	return file_peers_v1_peer_proto_rawDescGZIP(), []int{9}
+	return file_peers_v1_peer_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *EventBatch) GetEvents() []*PeerEvent {
@@ -529,6 +581,7 @@ type SyncWireMessage struct {
 	//	*SyncWireMessage_EventBatch
 	//	*SyncWireMessage_HasEventWithTimestampQuery
 	//	*SyncWireMessage_HasEventWithTimestampUpdates
+	//	*SyncWireMessage_SendEventWithTimestamp
 	Payload       isSyncWireMessage_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -536,7 +589,7 @@ type SyncWireMessage struct {
 
 func (x *SyncWireMessage) Reset() {
 	*x = SyncWireMessage{}
-	mi := &file_peers_v1_peer_proto_msgTypes[10]
+	mi := &file_peers_v1_peer_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -548,7 +601,7 @@ func (x *SyncWireMessage) String() string {
 func (*SyncWireMessage) ProtoMessage() {}
 
 func (x *SyncWireMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_peers_v1_peer_proto_msgTypes[10]
+	mi := &file_peers_v1_peer_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -561,7 +614,7 @@ func (x *SyncWireMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncWireMessage.ProtoReflect.Descriptor instead.
 func (*SyncWireMessage) Descriptor() ([]byte, []int) {
-	return file_peers_v1_peer_proto_rawDescGZIP(), []int{10}
+	return file_peers_v1_peer_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *SyncWireMessage) GetAccountId() string {
@@ -639,6 +692,15 @@ func (x *SyncWireMessage) GetHasEventWithTimestampUpdates() *HasEventWithTimesta
 	return nil
 }
 
+func (x *SyncWireMessage) GetSendEventWithTimestamp() *SendEventWithTimestamp {
+	if x != nil {
+		if x, ok := x.Payload.(*SyncWireMessage_SendEventWithTimestamp); ok {
+			return x.SendEventWithTimestamp
+		}
+	}
+	return nil
+}
+
 type isSyncWireMessage_Payload interface {
 	isSyncWireMessage_Payload()
 }
@@ -667,6 +729,10 @@ type SyncWireMessage_HasEventWithTimestampUpdates struct {
 	HasEventWithTimestampUpdates *HasEventWithTimestampUpdates `protobuf:"bytes,8,opt,name=has_event_with_timestamp_updates,json=hasEventWithTimestampUpdates,proto3,oneof"`
 }
 
+type SyncWireMessage_SendEventWithTimestamp struct {
+	SendEventWithTimestamp *SendEventWithTimestamp `protobuf:"bytes,9,opt,name=send_event_with_timestamp,json=sendEventWithTimestamp,proto3,oneof"`
+}
+
 func (*SyncWireMessage_Handshake) isSyncWireMessage_Payload() {}
 
 func (*SyncWireMessage_DigestQuery) isSyncWireMessage_Payload() {}
@@ -679,17 +745,20 @@ func (*SyncWireMessage_HasEventWithTimestampQuery) isSyncWireMessage_Payload() {
 
 func (*SyncWireMessage_HasEventWithTimestampUpdates) isSyncWireMessage_Payload() {}
 
+func (*SyncWireMessage_SendEventWithTimestamp) isSyncWireMessage_Payload() {}
+
 var File_peers_v1_peer_proto protoreflect.FileDescriptor
 
 const file_peers_v1_peer_proto_rawDesc = "" +
 	"\n" +
 	"\x13peers/v1/peer.proto\x12\bpeers.v1\"&\n" +
 	"\bTreePath\x12\x1a\n" +
-	"\bsegments\x18\x01 \x03(\rR\bsegments\"_\n" +
+	"\bsegments\x18\x01 \x03(\rR\bsegments\"|\n" +
 	"\rSyncHandshake\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\tR\aversion\x12$\n" +
 	"\vroot_digest\x18\x03 \x01(\fH\x00R\n" +
-	"rootDigest\x88\x01\x01B\x0e\n" +
+	"rootDigest\x88\x01\x01\x12\x1b\n" +
+	"\tclient_id\x18\x04 \x01(\tR\bclientIdB\x0e\n" +
 	"\f_root_digest\"`\n" +
 	"\x11MerkleDigestQuery\x12!\n" +
 	"\fmerkle_depth\x18\x01 \x01(\rR\vmerkleDepth\x12(\n" +
@@ -707,6 +776,10 @@ const file_peers_v1_peer_proto_rawDesc = "" +
 	"\x1aHasEventWithTimestampQuery\x12\x1e\n" +
 	"\n" +
 	"timestamps\x18\x01 \x03(\tR\n" +
+	"timestamps\"8\n" +
+	"\x16SendEventWithTimestamp\x12\x1e\n" +
+	"\n" +
+	"timestamps\x18\x01 \x03(\tR\n" +
 	"timestamps\"M\n" +
 	"\x1bHasEventWithTimestampUpdate\x12\x10\n" +
 	"\x03yes\x18\x01 \x01(\bR\x03yes\x12\x1c\n" +
@@ -715,7 +788,7 @@ const file_peers_v1_peer_proto_rawDesc = "" +
 	"\aupdates\x18\x01 \x03(\v2%.peers.v1.HasEventWithTimestampUpdateR\aupdates\"9\n" +
 	"\n" +
 	"EventBatch\x12+\n" +
-	"\x06events\x18\x01 \x03(\v2\x13.peers.v1.PeerEventR\x06events\"\xaf\x04\n" +
+	"\x06events\x18\x01 \x03(\v2\x13.peers.v1.PeerEventR\x06events\"\x8e\x05\n" +
 	"\x0fSyncWireMessage\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x12\x1b\n" +
@@ -726,7 +799,8 @@ const file_peers_v1_peer_proto_rawDesc = "" +
 	"\vevent_batch\x18\x06 \x01(\v2\x14.peers.v1.EventBatchH\x00R\n" +
 	"eventBatch\x12j\n" +
 	"\x1ehas_event_with_timestamp_query\x18\a \x01(\v2$.peers.v1.HasEventWithTimestampQueryH\x00R\x1ahasEventWithTimestampQuery\x12p\n" +
-	" has_event_with_timestamp_updates\x18\b \x01(\v2&.peers.v1.HasEventWithTimestampUpdatesH\x00R\x1chasEventWithTimestampUpdatesB\t\n" +
+	" has_event_with_timestamp_updates\x18\b \x01(\v2&.peers.v1.HasEventWithTimestampUpdatesH\x00R\x1chasEventWithTimestampUpdates\x12]\n" +
+	"\x19send_event_with_timestamp\x18\t \x01(\v2 .peers.v1.SendEventWithTimestampH\x00R\x16sendEventWithTimestampB\t\n" +
 	"\apayloadB\rZ\vproto/peersb\x06proto3"
 
 var (
@@ -741,7 +815,7 @@ func file_peers_v1_peer_proto_rawDescGZIP() []byte {
 	return file_peers_v1_peer_proto_rawDescData
 }
 
-var file_peers_v1_peer_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_peers_v1_peer_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_peers_v1_peer_proto_goTypes = []any{
 	(*TreePath)(nil),                     // 0: peers.v1.TreePath
 	(*SyncHandshake)(nil),                // 1: peers.v1.SyncHandshake
@@ -750,27 +824,29 @@ var file_peers_v1_peer_proto_goTypes = []any{
 	(*MerkleDigestUpdate)(nil),           // 4: peers.v1.MerkleDigestUpdate
 	(*PeerEvent)(nil),                    // 5: peers.v1.PeerEvent
 	(*HasEventWithTimestampQuery)(nil),   // 6: peers.v1.HasEventWithTimestampQuery
-	(*HasEventWithTimestampUpdate)(nil),  // 7: peers.v1.HasEventWithTimestampUpdate
-	(*HasEventWithTimestampUpdates)(nil), // 8: peers.v1.HasEventWithTimestampUpdates
-	(*EventBatch)(nil),                   // 9: peers.v1.EventBatch
-	(*SyncWireMessage)(nil),              // 10: peers.v1.SyncWireMessage
+	(*SendEventWithTimestamp)(nil),       // 7: peers.v1.SendEventWithTimestamp
+	(*HasEventWithTimestampUpdate)(nil),  // 8: peers.v1.HasEventWithTimestampUpdate
+	(*HasEventWithTimestampUpdates)(nil), // 9: peers.v1.HasEventWithTimestampUpdates
+	(*EventBatch)(nil),                   // 10: peers.v1.EventBatch
+	(*SyncWireMessage)(nil),              // 11: peers.v1.SyncWireMessage
 }
 var file_peers_v1_peer_proto_depIdxs = []int32{
 	0,  // 0: peers.v1.MerkleDigestQuery.paths:type_name -> peers.v1.TreePath
 	3,  // 1: peers.v1.MerkleDigestUpdate.digests:type_name -> peers.v1.DigestWithPath
-	7,  // 2: peers.v1.HasEventWithTimestampUpdates.updates:type_name -> peers.v1.HasEventWithTimestampUpdate
+	8,  // 2: peers.v1.HasEventWithTimestampUpdates.updates:type_name -> peers.v1.HasEventWithTimestampUpdate
 	5,  // 3: peers.v1.EventBatch.events:type_name -> peers.v1.PeerEvent
 	1,  // 4: peers.v1.SyncWireMessage.handshake:type_name -> peers.v1.SyncHandshake
 	2,  // 5: peers.v1.SyncWireMessage.digest_query:type_name -> peers.v1.MerkleDigestQuery
 	4,  // 6: peers.v1.SyncWireMessage.digest_update:type_name -> peers.v1.MerkleDigestUpdate
-	9,  // 7: peers.v1.SyncWireMessage.event_batch:type_name -> peers.v1.EventBatch
+	10, // 7: peers.v1.SyncWireMessage.event_batch:type_name -> peers.v1.EventBatch
 	6,  // 8: peers.v1.SyncWireMessage.has_event_with_timestamp_query:type_name -> peers.v1.HasEventWithTimestampQuery
-	8,  // 9: peers.v1.SyncWireMessage.has_event_with_timestamp_updates:type_name -> peers.v1.HasEventWithTimestampUpdates
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	9,  // 9: peers.v1.SyncWireMessage.has_event_with_timestamp_updates:type_name -> peers.v1.HasEventWithTimestampUpdates
+	7,  // 10: peers.v1.SyncWireMessage.send_event_with_timestamp:type_name -> peers.v1.SendEventWithTimestamp
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_peers_v1_peer_proto_init() }
@@ -779,13 +855,14 @@ func file_peers_v1_peer_proto_init() {
 		return
 	}
 	file_peers_v1_peer_proto_msgTypes[1].OneofWrappers = []any{}
-	file_peers_v1_peer_proto_msgTypes[10].OneofWrappers = []any{
+	file_peers_v1_peer_proto_msgTypes[11].OneofWrappers = []any{
 		(*SyncWireMessage_Handshake)(nil),
 		(*SyncWireMessage_DigestQuery)(nil),
 		(*SyncWireMessage_DigestUpdate)(nil),
 		(*SyncWireMessage_EventBatch)(nil),
 		(*SyncWireMessage_HasEventWithTimestampQuery)(nil),
 		(*SyncWireMessage_HasEventWithTimestampUpdates)(nil),
+		(*SyncWireMessage_SendEventWithTimestamp)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -793,7 +870,7 @@ func file_peers_v1_peer_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_peers_v1_peer_proto_rawDesc), len(file_peers_v1_peer_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

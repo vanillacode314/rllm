@@ -106,6 +106,7 @@ const initSocket = () =>
                     payload: {
                       case: 'handshake',
                       value: create(PeerPB.SyncHandshakeSchema, {
+                        clientId,
                         rootDigest,
                         version: version ?? '0'
                       })
@@ -126,6 +127,26 @@ const initSocket = () =>
                       clientId,
                       payload: {
                         case: 'hasEventWithTimestampQuery',
+                        value: { timestamps }
+                      }
+                    })
+                  )
+                );
+              },
+              { maxSize: 100, wait: 5000 }
+            );
+
+            const batchSendEventWithTimestamp = asyncBatch<string>(
+              async (timestamps) => {
+                const tree = await logger.getMerkleTree();
+                ws.send(
+                  toBinary(
+                    PeerPB.SyncWireMessageSchema,
+                    create(PeerPB.SyncWireMessageSchema, {
+                      accountId: $account.id,
+                      clientId,
+                      payload: {
+                        case: 'sendEventWithTimestamp',
                         value: { timestamps }
                       }
                     })
@@ -283,7 +304,6 @@ const initSocket = () =>
 
                         const isLeafNode = path.length === MAX_DEPTH;
                         if (isLeafNode) {
-                          if (isZeroDigest(ourDigest)) continue;
                           const timestamp = tree.getMetaByPath(
                             path.slice(virtualTreePrefix.length)
                           );
@@ -291,7 +311,10 @@ const initSocket = () =>
                             console.error('data integrity error');
                             continue;
                           }
-                          if (isZeroDigest(theirDigest)) {
+                          if (isZeroDigest(ourDigest)) {
+                            batchSendEventWithTimestamp(timestamp);
+                            continue;
+                          } else if (isZeroDigest(theirDigest)) {
                             batchTimestampForSending(timestamp);
                             continue;
                           }
@@ -354,12 +377,18 @@ const initSocket = () =>
                         console.error('Invalid handshake, root digest missing');
                         return;
                       }
-                      const tree = await logger.getMerkleTree();
-                      const ourRootDigest = tree.getHash([]);
-                      if (ourRootDigest === null) {
-                        throw new Error('Unreachable: root digest is always defined');
+                      if (payload.value.clientId === '') {
+                        console.error('Invalid handshake, clientId missing');
+                        return;
                       }
-                      if (digestsDiffer(ourRootDigest, payload.value.rootDigest))
+                      const tree = await logger.getMerkleTree();
+                      const shouldQuery = clientId > payload.value.clientId;
+                      const ourRootDigest = tree.getRootHash();
+                      const mismatch = digestsDiffer(ourRootDigest, payload.value.rootDigest);
+                      if (!mismatch) console.log('[WS Handshake] Roots match');
+                      if (!shouldQuery) return;
+
+                      if (mismatch)
                         ws.send(
                           createDigestQuery(
                             $account.id,
@@ -368,7 +397,6 @@ const initSocket = () =>
                             Array.from({ length: 16 }).map((_, i) => [i])
                           )
                         );
-                      else console.log('[WS Handhsake] Roots match');
                       break;
                     }
                     case 'hasEventWithTimestampQuery': {
@@ -382,6 +410,11 @@ const initSocket = () =>
                       for (const { timestamp, yes } of updates) {
                         if (!yes) batchTimestampForSending(timestamp);
                       }
+                      break;
+                    }
+                    case 'sendEventWithTimestamp': {
+                      const { timestamps } = payload.value;
+                      for (const timestamp of timestamps) batchTimestampForSending(timestamp);
                       break;
                     }
                   }
