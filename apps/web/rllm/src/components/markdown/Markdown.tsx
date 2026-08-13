@@ -28,7 +28,7 @@ import { useDocumentDialog } from '~/components/modals/auto-import/DocumentDialo
 import { hoverStateChange } from '~/directives/hover-state-change';
 import { vectorDb } from '~/lib/vector-db/client';
 import { transientDb } from '~/lib/vector-db/transient';
-import { attachments } from '~/routes/(chat)/-state';
+import { chatState } from '~/routes/(chat)/-state';
 import { rehypePlugins, remarkPlugins } from '~/utils/markdown';
 import { randomFloat } from '~/utils/math';
 import { createLatestAsync } from '~/utils/signals';
@@ -46,12 +46,11 @@ function SourceComponent(
   const documentQuery = useQuery(() => ({
     enabled: props.type === 'document',
     queryFn: async ({ queryKey: [, documentId, id] }) => {
-      const document = attachments.find((attachment) => attachment.id === documentId)!;
-      const text = await Promise.all([
-        vectorDb.getText(id, documentId),
-        transientDb.getText(id, documentId)
-      ]).then((items) => items.flat().filter((value) => value !== null)[0] ?? null);
-      return { ...document, text };
+      const document = chatState.attachments.find((attachment) => attachment.id === documentId)!;
+      const text = document.transient
+        ? await transientDb.getText(id, documentId)
+        : await vectorDb.getText(id, documentId);
+      return { ...document, text: text ?? 'Error: Not Found' };
     },
     queryKey: ['document', props.documentId, props.id] as const
   }));

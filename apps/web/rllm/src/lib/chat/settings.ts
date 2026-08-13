@@ -8,7 +8,8 @@ import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { chatsSchema } from '~/db/app-schema';
 import { logger } from '~/db/client';
 import { fetchers } from '~/queries';
-import { chatSettings, setChatSettings } from '~/routes/(chat)/-state';
+import { chatState, setChatState } from '~/routes/(chat)/-state';
+import { produce } from '~/utils/immer';
 
 export const chatSettingsSchema = z.object({
   includeDateTimeInSystemPrompt: z._default(z.boolean(), true),
@@ -88,41 +89,43 @@ export async function initChatSettings() {
     );
   }
   await Promise.all(tasks.map((task) => task()));
-  setChatSettings(
-    Option.Some({
-      includeDateTimeInSystemPrompt: true,
-      modelId: providers[0].defaultModelIds[0],
-      providerId: providers[0].id,
-      reasoning: 'medium',
-      systemPrompt: ''
+  setChatState((state) =>
+    produce(state, (draft) => {
+      draft.settings = Option.Some({
+        includeDateTimeInSystemPrompt: true,
+        modelId: providers[0].defaultModelIds[0],
+        providerId: providers[0].id,
+        reasoning: 'medium',
+        systemPrompt: ''
+      });
     })
   );
 }
 
-export async function updateChatSettings(
+export async function saveChatSettings(
   settings: Partial<TChatSettings>,
   location: ParsedLocation<{ id?: string }>
 ) {
   const scratchpad = location.pathname.startsWith('/scratchpad');
   const chatId = location.pathname.startsWith('/chat') ? location.search.id : undefined;
-  if (chatSettings().isNone()) return;
-  const newValue = { ...chatSettings().unwrap(), ...settings };
-  setChatSettings(Option.Some(newValue));
+  if (chatState.settings.isNone()) return;
+  const updatedSettings = { ...chatState.settings.unwrap(), ...settings };
+  setChatState((state) =>
+    produce(state, (draft) => {
+      draft.settings = Option.Some(updatedSettings);
+    })
+  );
 
   if (scratchpad) {
     const chat = Option.from(await fetchers.userMetadata.byId(USER_METADATA_KEYS.SCRATCHPAD_CHAT))
       .okOrElse(() => new Error('No chat found'))
       .andThen((value) => safeParseJson(value, { validate: chatsSchema.parse }));
-    if (chat.isErr()) {
-      console.error(chat.unwrapErr());
-      return;
-    }
     await logger.dispatch({
       data: {
         id: USER_METADATA_KEYS.SCRATCHPAD_CHAT,
         value: JSON.stringify({
-          ...chat,
-          settings: newValue
+          ...chat.unwrap(),
+          settings: updatedSettings
         })
       },
       dontLog: true,
@@ -133,7 +136,7 @@ export async function updateChatSettings(
 
   if (chatId) {
     await logger.dispatch({
-      data: { id: chatId, settings: newValue },
+      data: { id: chatId, settings: updatedSettings },
       type: 'updateChat'
     });
   }

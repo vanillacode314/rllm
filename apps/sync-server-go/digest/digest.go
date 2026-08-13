@@ -135,6 +135,7 @@ func HandleDigestUpdate(tree *merkletree.MerkleTree[string, string], merkleDepth
 		if isLeafNode {
 			if IsZeroDigest(ourDigest) {
 				actions = append(actions, Action{Kind: KindAskTimestamp, Timestamp: d.Timestamp})
+				continue
 			}
 			timestamp := tree.GetMetaByPath(SegmentsToInts(path[prefixLen:]))
 			if timestamp == nil {

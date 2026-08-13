@@ -22,7 +22,7 @@ import {
 import { SETTINGS_PAGES } from '~/constants/settings';
 import { logger } from '~/db/client';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
-import { updateChatSettings } from '~/lib/chat/settings';
+import { saveChatSettings } from '~/lib/chat/settings';
 import { queries } from '~/queries';
 import { slugify } from '~/utils/string';
 
@@ -195,7 +195,7 @@ function TheCommandPrompt() {
             ? models.data.flatMap(({ models, provider }) =>
                 models.map((model) => ({
                   handler: () => {
-                    updateChatSettings(
+                    saveChatSettings(
                       {
                         modelId: model.id,
                         providerId: provider.id
@@ -213,7 +213,7 @@ function TheCommandPrompt() {
       case 'presets':
         return {
           'Switch Preset': presets().map((preset) => ({
-            handler: () => updateChatSettings(preset.settings, location()),
+            handler: () => saveChatSettings(preset.settings, location()),
             keywords: [`:${preset.name}`],
             label: preset.name,
             value: preset.id

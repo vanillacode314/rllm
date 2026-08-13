@@ -14,7 +14,7 @@ import type { TAttachment } from '~/types/chat';
 
 import { logger } from '~/db/client';
 import { MCPManager } from '~/lib/mcp/manager';
-import { chatSettings } from '~/routes/(chat)/-state';
+import { chatState } from '~/routes/(chat)/-state';
 import { getFile } from '~/utils/files';
 
 import { useAppDrawer } from './AppDrawer';
@@ -168,7 +168,8 @@ function Toolbar(props: {
   scratchpad?: boolean;
 }) {
   const mcpClients = () => MCPManager.getAllClients();
-  const modelId = () => chatSettings().mapOr('Invalid Settings', (settings) => settings.modelId);
+  const modelId = () =>
+    chatState.settings.mapOr('Invalid Settings', (settings) => settings.modelId);
 
   const navigate = useNavigate();
   const confirmDialog = useConfirmDialog();

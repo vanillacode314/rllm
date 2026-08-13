@@ -1,7 +1,8 @@
+import { createActiveElement } from '@solid-primitives/active-element';
 import { createEventListenerMap } from '@solid-primitives/event-listener';
-import { createShortcut } from '@solid-primitives/keyboard';
 import { createWritableMemo } from '@solid-primitives/memo';
 import { createElementSize } from '@solid-primitives/resize-observer';
+import { createHotkey } from '@tanstack/solid-hotkeys';
 import { useMutation } from '@tanstack/solid-query';
 import { type NavigateFn, redirect, useBlocker, useRouter } from '@tanstack/solid-router';
 import { HLC } from 'hlc';
@@ -35,7 +36,7 @@ import { logger } from '~/db/client';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { createTask } from '~/lib/background-task-manager/tasks';
 import { ChatGenerationManager } from '~/lib/chat/generation';
-import { chatSettingsSchema, type TChatSettings } from '~/lib/chat/settings';
+import { type TChatSettings } from '~/lib/chat/settings';
 import { epubRAGAdapter } from '~/lib/rag/epub';
 import { pdfRAGAdapter } from '~/lib/rag/pdf';
 import { splitter } from '~/lib/rag/utils';
@@ -49,23 +50,20 @@ import { compressImageFile, fileToBase64 } from '~/utils/files';
 import { produce } from '~/utils/immer';
 import { queryClient } from '~/utils/query-client';
 import { slugify } from '~/utils/string';
-import { ReactiveTree, ReactiveTreeNode, type TTree } from '~/utils/tree';
+import { ReactiveTree, ReactiveTreeNode, Tree, type TTree } from '~/utils/tree';
 
 import {
-  attachments,
-  chatSettings,
-  feedbackEnabled,
-  messages,
-  prompt,
-  setAttachments,
-  setChatSettings,
-  setFeedbackEnabled,
-  setMessages,
-  setPrompt
+  addAttachment,
+  chatState,
+  removeAttachmentById,
+  setChatState,
+  updateAttachmentById,
+  updateChatSettings,
+  updateFeedbackEnabled,
+  updateMessages,
+  updatePrompt
 } from './-state';
 import { getLatestPath } from './-utils';
-import { createHotkey } from '@tanstack/solid-hotkeys';
-import { createActiveElement } from '@solid-primitives/active-element';
 
 export function useChatPage(
   opts: Accessor<{
@@ -93,16 +91,13 @@ export function useChatPage(
   });
   const isPending = ChatGenerationManager.createIsPending(() => opts().id);
 
-  const [currentPath, setCurrentPath] = createSignal<number[]>([]);
   const [, { createNotification, removeNotification }] = useNotifications();
 
   useBlocker({
     enableBeforeUnload: () => ChatGenerationManager.isPending(opts().id),
     shouldBlockFn: () => false
   });
-  onMount(() => {
-    setChatSettings(Option.Some(chatSettingsSchema.parse(opts().chatSettings)));
-  });
+  onMount(() => updateChatSettings(opts().chatSettings));
   onMount(() => {
     void logger.dispatch({
       data: {
@@ -123,12 +118,19 @@ export function useChatPage(
       ChatGenerationManager.subscribe(opts().id, ($chat, newPath) => {
         batch(() => {
           setChat({ ...$chat });
-          setMessages($chat.messages);
-          const $currentPath = currentPath();
+          const $currentPath = chatState.path;
           const newPathFollowsCurrentPath =
             newPath.length >= $currentPath.length &&
             newPath.slice(0, $currentPath.length).every((v, i) => v === $currentPath[i]);
-          if (newPathFollowsCurrentPath) setCurrentPath(newPath);
+          if (newPathFollowsCurrentPath)
+            updateMessages({
+              messages: $chat.messages,
+              path: newPath
+            });
+          else
+            updateMessages({
+              messages: $chat.messages
+            });
         });
       })
     )
@@ -151,8 +153,8 @@ export function useChatPage(
       if (isLatestMessage) continue;
       pathsToRemove.push(path);
     }
-    for (const path of pathsToRemove.toReversed()) {
-      tree.removeNodeAndDescendants(path);
+    for (let i = pathsToRemove.length - 1; i >= 0; i--) {
+      tree.removeNodeAndDescendants(pathsToRemove[i]);
     }
   }
 
@@ -173,13 +175,14 @@ export function useChatPage(
   createRenderEffect(() => {
     const messages = opts().loaderChat?.messages ?? { children: [], value: null };
     untrack(() => {
-      const tree = ReactiveTree.fromJSON(messages);
+      const tree = Tree.fromJSON(messages);
       purgeOnlyErrorResponses(tree);
       flushOldToolCalls(tree);
-      batch(() => {
-        setCurrentPath(getLatestPath(tree));
-        setMessages(tree);
-      });
+      if (opts().scratchpad) {
+        updateMessages({ messages: tree });
+      } else {
+        updateMessages({ messages: tree, path: getLatestPath(tree) });
+      }
     });
   });
 
@@ -189,9 +192,9 @@ export function useChatPage(
         createTask(
           {
             arguments: {
-              attachements: unwrap(attachments),
+              attachements: unwrap(chatState.attachments),
               chatId: id,
-              feedbackEnabled: feedbackEnabled(),
+              feedbackEnabled: chatState.feedbackEnabled,
               path: unwrap(path),
               scratchpad: Boolean(opts().scratchpad)
             },
@@ -217,7 +220,7 @@ export function useChatPage(
     }
   }));
 
-  const currentNode = createMemo(() => messages().traverse(currentPath()).unwrap());
+  const currentNode = createMemo(() => chatState.messages.traverse(chatState.path).unwrap());
   const handlePrompt = async (prompt: string) => {
     if (sendPrompt.isPending) {
       toast.error('Please wait for the current request to finish');
@@ -237,7 +240,7 @@ export function useChatPage(
     }
 
     if (shouldAddPrompt) {
-      setPrompt('');
+      updatePrompt('');
       const chunkId = nanoid();
       const message = currentMessageIsUserMessage
         ? currentMessage
@@ -258,7 +261,7 @@ export function useChatPage(
             type: 'user'
           } as never)
         );
-        setCurrentPath((path) => [...path, 0]);
+        updateMessages(({ path }) => ({ path: [...path, 0] }));
       } else {
         message.unwrap().chunks.push(...newChunks);
       }
@@ -273,8 +276,8 @@ export function useChatPage(
           value: JSON.stringify(
             chatsSchema.parse(
               produce($chat as TDBChat, (draft) => {
-                draft.messages = messages().toJSON();
-                draft.settings = chatSettings().unwrap();
+                draft.messages = chatState.messages.toJSON();
+                draft.settings = chatState.settings.unwrap();
                 if (opts().isNewChat) {
                   const hlc = HLC.generate(clientId);
                   draft.createdAt = hlc.toString();
@@ -293,7 +296,11 @@ export function useChatPage(
       if (opts().isNewChat) {
         await logger.dispatch(
           {
-            data: { ...$chat, messages: messages().toJSON(), settings: chatSettings().unwrap() },
+            data: {
+              ...$chat,
+              messages: chatState.messages.toJSON(),
+              settings: chatState.settings.unwrap()
+            },
             type: 'createChat'
           },
           {
@@ -309,7 +316,7 @@ export function useChatPage(
         });
       } else {
         await logger.dispatch({
-          data: { id: $chat.id, messages: messages().toJSON() },
+          data: { id: $chat.id, messages: chatState.messages.toJSON() },
           type: 'updateChat'
         });
       }
@@ -317,12 +324,12 @@ export function useChatPage(
     document.dispatchEvent(new CustomEvent('chat:updated'));
     sendPrompt.mutate({
       id: $chat.id,
-      path: currentPath()
+      path: chatState.path
     });
   };
 
   async function onEdit(path: number[], chunkIndex: number, chunk: TUserMessageChunk) {
-    const $messages = messages();
+    const $messages = chatState.messages;
     const node = $messages.traverse(path).expect('should be able to traverse to node');
     const parentNode = node.parent.expect('should have a parent node');
     if (node.value.isSomeAnd((message) => message.type !== 'user')) {
@@ -366,31 +373,28 @@ export function useChatPage(
         type: 'updateChat'
       });
     }
-    setCurrentPath(path.slice(0, -1).concat(parentNode.children.length - 1));
+    updateMessages({ path: path.slice(0, -1).concat(parentNode.children.length - 1) });
     sendPrompt.mutate({
       id: chat().id,
-      path: currentPath()
+      path: chatState.path
     });
   }
 
   function onRegenerate(path: number[]) {
-    setCurrentPath(path.slice(0, -1));
-    sendPrompt.mutate({
-      id: chat().id,
-      path: currentPath()
-    });
+    updateMessages({ path: path.slice(0, -1) });
+    sendPrompt.mutate({ id: chat().id, path: chatState.path });
   }
 
   async function onTraversal(path: number[], direction: -1 | 1) {
     const rootPath = path.slice(0, -1).concat(path.at(-1)! + direction);
-    const $messages = messages().traverse(rootPath).unwrap();
+    const $messages = chatState.messages.traverse(rootPath).unwrap();
     const newPath = rootPath.concat(getLatestPath($messages));
-    setCurrentPath(newPath);
+    updateMessages({ path: newPath });
   }
 
   async function onDelete(path: number[], chunkIndex?: number) {
     outer: if (chunkIndex !== undefined) {
-      const message = messages()
+      const message = chatState.messages
         .traverse(path)
         .andThen((node) => node.value)
         .expect('should be able to traverse to node and node should have value');
@@ -399,8 +403,8 @@ export function useChatPage(
       message.chunks.splice(chunkIndex, 1);
       return;
     }
-    const parentNode = messages().traverse(path.slice(0, -1)).unwrap();
-    setCurrentPath(path.slice(0, -1));
+    const parentNode = chatState.messages.traverse(path.slice(0, -1)).unwrap();
+    updateMessages({ path: path.slice(0, -1) });
     if (parentNode.children.length === 1) {
       parentNode.removeChild(path.at(-1)!);
     } else if (path.at(-1) === parentNode.children.length - 1) {
@@ -408,7 +412,7 @@ export function useChatPage(
       onTraversal(path, -1);
     } else {
       parentNode.removeChild(path.at(-1)!);
-      setCurrentPath(path.concat(getLatestPath(parentNode.children[path.at(-1)!])));
+      updateMessages({ path: path.concat(getLatestPath(parentNode.children[path.at(-1)!])) });
     }
     if (opts().scratchpad) {
       await logger.dispatch({
@@ -416,7 +420,7 @@ export function useChatPage(
           id: USER_METADATA_KEYS.SCRATCHPAD_CHAT,
           value: JSON.stringify({
             ...chat(),
-            messages: messages().toJSON()
+            messages: chatState.messages.toJSON()
           })
         },
         dontLog: true,
@@ -424,7 +428,7 @@ export function useChatPage(
       });
     } else {
       await logger.dispatch({
-        data: { id: chat().id, messages: messages().toJSON() },
+        data: { id: chat().id, messages: chatState.messages.toJSON() },
         type: 'updateChat'
       });
     }
@@ -470,7 +474,9 @@ export function useChatPage(
             type: 'user'
           })
         );
-        setCurrentPath((path) => [...path, 0]);
+        updateMessages(({ path }) => ({
+          path: [...path, 0]
+        }));
       }
     } else if (file.type === 'application/pdf' || file.type === 'application/epub+zip') {
       const id = nanoid();
@@ -480,38 +486,23 @@ export function useChatPage(
         progress: 0,
         transient: true
       };
-      const idx = attachments.length;
-      setAttachments(
-        produce((attachments) => {
-          attachments.push(attachment);
-        })
-      );
+      addAttachment(attachment);
       const adapter = file.type === 'application/epub+zip' ? epubRAGAdapter : pdfRAGAdapter;
       const text = (await adapter.getText(file)).unwrap();
       const chunks = splitter.splitText(text);
       await tryBlock(
         async function* () {
           const description = yield* adapter.getDescription(file);
-          setAttachments(
-            produce((attachments) => {
-              attachments[idx].description = description;
-            })
-          );
+          updateAttachmentById(id, { description });
           await transientDb.indexDocument(chunks.values(), {
             id,
-            onProgress(n) {
-              setAttachments(
-                produce((attachments) => {
-                  attachments[idx].progress = n / chunks.length;
-                })
-              );
-            }
+            onProgress: (n) => updateAttachmentById(id, { progress: n / chunks.length })
           });
         },
         (e) => e
       )
         .inspectErr(() => {
-          setAttachments((attachments) => attachments.filter((a) => a.id !== id));
+          removeAttachmentById(id);
           toast.error('Failed to load document');
         })
         .unwrap();
@@ -521,18 +512,18 @@ export function useChatPage(
   }
 
   function onRemoveAttachment(id: string) {
-    setAttachments((attachments) =>
-      produce(attachments, (attachments) => {
-        const index = attachments.findIndex((attachment) => attachment.id === id);
-        attachments.splice(index, 1);
-      })
-    );
+    removeAttachmentById(id);
     void transientDb.deleteDocument(id);
   }
 
   function onLibraryAttach(newAttachments: TAttachment[]) {
-    const transientAttachments = attachments.filter((attachment) => attachment.transient);
-    setAttachments(transientAttachments.concat(newAttachments));
+    setChatState((state) =>
+      produce(state, (draft) => {
+        const attachments = draft.attachments.filter((attachment) => attachment.transient);
+        attachments.push(...newAttachments);
+        draft.attachments = attachments;
+      })
+    );
   }
 
   const activeElement = createActiveElement();
@@ -584,15 +575,15 @@ export function useChatPage(
           <Chat
             chat={{
               ...chat(),
-              messages: messages().toJSON(),
-              settings: chatSettings().unwrapOr({})
+              messages: chatState.messages.toJSON(),
+              settings: chatState.settings.unwrapOr({})
             }}
             class="p-4 [view-transition-name:main-content]"
             onDelete={onDelete}
             onEdit={onEdit}
             onRegenerate={onRegenerate}
             onTraversal={onTraversal}
-            path={currentPath()}
+            path={chatState.path}
             ref={(el) => {
               let touchId = 0;
               let start = 0;
@@ -653,27 +644,25 @@ export function useChatPage(
             <span class="sr-only">Show Prompt Box</span>
           </button>
           <ThePromptBox
-            attachments={attachments}
+            attachments={chatState.attachments}
             chatId={opts().id}
             class="absolute bottom-0 inset-x-0 will-change-transform bg-card/25 backdrop-blur-xl rounded-lg m-4 border border-input"
-            feedbackEnabled={feedbackEnabled()}
+            feedbackEnabled={chatState.feedbackEnabled}
             isNewChat={opts().isNewChat}
             isPending={isPending()}
             onAbort={() => ChatGenerationManager.abortChat(opts().id)}
             onAttachment={onAttachment}
-            onFeedbackEnabledChange={setFeedbackEnabled}
-            onInput={setPrompt}
+            onFeedbackEnabledChange={updateFeedbackEnabled}
+            onInput={updatePrompt}
             onLibraryAttach={onLibraryAttach}
             onMessage={handlePrompt}
             onRemoveAttachment={onRemoveAttachment}
             onReset={props.onReset}
             onSave={props.onSave}
-            prompt={prompt()}
+            prompt={chatState.prompt}
             ref={promptBoxRef}
             scratchpad={opts().scratchpad}
-            style={{
-              transform: `translate3d(var(--translate-x-prompt-box, 0), 0, 0)`
-            }}
+            style={{ transform: `translate3d(var(--translate-x-prompt-box, 0), 0, 0)` }}
           />
         </main>
       </div>
@@ -682,7 +671,7 @@ export function useChatPage(
 
   createEventListenerMap(document, {
     'chat:handoff': (event: CustomEvent<{ prefilledPrompt: string }>) => {
-      setPrompt(event.detail.prefilledPrompt);
+      updatePrompt(event.detail.prefilledPrompt);
       navigate({ params: { _splat: 'new' }, to: '/chat/$' });
     }
   });
@@ -690,7 +679,6 @@ export function useChatPage(
   return {
     chat,
     ChatPage,
-    currentPath,
     handlePrompt,
     isPending,
     onAttachment,
@@ -699,8 +687,7 @@ export function useChatPage(
     onRegenerate,
     onTraversal,
     sendPrompt,
-    setChat,
-    setCurrentPath
+    setChat
   };
 }
 

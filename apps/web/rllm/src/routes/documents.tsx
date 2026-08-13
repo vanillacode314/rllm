@@ -18,7 +18,7 @@ import { formatError } from '~/utils/errors';
 import { getFile } from '~/utils/files';
 import { produce } from '~/utils/immer';
 
-import { setAttachments } from './(chat)/-state';
+import { setChatState } from './(chat)/-state';
 
 export const Route = createFileRoute('/documents')({
   component: DocumentsComponent
@@ -33,12 +33,12 @@ function DocumentCard(props: { document: TDocument }) {
       description: `Are you sure you want to delete "${props.document.name}"? This action cannot be undone.`,
       onConfirm: async () => {
         await deleteDocument(props.document.id);
-        setAttachments((attachments) =>
-          produce(attachments, (attachments) => {
-            const index = attachments.findIndex(
+        setChatState((state) =>
+          produce(state, (draft) => {
+            const index = draft.attachments.findIndex(
               (attachment) => attachment.id === props.document.id
             );
-            attachments.splice(index, 1);
+            draft.attachments.splice(index, 1);
           })
         );
       },

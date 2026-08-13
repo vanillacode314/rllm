@@ -13,8 +13,10 @@ import { queryClient } from '~/utils/query-client';
 import ChatAppDrawer from '../-ChatAppDrawer';
 import { INCREMENT_ACCESS_COUNT_THRESHOLD_MILLISECONDS } from '../-constants';
 import { useChatPage, useChatPageBeforeLoad, useChatPageLoader } from '../-layout';
-import { messages } from '../-state';
+import { updateMessages } from '../-state';
 import { getLatestPath } from '../-utils';
+import { Tree } from '~/utils/tree';
+import type { TMessage } from '~/types/chat';
 
 console.error('FIX OPTIMIZE STORAGE');
 
@@ -66,7 +68,7 @@ function ChatPageComponent() {
   const searchParams = Route.useSearch();
   const loaderData = Route.useLoaderData();
   const navigate = Route.useNavigate();
-  const { ChatPage, setCurrentPath } = useChatPage(() => ({
+  const { ChatPage } = useChatPage(() => ({
     chatSettings: loaderData().chatSettings,
     id: loaderData().id,
     isNewChat: loaderData().isNewChat,
@@ -110,7 +112,7 @@ function ChatPageComponent() {
             label: 'Reload',
             onClick: async () => {
               await router.invalidate();
-              setCurrentPath(getLatestPath(messages()));
+              updateMessages(({ messages }) => ({ path: getLatestPath(messages) }));
             }
           },
           duration: Number.POSITIVE_INFINITY,

@@ -1,6 +1,5 @@
 import { ReactiveSet } from '@solid-primitives/set';
 import { useQuery } from '@tanstack/solid-query';
-import { nanoid } from 'nanoid';
 import { createSignal, For, onCleanup, Show } from 'solid-js';
 import { Button } from 'ui/button';
 import {
@@ -15,7 +14,7 @@ import {
 import type { TAttachment } from '~/types/chat';
 
 import { queries } from '~/queries';
-import { attachments } from '~/routes/(chat)/-state';
+import { chatState } from '~/routes/(chat)/-state';
 
 const [open, setOpen] = createSignal(false);
 const selectedIds = new ReactiveSet();
@@ -107,7 +106,7 @@ export function useLibraryPicker() {
       return new Promise((resolve) => {
         resolvePromise = resolve;
         selectedIds.clear();
-        for (const attachment of attachments) {
+        for (const attachment of chatState.attachments) {
           selectedIds.add(attachment.id);
         }
         setOpen(true);

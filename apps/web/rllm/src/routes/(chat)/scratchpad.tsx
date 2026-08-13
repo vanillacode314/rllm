@@ -1,6 +1,7 @@
-import { createFileRoute, redirect, useRouter } from '@tanstack/solid-router';
+import { createFileRoute, useRouter } from '@tanstack/solid-router';
 import { HLC } from 'hlc';
 import { nanoid } from 'nanoid';
+import { createRenderEffect, onMount, untrack } from 'solid-js';
 import { Option } from 'ts-result-option';
 import { safeParseJson } from 'ts-result-option/utils';
 import { z } from 'zod/mini';
@@ -21,12 +22,14 @@ import { Tree } from '~/utils/tree';
 
 import ChatAppDrawer from './-ChatAppDrawer';
 import { useChatPage, useChatPageBeforeLoad, useChatPageLoader } from './-layout';
+import { updateMessages } from './-state';
+import { getLatestPath } from './-utils';
 
 console.error('FIX OPTIMIZE STORAGE');
 
 export const Route = createFileRoute('/(chat)/scratchpad')({
   beforeLoad: useChatPageBeforeLoad,
-  component: ChatPageComponent,
+  component: ScratchpadPageComponent,
   // oxlint-disable-next-line perfectionist/sort-objects
   loader: async () => {
     const { ensureQueryData, ensureValidChatProvider } = useChatPageLoader({ scratchpad: true });
@@ -74,12 +77,18 @@ export const Route = createFileRoute('/(chat)/scratchpad')({
   validateSearch: z.object({ id: z.optional(z.string()) })
 });
 
-function ChatPageComponent() {
+function ScratchpadPageComponent() {
   const appDrawer = useAppDrawer();
   appDrawer.setContent(ChatAppDrawer);
   const router = useRouter();
   const loaderData = Route.useLoaderData();
   const navigate = Route.useNavigate();
+  function initChat() {
+    const messages = loaderData().chat.messages ?? { children: [], value: null };
+    const tree = Tree.fromJSON<TMessage>(messages);
+    updateMessages({ messages: tree, path: getLatestPath(tree) });
+  }
+  createRenderEffect(() => untrack(initChat));
   const { chat, ChatPage } = useChatPage(() => ({
     chatSettings: loaderData().chatSettings,
     id: loaderData().id,
@@ -98,6 +107,7 @@ function ChatPageComponent() {
       variant: 'destructive'
     });
     if (!yes) return;
+    updateMessages({ messages: new Tree(), path: [] });
     await logger.dispatch({
       data: { id: USER_METADATA_KEYS.SCRATCHPAD_CHAT },
       dontLog: true,

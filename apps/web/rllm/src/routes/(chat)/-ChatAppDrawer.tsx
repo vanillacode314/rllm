@@ -6,18 +6,20 @@ import type { AppDrawerComponentProps } from '~/components/AppDrawer';
 
 import { ChatListSection, QuickActionsSection } from '~/components/ChatList';
 import ChatSettingsControls from '~/components/ChatSettingsControls';
-import { type TChatSettings, updateChatSettings } from '~/lib/chat/settings';
+import { type TChatSettings, saveChatSettings } from '~/lib/chat/settings';
 import { produce } from '~/utils/immer';
 
-import { chatSettings } from './-state';
+import { chatState } from './-state';
 
 export function ChatAppDrawer(props: AppDrawerComponentProps) {
+  // oxlint-disable-next-line solid/reactivity
+  const { onClose } = props;
   const location = useLocation();
 
-  const [localSettings, setLocalSettings] = createWritableMemo(() => chatSettings());
+  const [localSettings, setLocalSettings] = createWritableMemo(() => chatState.settings);
 
-  props.onClose(() => {
-    const settings = chatSettings()
+  onClose(() => {
+    const settings = chatState.settings
       .zip(localSettings())
       .mapOr(null, ([chat, local]) => ({ chat, local }));
     if (!settings) {
@@ -25,7 +27,7 @@ export function ChatAppDrawer(props: AppDrawerComponentProps) {
       return;
     }
     const hasUnsavedChanges = JSON.stringify(settings.local) !== JSON.stringify(settings.chat);
-    if (hasUnsavedChanges) updateChatSettings(settings.local, location());
+    if (hasUnsavedChanges) saveChatSettings(settings.local, location());
   });
 
   function updateLocalSettings(fn: (settings: TChatSettings) => void) {

@@ -13,8 +13,8 @@ import {
 } from 'ui/drawer';
 
 import { type TChatPreset } from '~/lib/chat/presets';
-import { type TChatSettings, updateChatSettings } from '~/lib/chat/settings';
-import { chatSettings } from '~/routes/(chat)/-state';
+import { type TChatSettings, saveChatSettings } from '~/lib/chat/settings';
+import { chatState } from '~/routes/(chat)/-state';
 import { isMobile } from '~/signals';
 import { produce } from '~/utils/immer';
 
@@ -25,7 +25,7 @@ const [chatSettingsDrawerOpen, setChatSettingsDrawerOpen] = createSignal(false);
 function TheChatSettingsDrawer() {
   const location = useLocation();
 
-  const [localSettings, setLocalSettings] = createWritableMemo(() => chatSettings());
+  const [localSettings, setLocalSettings] = createWritableMemo(() => chatState.settings);
 
   function updateLocalSettings(fn: (draft: TChatSettings) => void) {
     setLocalSettings((prev) =>
@@ -33,11 +33,8 @@ function TheChatSettingsDrawer() {
     );
   }
 
-  const handleApplyPreset = (preset: TChatPreset) => {
-    updateLocalSettings((draft) => {
-      Object.assign(draft, preset.settings);
-    });
-  };
+  const handleApplyPreset = (preset: TChatPreset) =>
+    updateLocalSettings((draft) => Object.assign(draft, preset.settings));
 
   return (
     <Drawer
@@ -45,12 +42,11 @@ function TheChatSettingsDrawer() {
       initialFocusEl={document.body}
       onOpenChange={(open) => {
         if (!open) {
-          // Save on close: compare local vs global and persist if different
-          const current = chatSettings();
+          const current = chatState.settings;
           const local = localSettings();
           if (current.isSome() && local.isSome()) {
             if (JSON.stringify(local.unwrap()) !== JSON.stringify(current.unwrap())) {
-              updateChatSettings(local.unwrap(), location());
+              saveChatSettings(local.unwrap(), location());
             }
           }
         }
