@@ -763,3 +763,5 @@ async function storePendingEvent(
     sql: `INSERT OR IGNORE INTO pendingEvents (id, "table", timestamp, data, operation, statements) VALUES (?, ?, ?, ?, ?, ?)`
   });
 }
+
+export { type MerkleTree };

@@ -1,3 +1,5 @@
+import type { MerkleTree } from 'event-logger';
+
 import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
 import { makeReconnectingWS } from '@solid-primitives/websocket';
 import { asyncBatch } from '@tanstack/solid-pacer';
@@ -138,7 +140,6 @@ const initSocket = () =>
 
             const batchSendEventWithTimestamp = asyncBatch<string>(
               async (timestamps) => {
-                const tree = await logger.getMerkleTree();
                 ws.send(
                   toBinary(
                     PeerPB.SyncWireMessageSchema,
@@ -242,22 +243,14 @@ const initSocket = () =>
                     case 'digestQuery': {
                       const { merkleDepth, paths } = payload.value;
                       const tree = await logger.getMerkleTree();
-                      const MAX_DEPTH = Math.max(merkleDepth, tree.maxDepth);
-                      const result = new Array<{ digest: Uint8Array; path: number[] }>();
-                      const virtualTreePrefix = Array.from({
-                        length: MAX_DEPTH - tree.maxDepth
-                      }).fill(0);
+                      const result = new Array<{
+                        digest: Uint8Array;
+                        path: number[];
+                        timestamp: string;
+                      }>();
                       for (const { segments } of paths) {
-                        const isVirtualTree =
-                          segments.length < virtualTreePrefix.length ||
-                          virtualTreePrefix.some((value, i) => segments[i] !== value);
-                        const digest = tree.isEmpty()
-                          ? ZERO_DIGEST
-                          : isVirtualTree
-                            ? ZERO_DIGEST
-                            : (tree.getHash(segments.slice(virtualTreePrefix.length)) ??
-                              ZERO_DIGEST);
-                        result.push({ digest, path: segments });
+                        const [digest, timestamp] = resolveDigest(tree, merkleDepth, segments);
+                        result.push({ digest, path: segments, timestamp });
                       }
                       ws.send(
                         toBinary(
@@ -283,38 +276,33 @@ const initSocket = () =>
                       const { digests, merkleDepth } = payload.value;
                       const tree = await logger.getMerkleTree();
                       const MAX_DEPTH = Math.max(merkleDepth, tree.maxDepth);
-                      const virtualTreePrefix = Array.from({
-                        length: MAX_DEPTH - tree.maxDepth
-                      }).fill(0);
-                      for (const { digest: theirDigest, path } of digests) {
-                        const isVirtualTree =
-                          path.length < virtualTreePrefix.length ||
-                          virtualTreePrefix.some((value, i) => path[i] !== value);
-                        const ourDigest = tree.isEmpty()
-                          ? ZERO_DIGEST
-                          : isVirtualTree
-                            ? ZERO_DIGEST
-                            : (tree.getHash(path.slice(virtualTreePrefix.length)) ?? ZERO_DIGEST);
-
+                      for (const {
+                        digest: theirDigest,
+                        path,
+                        timestamp: theirTimestamp
+                      } of digests) {
+                        const [ourDigest] = resolveDigest(tree, merkleDepth, path);
                         const mismatch = digestsDiffer(ourDigest, theirDigest);
-                        if (path.length - virtualTreePrefix.length === 0 && !mismatch) {
-                          console.debug('Roots match');
-                        }
+
                         if (!mismatch) continue;
 
                         const isLeafNode = path.length === MAX_DEPTH;
                         if (isLeafNode) {
-                          const timestamp = tree.getMetaByPath(
-                            path.slice(virtualTreePrefix.length)
-                          );
-                          if (timestamp === null) {
-                            console.error('data integrity error');
+                          if (isZeroDigest(ourDigest)) {
+                            batchSendEventWithTimestamp(theirTimestamp);
                             continue;
                           }
-                          if (isZeroDigest(ourDigest)) {
-                            batchSendEventWithTimestamp(timestamp);
+                          const timestamp = tree.getMetaByPath(
+                            path.slice(MAX_DEPTH - tree.maxDepth)
+                          );
+                          if (timestamp === null) {
+                            console.error(
+                              'data integrity error: timestamp missing in our tree for path',
+                              path.slice(MAX_DEPTH - tree.maxDepth)
+                            );
                             continue;
-                          } else if (isZeroDigest(theirDigest)) {
+                          }
+                          if (isZeroDigest(theirDigest)) {
                             batchTimestampForSending(timestamp);
                             continue;
                           }
@@ -325,7 +313,7 @@ const initSocket = () =>
                               $account.id,
                               clientId,
                               tree.maxDepth,
-                              Array.from({ length: 16 }).map((_, i) => [...path, i])
+                              Array.from({ length: tree.arity }).map((_, i) => [...path, i])
                             )
                           );
                         }
@@ -394,7 +382,7 @@ const initSocket = () =>
                             $account.id,
                             clientId,
                             tree.maxDepth,
-                            Array.from({ length: 16 }).map((_, i) => [i])
+                            Array.from({ length: tree.arity }).map((_, i) => [i])
                           )
                         );
                       break;
@@ -518,4 +506,38 @@ function digestsDiffer(a: Uint8Array, b: Uint8Array) {
     if (a[i] !== b[i]) return true;
   }
   return false;
+}
+
+function isVirtualPath(segments: number[], prefixLen: number): boolean {
+  if (segments.length < prefixLen) {
+    return true;
+  }
+  for (let i = 0; i < prefixLen; i++) {
+    if (segments[i] != 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function resolveDigest(
+  tree: MerkleTree<string, string>,
+  merkleDepth: number,
+  segments: number[]
+): [Uint8Array, string] {
+  let maxDepth = merkleDepth;
+  if (tree.maxDepth > maxDepth) {
+    maxDepth = tree.maxDepth;
+  }
+  const prefixLen = maxDepth - tree.maxDepth;
+  if (tree.isEmpty() || isVirtualPath(segments, prefixLen)) {
+    return [new Uint8Array(0), ''];
+  }
+  const path = segments.slice(prefixLen);
+  const digest = tree.getHash(path);
+  if (digest === null) {
+    return [new Uint8Array(0), ''];
+  }
+  const timestamp = tree.getMetaByPath(path);
+  return [digest, timestamp ?? ''];
 }

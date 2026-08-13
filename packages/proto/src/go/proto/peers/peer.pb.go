@@ -181,6 +181,7 @@ type DigestWithPath struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Path          []uint32               `protobuf:"varint,1,rep,packed,name=path,proto3" json:"path,omitempty"`
 	Digest        []byte                 `protobuf:"bytes,2,opt,name=digest,proto3" json:"digest,omitempty"`
+	Timestamp     string                 `protobuf:"bytes,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -227,6 +228,13 @@ func (x *DigestWithPath) GetDigest() []byte {
 		return x.Digest
 	}
 	return nil
+}
+
+func (x *DigestWithPath) GetTimestamp() string {
+	if x != nil {
+		return x.Timestamp
+	}
+	return ""
 }
 
 type MerkleDigestUpdate struct {
@@ -762,10 +770,11 @@ const file_peers_v1_peer_proto_rawDesc = "" +
 	"\f_root_digest\"`\n" +
 	"\x11MerkleDigestQuery\x12!\n" +
 	"\fmerkle_depth\x18\x01 \x01(\rR\vmerkleDepth\x12(\n" +
-	"\x05paths\x18\x02 \x03(\v2\x12.peers.v1.TreePathR\x05paths\"<\n" +
+	"\x05paths\x18\x02 \x03(\v2\x12.peers.v1.TreePathR\x05paths\"Z\n" +
 	"\x0eDigestWithPath\x12\x12\n" +
 	"\x04path\x18\x01 \x03(\rR\x04path\x12\x16\n" +
-	"\x06digest\x18\x02 \x01(\fR\x06digest\"k\n" +
+	"\x06digest\x18\x02 \x01(\fR\x06digest\x12\x1c\n" +
+	"\ttimestamp\x18\x03 \x01(\tR\ttimestamp\"k\n" +
 	"\x12MerkleDigestUpdate\x12!\n" +
 	"\fmerkle_depth\x18\x01 \x01(\rR\vmerkleDepth\x122\n" +
 	"\adigests\x18\x02 \x03(\v2\x18.peers.v1.DigestWithPathR\adigests\"[\n" +

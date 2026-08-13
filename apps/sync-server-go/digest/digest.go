@@ -59,29 +59,37 @@ func isVirtualPath(segments []uint32, prefixLen int) bool {
 
 // ResolveDigest returns the local digest for a path, or the zero digest when
 // the tree is empty, the path is virtual, or the path is out of bounds.
-func ResolveDigest(tree *merkletree.MerkleTree[string, string], merkleDepth uint32, segments []uint32) []byte {
+func ResolveDigest(tree *merkletree.MerkleTree[string, string], merkleDepth uint32, segments []uint32) ([]byte, string) {
 	maxDepth := int(merkleDepth)
 	if t := tree.MaxDepth(); t > maxDepth {
 		maxDepth = t
 	}
 	prefixLen := maxDepth - tree.MaxDepth()
 	if tree.IsEmpty() || isVirtualPath(segments, prefixLen) {
-		return ZeroDigest
+		return ZeroDigest, ""
 	}
-	digest, err := tree.GetHash(SegmentsToInts(segments[prefixLen:]))
+	path := SegmentsToInts(segments[prefixLen:])
+	digest, err := tree.GetHash(path)
 	if err != nil || digest == nil {
-		return ZeroDigest
+		return ZeroDigest, ""
 	}
-	return digest
+	timestamp := tree.GetMetaByPath(path)
+	if timestamp == nil {
+		return digest, ""
+	}
+	return digest, *timestamp
 }
 
 // HandleDigestQuery builds the digestUpdate response payload for a digestQuery request. Paths are echoed back unchanged.
 func HandleDigestQuery(tree *merkletree.MerkleTree[string, string], merkleDepth uint32, paths []*peers.TreePath) []*peers.DigestWithPath {
 	result := make([]*peers.DigestWithPath, 0, len(paths))
 	for _, path := range paths {
+
+		digest, timestamp := ResolveDigest(tree, merkleDepth, path.Segments)
 		result = append(result, &peers.DigestWithPath{
-			Path:   path.Segments,
-			Digest: ResolveDigest(tree, merkleDepth, path.Segments),
+			Path:      path.Segments,
+			Digest:    digest,
+			Timestamp: timestamp,
 		})
 	}
 	return result
@@ -119,7 +127,7 @@ func HandleDigestUpdate(tree *merkletree.MerkleTree[string, string], merkleDepth
 	for _, d := range digests {
 		path := d.Path
 		theirDigest := d.Digest
-		ourDigest := ResolveDigest(tree, merkleDepth, path)
+		ourDigest, _ := ResolveDigest(tree, merkleDepth, path)
 		if !DigestsDiffer(theirDigest, ourDigest) {
 			continue
 		}
@@ -131,7 +139,7 @@ func HandleDigestUpdate(tree *merkletree.MerkleTree[string, string], merkleDepth
 				continue
 			}
 			if IsZeroDigest(ourDigest) {
-				actions = append(actions, Action{Kind: KindAskTimestamp, Timestamp: *timestamp})
+				actions = append(actions, Action{Kind: KindAskTimestamp, Timestamp: d.Timestamp})
 			} else if IsZeroDigest(theirDigest) {
 				actions = append(actions, Action{Kind: KindSendTimestamp, Timestamp: *timestamp})
 			} else {

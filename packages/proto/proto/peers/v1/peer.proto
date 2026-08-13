@@ -22,6 +22,7 @@ message MerkleDigestQuery {
 message DigestWithPath {
   repeated uint32 path = 1;
   bytes digest = 2;
+  string timestamp = 3;
 }
 
 message MerkleDigestUpdate {
