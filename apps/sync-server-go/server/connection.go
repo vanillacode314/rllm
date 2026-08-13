@@ -160,7 +160,7 @@ func (m *ConnectionManager) createHandshake(version string, rootDigest []byte, c
 		AccountId: m.accountID,
 		ClientId:  m.clientID,
 		Payload: &peers.SyncWireMessage_Handshake{
-			Handshake: &peers.SyncHandshake{Version: version, RootDigest: rootDigest, ClientId: &clientId},
+			Handshake: &peers.SyncHandshake{Version: version, RootDigest: rootDigest, ClientId: clientId},
 		},
 	})
 }

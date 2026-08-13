@@ -113,7 +113,7 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 			log.Printf("[WS Error] Failed to load tree: %v", err)
 			return
 		}
-		shouldQuery := strings.Compare(clientId, *payload.Handshake.ClientId) == 1
+		shouldQuery := strings.Compare(clientId, payload.Handshake.ClientId) == 1
 		ourRootDigest := tree.GetRootHash()
 		mismatch := digest.DigestsDiffer(ourRootDigest, payload.Handshake.RootDigest)
 		if !mismatch {
