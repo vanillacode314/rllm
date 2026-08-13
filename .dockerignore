@@ -1,10 +1,31 @@
+# Version control metadata
 .git
-data
-node_modules
+.jj
+
+# Local tooling / dev environment (never needed in an image)
+**/.direnv
+**/.vscode
+**/.github
+**/.pi-lens
+**/.tanstack
+**/.aider*
+tmux.conf
+justfile
+flake.nix
+flake.lock
+
+# Package manager / build caches
 **/node_modules
-apps/web/rllm/android/app/build
-local.db*
-.aider*
-.turbo
-.env*
-.envrc*
+**/.turbo
+**/dist
+
+# Native Android build tree (web image only runs the Vite build)
+apps/web/rllm/android
+
+# Local databases
+**/data
+**/local.db*
+
+# Environment / secrets at any depth (.env, .envrc, *.prod, .example — root and nested)
+**/.env*
+**/.envrc*
