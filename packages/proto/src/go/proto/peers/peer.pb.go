@@ -68,6 +68,7 @@ func (x *TreePath) GetSegments() []uint32 {
 type SyncHandshake struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	RootDigest    []byte                 `protobuf:"bytes,3,opt,name=root_digest,json=rootDigest,proto3,oneof" json:"root_digest,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -107,6 +108,13 @@ func (x *SyncHandshake) GetVersion() string {
 		return x.Version
 	}
 	return ""
+}
+
+func (x *SyncHandshake) GetRootDigest() []byte {
+	if x != nil {
+		return x.RootDigest
+	}
+	return nil
 }
 
 type MerkleDigestQuery struct {
@@ -677,9 +685,12 @@ const file_peers_v1_peer_proto_rawDesc = "" +
 	"\n" +
 	"\x13peers/v1/peer.proto\x12\bpeers.v1\"&\n" +
 	"\bTreePath\x12\x1a\n" +
-	"\bsegments\x18\x01 \x03(\rR\bsegments\")\n" +
+	"\bsegments\x18\x01 \x03(\rR\bsegments\"_\n" +
 	"\rSyncHandshake\x12\x18\n" +
-	"\aversion\x18\x02 \x01(\tR\aversion\"`\n" +
+	"\aversion\x18\x02 \x01(\tR\aversion\x12$\n" +
+	"\vroot_digest\x18\x03 \x01(\fH\x00R\n" +
+	"rootDigest\x88\x01\x01B\x0e\n" +
+	"\f_root_digest\"`\n" +
 	"\x11MerkleDigestQuery\x12!\n" +
 	"\fmerkle_depth\x18\x01 \x01(\rR\vmerkleDepth\x12(\n" +
 	"\x05paths\x18\x02 \x03(\v2\x12.peers.v1.TreePathR\x05paths\"<\n" +
@@ -767,6 +778,7 @@ func file_peers_v1_peer_proto_init() {
 	if File_peers_v1_peer_proto != nil {
 		return
 	}
+	file_peers_v1_peer_proto_msgTypes[1].OneofWrappers = []any{}
 	file_peers_v1_peer_proto_msgTypes[10].OneofWrappers = []any{
 		(*SyncWireMessage_Handshake)(nil),
 		(*SyncWireMessage_DigestQuery)(nil),

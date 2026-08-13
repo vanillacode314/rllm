@@ -34,32 +34,42 @@ func (s SocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "missing accountId query parameter", http.StatusBadRequest)
 		return
 	}
-	c, err := websocket.Accept(w, r, &websocket.AcceptOptions{OriginPatterns: []string{"*"}})
+	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{OriginPatterns: []string{"*"}})
 	if err != nil {
 		log.Printf("%v", err)
 		return
 	}
-	go s.keepAlive(ctx, c)
-	c.SetReadLimit(wsReadLimitBytes)
+	go s.keepAlive(ctx, conn)
+	conn.SetReadLimit(wsReadLimitBytes)
 	clock, err := client.GetLocalClock(s.Db)
 	if err != nil {
 		log.Printf("[WS Open] Failed to get local clock: %v", err)
-		c.CloseNow()
+		conn.CloseNow()
 		return
 	}
-	m := newConnectionManager(s.Db, accountID, clock.ClientID, c, s.Hub)
-	s.Hub.Subscribe(accountID, c)
+	connectionManager := newConnectionManager(s.Db, accountID, clock.ClientID, conn, s.Hub)
+	s.Hub.Subscribe(accountID, conn)
 	defer func() {
-		s.Hub.Unsubscribe(accountID, c)
-		m.close()
-		c.CloseNow()
+		s.Hub.Unsubscribe(accountID, conn)
+		connectionManager.close()
+		conn.CloseNow()
 	}()
 
 	log.Printf("[WS Open] Client connected: accountId=%s", accountID)
-	m.write(m.createHandshake("__any__"))
+	tree, err := client.GetMerkleTreeByAccountId(s.Db, accountID)
+	if err != nil {
+		log.Printf("[WS Open] Failed to get merkle tree: %v", err)
+		return
+	}
+	rootDigest, err := tree.GetHash([]int{})
+	if err != nil {
+		log.Printf("[WS Open] Failed to get root digest: %v", err)
+		return
+	}
+	connectionManager.write(connectionManager.createHandshake("__any__", rootDigest))
 
 	for {
-		typ, message, err := c.Read(ctx)
+		typ, rawMessage, err := conn.Read(ctx)
 		if err != nil {
 			if errors.Is(err, io.EOF) || websocket.CloseStatus(err) != -1 {
 				log.Println("Client disconnected cleanly")
@@ -72,32 +82,50 @@ func (s SocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Printf("[WS] Received non-binary message, closing")
 			break
 		}
-		v := peers.SyncWireMessage{}
-		if err := proto.Unmarshal(message, &v); err != nil {
+		message := peers.SyncWireMessage{}
+		if err := proto.Unmarshal(rawMessage, &message); err != nil {
 			log.Printf("[WS] Failed to unmarshal message: %v", err)
 			continue
 		}
-		if v.AccountId != accountID {
-			log.Printf("[WS Warn] accountId mismatch: expected=%s got=%s", accountID, v.AccountId)
+		if message.AccountId != accountID {
+			log.Printf("[WS Warn] accountId mismatch: expected=%s got=%s", accountID, message.AccountId)
 			continue
 		}
-		s.handleMessage(&v, m)
+		s.handleMessage(&message, connectionManager)
 	}
 }
 
-func (s SocketHandler) handleMessage(v *peers.SyncWireMessage, m *ConnectionManager) {
-	accountID := m.accountID
-	log.Printf("[WS Received Message] accountId=%s case=%T", accountID, v.Payload)
+func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionManager *ConnectionManager) {
+	accountID := connectionManager.accountID
+	log.Printf("[WS Received Message] accountId=%s case=%T", accountID, message.Payload)
 
-	switch payload := v.Payload.(type) {
+	switch payload := message.Payload.(type) {
 	case *peers.SyncWireMessage_Handshake:
-		log.Printf("[WS Handshake] accountId=%s clientId=%s version=%s", accountID, v.ClientId, payload.Handshake.GetVersion())
+		log.Printf("[WS Handshake] accountId=%s clientId=%s version=%s", accountID, message.ClientId, payload.Handshake.GetVersion())
 		tree, err := client.GetMerkleTreeByAccountId(s.Db, accountID)
 		if err != nil {
 			log.Printf("[WS Error] Failed to load tree: %v", err)
 			return
 		}
-		m.write(m.createDigestQuery(uint32(tree.MaxDepth()), [][]uint32{{}}))
+		ourRootDigest, err := tree.GetHash([]int{})
+		if err != nil {
+			log.Printf("[WS Handshake] Failed to get root digest: %v", err)
+			return
+		}
+		if payload.Handshake.GetRootDigest() == nil {
+			log.Printf("[WS Handshake] Invalid handshake root digest missing")
+			return
+		}
+		if digest.DigestsDiffer(ourRootDigest, payload.Handshake.RootDigest) {
+			log.Printf("[WS Handshake] Root digest mismatch")
+			paths := make([][]uint32, 16)
+			for i := range tree.Arity() {
+				paths[i] = []uint32{uint32(i)}
+			}
+			connectionManager.write(connectionManager.createDigestQuery(uint32(tree.MaxDepth()), paths))
+			return
+		}
+		log.Printf("[WS Handshake] Root digest matches")
 
 	case *peers.SyncWireMessage_DigestQuery:
 		q := payload.DigestQuery
@@ -108,9 +136,9 @@ func (s SocketHandler) handleMessage(v *peers.SyncWireMessage, m *ConnectionMana
 			return
 		}
 		digests := digest.HandleDigestQuery(tree, q.GetMerkleDepth(), q.GetPaths())
-		m.write(marshalMessage(&peers.SyncWireMessage{
+		connectionManager.write(marshalMessage(&peers.SyncWireMessage{
 			AccountId: accountID,
-			ClientId:  m.clientID,
+			ClientId:  connectionManager.clientID,
 			Payload: &peers.SyncWireMessage_DigestUpdate{
 				DigestUpdate: &peers.MerkleDigestUpdate{
 					MerkleDepth: uint32(tree.MaxDepth()),
@@ -130,11 +158,11 @@ func (s SocketHandler) handleMessage(v *peers.SyncWireMessage, m *ConnectionMana
 		for _, action := range digest.HandleDigestUpdate(tree, u.GetMerkleDepth(), u.GetDigests()) {
 			switch action.Kind {
 			case digest.KindQueryChildren:
-				m.write(m.createDigestQuery(uint32(tree.MaxDepth()), action.Children))
+				connectionManager.write(connectionManager.createDigestQuery(uint32(tree.MaxDepth()), action.Children))
 			case digest.KindSendTimestamp:
-				m.sendTimestamp(action.Timestamp)
+				connectionManager.sendTimestamp(action.Timestamp)
 			case digest.KindHasEventQuery:
-				m.sendHasEventWithTimestampQuery(action.Timestamp)
+				connectionManager.sendHasEventWithTimestampQuery(action.Timestamp)
 			}
 		}
 
@@ -142,7 +170,7 @@ func (s SocketHandler) handleMessage(v *peers.SyncWireMessage, m *ConnectionMana
 		q := payload.HasEventWithTimestampQuery
 		log.Printf("[WS HasEventQuery] accountId=%s timestamps=%v", accountID, q.GetTimestamps())
 		for _, timestamp := range q.GetTimestamps() {
-			m.sendHasEventWithTimestampUpdate(timestamp)
+			connectionManager.sendHasEventWithTimestampUpdate(timestamp)
 		}
 
 	case *peers.SyncWireMessage_HasEventWithTimestampUpdates:
@@ -150,7 +178,7 @@ func (s SocketHandler) handleMessage(v *peers.SyncWireMessage, m *ConnectionMana
 		log.Printf("[WS HasEventUpdate] accountId=%s updates=%d", accountID, len(u.GetUpdates()))
 		for _, update := range u.GetUpdates() {
 			if !update.GetYes() {
-				m.sendTimestamp(update.GetTimestamp())
+				connectionManager.sendTimestamp(update.GetTimestamp())
 			}
 		}
 
@@ -181,7 +209,7 @@ func (s SocketHandler) handleMessage(v *peers.SyncWireMessage, m *ConnectionMana
 				Timestamp: event.GetTimestamp(),
 			})
 		}
-		if err := client.ReceiveMessages(tx, accountID, v.ClientId, messages); err != nil {
+		if err := client.ReceiveMessages(tx, accountID, message.ClientId, messages); err != nil {
 			_ = tx.Rollback()
 			log.Printf("[WS Error] Failed to receive messages: %v", err)
 			return
@@ -190,8 +218,8 @@ func (s SocketHandler) handleMessage(v *peers.SyncWireMessage, m *ConnectionMana
 			log.Printf("[WS Error] Failed to commit transaction: %v", err)
 			return
 		}
-		s.Hub.Publish(accountID, m.conn, m.createEventBatch(events))
-		m.recomputeMerkleTree()
+		s.Hub.Publish(accountID, connectionManager.conn, connectionManager.createEventBatch(events))
+		connectionManager.recomputeMerkleTree()
 
 	default:
 	}

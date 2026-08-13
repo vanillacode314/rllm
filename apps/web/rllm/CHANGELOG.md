@@ -1,9 +1,12 @@
 # What's New
 
-## v0.0.30 — August 12, 2026
+## v0.0.31 — August 13, 2026
+
+### 🎨 Improvements
+
+- **Syncing is faster between your devices** — When your devices are already up to date, the app now skips the extra check and gets to work right away, using less data and less waiting.
 
 ### 🐛 Bug Fixes
 
-- **Chat no longer jumps when you send a message** — The conversation stays steady while your prompt is sent and the AI starts replying.
-- **Replies keep their state while you read** — Messages no longer lose their rendered state (like expanded or collapsed views) when the chat updates.
-- **Reasoning sections stay as you left them** — The collapsible reasoning panel in AI replies no longer opens or closes on its own.
+- **Wide math formulas no longer overflow** — Math equations in chat replies that are wider than your screen can now scroll sideways instead of overflowing and getting cut off.
+- **Background syncing no longer drops while idle** — The app now keeps sync connections alive, so your data stays in sync across devices even after long pauses.

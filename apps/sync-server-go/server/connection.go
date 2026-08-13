@@ -7,12 +7,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coder/websocket"
-	"google.golang.org/protobuf/proto"
 	"proto/peers"
 	"sync-server/batch"
 	client "sync-server/db"
 	"sync-server/digest"
+
+	"github.com/coder/websocket"
+	"google.golang.org/protobuf/proto"
 )
 
 // Hub tracks WebSocket connections per account topic and broadcasts event
@@ -149,12 +150,12 @@ func (m *ConnectionManager) write(data []byte) {
 	}
 }
 
-func (m *ConnectionManager) createHandshake(version string) []byte {
+func (m *ConnectionManager) createHandshake(version string, rootDigest []byte) []byte {
 	return marshalMessage(&peers.SyncWireMessage{
 		AccountId: m.accountID,
 		ClientId:  m.clientID,
 		Payload: &peers.SyncWireMessage_Handshake{
-			Handshake: &peers.SyncHandshake{Version: version},
+			Handshake: &peers.SyncHandshake{Version: version, RootDigest: rootDigest},
 		},
 	})
 }

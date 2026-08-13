@@ -10,6 +10,7 @@ message TreePath {
 
 message SyncHandshake {
   string version = 2;
+  optional bytes root_digest = 3;
 }
 
 message MerkleDigestQuery {

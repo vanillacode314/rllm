@@ -92,6 +92,11 @@ const initSocket = () =>
             ws = makeReconnectingWS(socketUrl.toString());
             ws.addEventListener('open', async () => {
               const version = await logger.getVersion();
+              const tree = await logger.getMerkleTree();
+              const rootDigest = tree.getHash([]);
+              if (rootDigest === null) {
+                throw new Error('Unreachable: root digest is always defined');
+              }
               ws.send(
                 toBinary(
                   PeerPB.SyncWireMessageSchema,
@@ -101,6 +106,7 @@ const initSocket = () =>
                     payload: {
                       case: 'handshake',
                       value: create(PeerPB.SyncHandshakeSchema, {
+                        rootDigest,
                         version: version ?? '0'
                       })
                     }
@@ -269,9 +275,7 @@ const initSocket = () =>
                             ? ZERO_DIGEST
                             : (tree.getHash(path.slice(virtualTreePrefix.length)) ?? ZERO_DIGEST);
 
-                        const mismatch =
-                          theirDigest.length !== ourDigest.length ||
-                          theirDigest.some((value, index) => value !== ourDigest[index]);
+                        const mismatch = digestsDiffer(ourDigest, theirDigest);
                         if (path.length - virtualTreePrefix.length === 0 && !mismatch) {
                           console.debug('Roots match');
                         }
@@ -346,9 +350,25 @@ const initSocket = () =>
                       break;
                     }
                     case 'handshake': {
-                      console.debug('Handshake done');
+                      if (payload.value.rootDigest === undefined) {
+                        console.error('Invalid handshake, root digest missing');
+                        return;
+                      }
                       const tree = await logger.getMerkleTree();
-                      ws.send(createDigestQuery($account.id, clientId, tree.maxDepth, [[]]));
+                      const ourRootDigest = tree.getHash([]);
+                      if (ourRootDigest === null) {
+                        throw new Error('Unreachable: root digest is always defined');
+                      }
+                      if (digestsDiffer(ourRootDigest, payload.value.rootDigest))
+                        ws.send(
+                          createDigestQuery(
+                            $account.id,
+                            clientId,
+                            tree.maxDepth,
+                            Array.from({ length: 16 }).map((_, i) => [i])
+                          )
+                        );
+                      else console.log('[WS Handhsake] Roots match');
                       break;
                     }
                     case 'hasEventWithTimestampQuery': {
@@ -458,3 +478,11 @@ const setupMessageStream = () => {
   );
 };
 export { initSocket };
+
+function digestsDiffer(a: Uint8Array, b: Uint8Array) {
+  if (a.length !== b.length) return true;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return true;
+  }
+  return false;
+}
