@@ -3,7 +3,7 @@ import { createDebouncer } from '@tanstack/solid-pacer';
 import { useInfiniteQuery, useQuery } from '@tanstack/solid-query';
 import { useLocation } from '@tanstack/solid-router';
 import { createVirtualizer } from '@tanstack/solid-virtual';
-import { createEffect, createMemo, createSignal, For, Show } from 'solid-js';
+import { createEffect, createMemo, createSignal, For, Show, untrack } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { toast } from 'solid-sonner';
 import { Badge } from 'ui/badge';
@@ -47,15 +47,23 @@ export function ChatListSection(props: ChatListSectionProps) {
       .all()
       ._ctx.pagedMinimal({ query: filterState.query, tags: Array.from(filterState.tags) })
   );
-  const chats = createDerivedStore(
-    () => [chatsQuery.isPending, chatsQuery.isSuccess ? chatsQuery.data.pages.flat() : []],
-    ([isPending, current], prev) =>
-      isPending && current.length === 0 && prev !== undefined ? prev : current,
-    {
-      key: 'id'
-    }
+  const chats = createDerivedStore<(typeof chatsQuery.data.pages)[number]>(
+    (prev) => {
+      const current = chatsQuery.isSuccess ? chatsQuery.data.pages.flat() : [];
+      if (prev === undefined) return current;
+
+      const pending = chatsQuery.isPending;
+      if (pending && current.length === 0) return prev;
+
+      return current;
+    },
+    { key: 'id', name: 'chat-list-chats' }
   );
-  const totalCountQuery = useQuery(() => queries.chats.all()._ctx.count());
+  const totalCountQuery = useQuery(() =>
+    queries.chats
+      .all()
+      ._ctx.filteredCount({ query: filterState.query, tags: Array.from(filterState.tags) })
+  );
   const loadedCount = () => chats.length;
   const totalCount = () => totalCountQuery.data ?? 0;
 
@@ -64,17 +72,23 @@ export function ChatListSection(props: ChatListSectionProps) {
 
   const virtualizer = createMemo(() => {
     void scrollRef();
-    return createVirtualizer({
-      count: totalCount(),
-      estimateSize: () => 36,
-      getItemKey: (index) => (chats.length <= index ? index : chats[index]!.id),
-      getScrollElement: () => (scrollRef()?.isConnected ? scrollRef() : null),
-      overscan: 5
-    });
+    return untrack(() =>
+      createVirtualizer({
+        count: totalCount(),
+        estimateSize: () => 36,
+        getItemKey: (index) => (chats.length <= index ? index : chats[index]!.id),
+        getScrollElement: () => (scrollRef()?.isConnected ? scrollRef() : null),
+        overscan: 5
+      })
+    );
   });
 
-  const virtualItems = () => virtualizer().getVirtualItems();
-  const totalSize = () => ('sizePx' in props ? props.sizePx : virtualizer().getTotalSize());
+  const virtualItems = createMemo(() => virtualizer().getVirtualItems(), {
+    name: 'chat-list-virtual-items'
+  });
+  const totalSize = createMemo(() =>
+    'sizePx' in props ? props.sizePx : virtualizer().getTotalSize()
+  );
 
   async function renameChat(id: string) {
     const promptDialog = usePromptDialog();

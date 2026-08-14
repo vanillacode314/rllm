@@ -54,7 +54,7 @@
     },
     "apps/web/rllm": {
       "name": "rllm",
-      "version": "0.0.29",
+      "version": "0.0.35",
       "dependencies": {
         "@bufbuild/protobuf": "^2.12.0",
         "@capacitor-community/sqlite": "^8.1.0",

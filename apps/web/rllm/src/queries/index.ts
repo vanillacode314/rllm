@@ -99,6 +99,30 @@ const chats = {
         .select({ count: count() })
         .from(tables.chats)
         .then((rows) => rows[0]?.count ?? 0),
+    countFilteredChats: (query?: string, tags?: string[]) =>
+      db
+        .select({ count: count() })
+        .from(tables.chats)
+        .where(
+          and(
+            like(sql`LOWER(${tables.chats.title})`, `%${query?.toLowerCase()}%`).if(
+              query && query.trim().length > 0
+            ),
+            exists(
+              db
+                .select({ value: sql`1` })
+                .from(sql`json_each(${tables.chats.tags})`)
+                .where(
+                  inArray(
+                    sql`LOWER(json_each.value)`,
+                    tags?.filter((tag) => tag.trim().length > 0).map((tag) => tag.toLowerCase()) ??
+                      []
+                  )
+                )
+            ).if(tags && tags.filter((tag) => tag.trim().length > 0).length > 0)
+          )
+        )
+        .then((rows) => rows[0]?.count ?? 0),
     getAllChats: () => db.select().from(tables.chats).orderBy(desc(tables.chats.createdAt)),
     getChatTags: () =>
       runCustomQuery<{ value: string }>(
@@ -171,6 +195,12 @@ const chats = {
                 queryKey: [...chats.queries.base(), 'all', 'count'],
                 staleTime: 5 * 60 * 1000
               }),
+            filteredCount: ({ query, tags }: { query?: string; tags?: string[] }) =>
+              queryOptions({
+                queryFn: () => chats.fetchers.countFilteredChats(query, tags),
+                queryKey: [...chats.queries.base(), { query, tags }, 'count'],
+                staleTime: 5 * 60 * 1000
+              }),
             minimal: queryOptions({
               queryFn: () => chats.fetchers.getMinimalChats(),
               queryKey: [...chats.queries.base(), 'all', 'minimal']
@@ -185,11 +215,12 @@ const chats = {
               tags?: string[];
             } = {}) =>
               infiniteQueryOptions({
+                queryFn: ({ pageParam }) =>
+                  chats.fetchers.getPagedMinimalChats(pageSize, pageParam, query, tags),
+                // oxlint-disable-next-line perfectionist/sort-objects
                 getNextPageParam: (lastPage, _allPages, lastPageParam) =>
                   lastPage.length < pageSize ? undefined : lastPageParam + pageSize,
                 initialPageParam: 0,
-                queryFn: ({ pageParam }) =>
-                  chats.fetchers.getPagedMinimalChats(pageSize, pageParam, query, tags),
                 queryKey: [
                   ...chats.queries.base(),
                   'all',

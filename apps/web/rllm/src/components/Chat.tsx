@@ -18,7 +18,6 @@ import {
   Suspense,
   Switch
 } from 'solid-js';
-import { unwrap } from 'solid-js/store';
 import { toast } from 'solid-sonner';
 import { Button } from 'ui/button';
 import { Callout, CalloutContent, CalloutTitle } from 'ui/callout';
@@ -79,11 +78,10 @@ export function Chat(props: Props): JSXElement {
   void autoScroll;
 
   const nodes = createDerivedStore(
-    () => structuredClone(unwrap({ messages: props.chat.messages, path: props.path })),
-    ({ messages, path }) => {
+    () => {
       const result = [];
-      let parent = messages;
-      for (const index of path) {
+      let parent = structuredClone(props.chat.messages);
+      for (const index of props.path) {
         const node = parent.children[index];
         result.push({
           id: index,

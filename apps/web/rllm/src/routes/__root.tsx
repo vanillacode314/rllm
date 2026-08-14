@@ -2,7 +2,7 @@ import { ColorModeProvider, cookieStorageManager } from '@kobalte/core';
 import { makePersisted } from '@solid-primitives/storage';
 import { debounce } from '@tanstack/solid-pacer';
 import { QueryClientProvider } from '@tanstack/solid-query';
-import { SolidQueryDevtools } from '@tanstack/solid-query-devtools';
+// import { SolidQueryDevtools } from '@tanstack/solid-query-devtools';
 import { createRootRouteWithContext, Outlet } from '@tanstack/solid-router';
 import { createSignal, For, type JSXElement, onMount, Suspense } from 'solid-js';
 import { Button } from 'ui/button';
@@ -118,7 +118,7 @@ function RootComponent() {
           <AutoImportModals />
         </SidebarProvider>
 
-        <SolidQueryDevtools initialIsOpen={false} />
+        {/* <SolidQueryDevtools initialIsOpen={false} /> */}
       </QueryClientProvider>
       {/* <Suspense> */}
       {/*   <TanStackRouterDevtools /> */}
