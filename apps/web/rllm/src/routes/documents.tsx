@@ -16,9 +16,8 @@ import { indexingProgress, type TIndexingProgress } from '~/lib/vector-db/progre
 import { queries } from '~/queries';
 import { formatError } from '~/utils/errors';
 import { getFile } from '~/utils/files';
-import { produce } from '~/utils/immer';
 
-import { setChatState } from './(chat)/-state';
+import { removeAttachmentById } from './(chat)/-state';
 
 export const Route = createFileRoute('/documents')({
   component: DocumentsComponent
@@ -33,14 +32,7 @@ function DocumentCard(props: { document: TDocument }) {
       description: `Are you sure you want to delete "${props.document.name}"? This action cannot be undone.`,
       onConfirm: async () => {
         await deleteDocument(props.document.id);
-        setChatState((state) =>
-          produce(state, (draft) => {
-            const index = draft.attachments.findIndex(
-              (attachment) => attachment.id === props.document.id
-            );
-            draft.attachments.splice(index, 1);
-          })
-        );
+        removeAttachmentById(props.document.id);
       },
       title: `Delete Document?`,
       variant: 'destructive'
