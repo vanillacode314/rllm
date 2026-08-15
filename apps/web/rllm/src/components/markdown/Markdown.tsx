@@ -1,8 +1,6 @@
-import type { Root } from 'hast';
-
 import { Repeat } from '@solid-primitives/range';
 import { createResizeObserver } from '@solid-primitives/resize-observer';
-import { Mutation, useQuery } from '@tanstack/solid-query';
+import { useQuery } from '@tanstack/solid-query';
 import { html } from 'property-information';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
@@ -19,7 +17,6 @@ import {
   Suspense,
   Switch
 } from 'solid-js';
-import { createStore, reconcile } from 'solid-js/store';
 import { Button } from 'ui/button';
 import { cn } from 'ui/utils/tailwind';
 import { unified } from 'unified';
@@ -33,6 +30,7 @@ import { chatState } from '~/routes/(chat)/-state';
 import { rehypePlugins, remarkPlugins } from '~/utils/markdown';
 import { randomFloat } from '~/utils/math';
 import { createLatestAsync } from '~/utils/signals';
+import { createDerivedStore } from '~/utils/stores';
 
 import CopyButton from './CopyButton';
 import { MarkdownRoot } from './Renderer';
@@ -133,15 +131,17 @@ function Markdown(props: TProps) {
   ]);
   const processor = createProcessor();
 
-  const [node, setNode] = createStore<Root>({ children: [], type: 'root' });
-  const update = async (content: string) => {
-    const file = new VFile();
-    file.value = content;
-    const tree = processor.runSync(processor.parse(file), file);
-    setNode(reconcile(tree));
-  };
-
-  createLatestAsync(() => local.content, update);
+  const [parsedTree] = createLatestAsync(
+    () => local.content,
+    async (content) => {
+      const file = new VFile();
+      file.value = content;
+      const tree = processor.runSync(processor.parse(file), file);
+      return tree;
+    },
+    { children: [], type: 'root' }
+  );
+  const node = createDerivedStore(parsedTree);
 
   return (
     <Show fallback={<MarkdownSkeleton content={local.content} />} when={node}>

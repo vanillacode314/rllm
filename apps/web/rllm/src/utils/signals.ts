@@ -3,19 +3,21 @@ import { createPageVisibility } from '@solid-primitives/page-visibility';
 import { createScheduled, debounce } from '@solid-primitives/scheduled';
 import {
   type Accessor,
-  batch,
   createComputed,
   createEffect,
   createMemo,
   createResource,
   createSignal,
+  on,
   onCleanup,
   onMount,
   type Setter,
   type Signal,
   untrack
 } from 'solid-js';
-import { createStore, reconcile } from 'solid-js/store';
+import { createStore } from 'solid-js/store';
+
+import { produce } from './immer';
 
 const isOnline = createConnectivitySignal();
 const pageVisible = createPageVisibility();
@@ -42,56 +44,70 @@ function createDebouncedMemo<T>(
   return createMemo((value) => (scheduled() ? fn(value) : value), value, options);
 }
 
-function createLatestAsync<T, S>(source: () => S, fetcher: (source: S) => Promise<T>) {
+function createLatestAsync<T, S>(
+  source: () => S,
+  fetcher: (source: S) => Promise<T>,
+  initial?: T
+): [Accessor<T>, Accessor<boolean>];
+function createLatestAsync<T, S>(
+  source: () => S,
+  fetcher: (source: S) => Promise<T>
+): [Accessor<T | undefined>, Accessor<boolean>];
+function createLatestAsync<T, S>(source: () => S, fetcher: (source: S) => Promise<T>, initial?: T) {
   const [state, setState] = createStore<{
     error: unknown;
-    finishedAt: number;
-    pending: boolean;
-    startedAt: number;
+    finished: number;
+    pending: number;
   }>({
     error: undefined,
-    finishedAt: Date.now(),
-    pending: false,
-    startedAt: Date.now()
+    finished: 0,
+    pending: 0
   });
   const [data, { mutate }] = createResource(
     () => ({ error: state.error, source: untrack(source) }),
     ({ error, source }) => {
       if (error !== undefined) throw error;
       return fetcher(source);
-    }
+    },
+    { initialValue: initial }
   );
 
-  let firstRun = true;
-  createComputed(() => {
-    const $source = source();
-    if (firstRun) {
-      firstRun = false;
-      return;
-    }
-    untrack(async () => {
-      const startedAt = Date.now();
-      setState({ pending: true, startedAt });
-      try {
-        const value = await fetcher($source);
-        const finishedAt = Date.now();
-        if (state.finishedAt > finishedAt) return;
-
-        batch(() => {
-          mutate(reconcile(value)(data.latest));
-          setState({ error: undefined, finishedAt });
-
-          if (state.startedAt > startedAt) return;
-          setState({ pending: false });
-        });
-      } catch (error) {
-        if (state.startedAt > startedAt) return;
-        const finishedAt = Date.now();
-        setState({ error: error, finishedAt });
-      }
-    });
-  });
-  return [() => data(), () => data.state === 'pending' || state.pending] as const;
+  createComputed(
+    on(
+      source,
+      async (source) => {
+        setState((state) =>
+          produce(state, (draft) => {
+            draft.pending++;
+          })
+        );
+        const pending = state.pending;
+        try {
+          const value = await fetcher(source);
+          if (state.finished > pending) return;
+          mutate(value);
+          setState((state) =>
+            produce(state, (draft) => {
+              draft.error = undefined;
+              draft.finished = pending;
+            })
+          );
+        } catch (error) {
+          if (state.finished > pending) return;
+          setState((state) =>
+            produce(state, (draft) => {
+              draft.error = error;
+            })
+          );
+        }
+      },
+      { defer: true }
+    )
+  );
+  return [
+    () => data(),
+    () => data.state === 'refreshing' || state.pending > state.finished
+  ] as const;
 }
 
 function syncToURLHash(signal: Signal<boolean>, key: string): Signal<boolean> {
