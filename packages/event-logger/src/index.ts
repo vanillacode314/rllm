@@ -370,8 +370,10 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
           .map(() => '(?, ?, ?, ?)')
           .join(',')} RETURNING timestamp, type, data, version`
       });
+      const appliedTimestamps = new Set(loggedEvents.map((event) => event.timestamp));
+      const appliedEvents = events.filter((event) => appliedTimestamps.has(event.timestamp));
       updates = await Promise.all(
-        events.map(async (event) => {
+        appliedEvents.map(async (event) => {
           return { event, updates: await eventToUpdates(event, tx) };
         })
       );
