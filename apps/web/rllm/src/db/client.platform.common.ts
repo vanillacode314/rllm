@@ -27,16 +27,8 @@ export const setupDb = (logger: SqliteAdapter['logger']) =>
       }
       await logger.invalidateSchema();
 
-      console.debug(
-        '[DB Metadata]',
-        Object.fromEntries(
-          (
-            await logger.db.query<{ key: string; value: string }>(
-              logger.sql`SELECT * FROM metadata;`
-            )
-          ).map(({ key, value }) => [key, value])
-        )
-      );
+      const [clock, version] = await Promise.all([logger.getClock(), logger.getVersion()]);
+      console.debug('[DB Metadata]', { clock: clock.toString(), version });
     },
     (e) => new Error('Failed to setup database', { cause: e })
   );
