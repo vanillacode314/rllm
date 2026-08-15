@@ -74,7 +74,9 @@ export function ChatListSection(props: ChatListSectionProps) {
     void scrollRef();
     return untrack(() =>
       createVirtualizer({
-        count: totalCount(),
+        get count() {
+          return totalCount();
+        },
         estimateSize: () => 36,
         getItemKey: (index) => (chats.length <= index ? index : chats[index]!.id),
         getScrollElement: () => (scrollRef()?.isConnected ? scrollRef() : null),
@@ -83,12 +85,8 @@ export function ChatListSection(props: ChatListSectionProps) {
     );
   });
 
-  const virtualItems = createMemo(() => virtualizer().getVirtualItems(), {
-    name: 'chat-list-virtual-items'
-  });
-  const totalSize = createMemo(() =>
-    'sizePx' in props ? props.sizePx : virtualizer().getTotalSize()
-  );
+  const virtualItems = () => virtualizer().getVirtualItems();
+  const totalSize = () => ('sizePx' in props ? props.sizePx : virtualizer().getTotalSize());
 
   async function renameChat(id: string) {
     const promptDialog = usePromptDialog();

@@ -1,11 +1,7 @@
 # What's New
 
-## v0.0.36 — August 14, 2026
-
-### 🎨 Improvements
-
-- **Smoother scrolling in chat lists** — The chat list no longer loses its places while you scroll.
+## v0.0.37 — August 15, 2026
 
 ### 🐛 Bug Fixes
 
-- **Search and tag filters show the right number of chats** — When you search your chats or filter them by tag, the list now shows the correct total of matching chats instead of counting everything.
+- **Chat list updates properly when chats change** — The chat list now refreshes correctly when chats are added, removed, or filtered, instead of freezing on the initial count.
