@@ -5,7 +5,9 @@ import { createTimer } from '@solid-primitives/timer';
 import { createHotkey } from '@tanstack/solid-hotkeys';
 import { useQuery } from '@tanstack/solid-query';
 import {
+  createEffect,
   createMemo,
+  createResource,
   createSignal,
   createUniqueId,
   For,
@@ -40,6 +42,7 @@ import { ChatGenerationManager } from '~/lib/chat/generation';
 import { queries } from '~/queries';
 import { formatToPercentage, formatToTokens } from '~/utils/number';
 import { formatAsKeyValuePair } from '~/utils/object';
+import { createWritableMemo } from '~/utils/signals';
 import { createDerivedStore } from '~/utils/stores';
 import { lowlightWorkerPool } from '~/workers/lowlight';
 
@@ -80,13 +83,14 @@ export function Chat(props: Props): JSXElement {
     () => {
       const result = [];
       let parent = structuredClone(props.chat.messages);
-      for (const index of props.path) {
-        const node = parent.children[index];
+      for (let index = 0; index < props.path.length; index++) {
+        const pathIndex = props.path[index];
+        const node = parent.children[pathIndex];
         result.push({
           id: index,
           node,
           numberOfSiblings: parent.children.length - 1,
-          pathIndex: index
+          pathIndex
         });
         parent = node;
       }
@@ -394,13 +398,20 @@ function LLMReasoningChunk(props: {
   const hideReasoningDuringGeneration = useQuery(() =>
     queries.userMetadata.byId(USER_METADATA_KEYS.HIDE_REASONING_DURING_GENERATION)
   );
+  // HACK: upstream tanstack query has a bug where it triggers suspense even
+  // if the data is already there if it's loaded by ensureQueryData()
+  // we wrap it in a resource to bypass this
+  const [hideReasoning, { mutate }] = createResource(
+    () => hideReasoningDuringGeneration.isSuccess && hideReasoningDuringGeneration.data === 'false'
+  );
+  createEffect(() =>
+    mutate(
+      hideReasoningDuringGeneration.isSuccess && hideReasoningDuringGeneration.data === 'false'
+    )
+  );
   let openChangedByUser = false;
   const [open, setOpen] = createWritableMemo((prev: boolean | undefined) =>
-    openChangedByUser
-      ? prev
-      : hideReasoningDuringGeneration.data === 'false'
-        ? props.inProgress
-        : false
+    openChangedByUser ? prev : hideReasoning.latest ? props.inProgress : false
   );
 
   return (
