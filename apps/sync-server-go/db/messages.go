@@ -90,11 +90,7 @@ func RecomputeMerkleTree(db *sql.DB, accountID string) error {
 		return fmt.Errorf("failed to create merkle tree: %w", err)
 	}
 	after := ""
-	query := "SELECT timestamp FROM messages WHERE accountId = ?"
-	if after != "" {
-		query += " AND timestamp > ?"
-	}
-	query += " ORDER BY timestamp ASC LIMIT ?"
+	query := "SELECT timestamp FROM messages WHERE accountId = ? AND timestamp > ? ORDER BY timestamp ASC LIMIT ?"
 	stmt, err := db.Prepare(query)
 	if err != nil {
 		return fmt.Errorf("failed to prepare timestamp query: %w", err)
@@ -102,14 +98,7 @@ func RecomputeMerkleTree(db *sql.DB, accountID string) error {
 	defer stmt.Close()
 
 	for {
-		params := make([]any, 0, 3)
-		params = append(params, accountID)
-		if after != "" {
-			params = append(params, after)
-		}
-		params = append(params, merkleTreePageSize)
-
-		rows, err := stmt.Query(params...)
+		rows, err := stmt.Query(accountID, after, merkleTreePageSize)
 		if err != nil {
 			return fmt.Errorf("failed to query timestamps: %w", err)
 		}
