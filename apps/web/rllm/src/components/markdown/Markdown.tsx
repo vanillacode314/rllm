@@ -2,7 +2,7 @@ import type { Root } from 'hast';
 
 import { Repeat } from '@solid-primitives/range';
 import { createResizeObserver } from '@solid-primitives/resize-observer';
-import { useQuery } from '@tanstack/solid-query';
+import { Mutation, useQuery } from '@tanstack/solid-query';
 import { html } from 'property-information';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
@@ -12,6 +12,7 @@ import {
   Index,
   type JSX,
   Match,
+  onCleanup,
   type ParentProps,
   Show,
   splitProps,
@@ -274,7 +275,12 @@ function Pre(props: any) {
           expanded() || local.pending ? 'max-h-none' : 'max-h-72'
         )}
         ref={(el) => {
-          setTimeout(() => setText(el.textContent));
+          const observer = new MutationObserver(() => setText(el.textContent));
+          observer.observe(el, {
+            childList: true,
+            subtree: true
+          });
+          onCleanup(() => observer.disconnect());
           createResizeObserver(el, () =>
             setCanExpand(expanded() || el.scrollHeight > el.clientHeight)
           );
