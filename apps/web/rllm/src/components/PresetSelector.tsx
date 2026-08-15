@@ -1,4 +1,4 @@
-import { createWritableMemo } from '@solid-primitives/memo';
+import { createWritableMemo } from '~/utils/signals';
 import { createVirtualizer } from '@tanstack/solid-virtual';
 import Fuse from 'fuse.js';
 import { createMemo, createSignal, For } from 'solid-js';

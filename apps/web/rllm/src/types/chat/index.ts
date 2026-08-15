@@ -1,7 +1,7 @@
 import * as z from 'zod/mini';
 
 import { chatSettingsSchema } from '~/lib/chat/settings';
-import { ReactiveTree, Tree, type TTree } from '~/utils/tree';
+import { Tree, type TTree } from '~/utils/tree';
 
 export const llmMessageChunkSchema = z.discriminatedUnion('type', [
   z.object({
@@ -75,7 +75,7 @@ export type TMessage = z.infer<typeof messageSchema>;
 export const chatSchema = z.object({
   finished: z.boolean(),
   id: z.string(),
-  messages: z.union([z.instanceof(Tree<TMessage>), z.instanceof(ReactiveTree<TMessage>)]),
+  messages: z.instanceof(Tree<TMessage>),
   settings: chatSettingsSchema,
   tags: z.array(z.string()),
   title: z.string()

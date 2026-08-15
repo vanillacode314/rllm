@@ -1,6 +1,6 @@
 import type { Accessor } from 'solid-js';
 
-import { createDebouncer } from '@tanstack/solid-pacer';
+import { Debouncer } from '@tanstack/solid-pacer';
 import { createMemo, from } from 'solid-js';
 import { Option } from 'ts-result-option';
 import * as z from 'zod/mini';
@@ -323,7 +323,7 @@ export class ChatGenerationManager {
     }
     const system = prompts.join('\n\n');
 
-    const debouncedOnUpdate = createDebouncer(
+    const debouncedOnUpdate = new Debouncer(
       async ({ chunks, usage }) => {
         if (chunks && chunks.length > 0) Object.assign(message.chunks, chunks);
         if (usage) {

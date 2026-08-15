@@ -1,6 +1,5 @@
 import { createActiveElement } from '@solid-primitives/active-element';
 import { createEventListener } from '@solid-primitives/event-listener';
-import { createWritableMemo } from '@solid-primitives/memo';
 import { createResizeObserver } from '@solid-primitives/resize-observer';
 import { createTimer } from '@solid-primitives/timer';
 import { createHotkey } from '@tanstack/solid-hotkeys';

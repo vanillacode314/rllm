@@ -1,4 +1,4 @@
-import { createWritableMemo } from '@solid-primitives/memo';
+import { createWritableMemo } from '~/utils/signals';
 import { useLocation } from '@tanstack/solid-router';
 import { createSignal, Show } from 'solid-js';
 import { Button } from 'ui/button';

@@ -58,9 +58,36 @@ export const [chatState, setChatState] = makePersisted(
   }
 );
 
+export function addAttachment(attachment: TAttachment) {
+  setChatState((state) =>
+    produce(state, (draft) => {
+      draft.attachments.push(attachment);
+    })
+  );
+}
+
+export function removeAttachmentById(id: string) {
+  setChatState((state) =>
+    produce(state, (draft) => {
+      const index = draft.attachments.findIndex((a) => a.id === id);
+      if (index === -1) return;
+      draft.attachments.splice(index, 1);
+    })
+  );
+}
 export function resetChatState() {
   setChatState(makeDefaultChatState());
   localforage.removeItem(CHAT_STATE_LOCALFORAGE_KEY);
+}
+
+export function updateAttachmentById(id: string, data: Partial<TAttachment>) {
+  setChatState((state) =>
+    produce(state, (draft) => {
+      const index = draft.attachments.findIndex((a) => a.id === id);
+      if (index === -1) return;
+      Object.assign(draft.attachments[index], data);
+    })
+  );
 }
 
 export function updateChatSettings(settings: z.input<typeof chatSettingsSchema>) {
@@ -70,6 +97,15 @@ export function updateChatSettings(settings: z.input<typeof chatSettingsSchema>)
     })
   );
 }
+
+export function updateFeedbackEnabled(feedbackEnabled: boolean) {
+  setChatState((state) =>
+    produce(state, (draft) => {
+      draft.feedbackEnabled = feedbackEnabled;
+    })
+  );
+}
+
 export function updateMessages(
   setter:
     | (({ messages, path }: { messages: TTree<TMessage>; path: number[] }) => {
@@ -101,42 +137,6 @@ export function updatePrompt(prompt: string) {
   setChatState((state) =>
     produce(state, (draft) => {
       draft.prompt = prompt;
-    })
-  );
-}
-
-export function addAttachment(attachment: TAttachment) {
-  setChatState((state) =>
-    produce(state, (draft) => {
-      draft.attachments.push(attachment);
-    })
-  );
-}
-
-export function removeAttachmentById(id: string) {
-  setChatState((state) =>
-    produce(state, (draft) => {
-      const index = draft.attachments.findIndex((a) => a.id === id);
-      if (index === -1) return;
-      draft.attachments.splice(index, 1);
-    })
-  );
-}
-
-export function updateAttachmentById(id: string, data: Partial<TAttachment>) {
-  setChatState((state) =>
-    produce(state, (draft) => {
-      const index = draft.attachments.findIndex((a) => a.id === id);
-      if (index === -1) return;
-      Object.assign(draft.attachments[index], data);
-    })
-  );
-}
-
-export function updateFeedbackEnabled(feedbackEnabled: boolean) {
-  setChatState((state) =>
-    produce(state, (draft) => {
-      draft.feedbackEnabled = feedbackEnabled;
     })
   );
 }

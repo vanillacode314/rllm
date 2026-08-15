@@ -1,6 +1,5 @@
 import { createActiveElement } from '@solid-primitives/active-element';
 import { createEventListenerMap } from '@solid-primitives/event-listener';
-import { createWritableMemo } from '@solid-primitives/memo';
 import { createElementSize } from '@solid-primitives/resize-observer';
 import { createHotkey } from '@tanstack/solid-hotkeys';
 import { useMutation } from '@tanstack/solid-query';
@@ -49,8 +48,9 @@ import { formatError } from '~/utils/errors';
 import { compressImageFile, fileToBase64 } from '~/utils/files';
 import { produce } from '~/utils/immer';
 import { queryClient } from '~/utils/query-client';
+import { createWritableMemo } from '~/utils/signals';
 import { slugify } from '~/utils/string';
-import { ReactiveTree, ReactiveTreeNode, Tree, type TTree } from '~/utils/tree';
+import { Tree, TreeNode, type TTree } from '~/utils/tree';
 
 import {
   addAttachment,
@@ -256,7 +256,7 @@ export function useChatPage(
       const shouldCreateNewMessage = message.isNoneOr((message) => message.type !== 'user');
       if (shouldCreateNewMessage) {
         currentNode().addChild(
-          new ReactiveTreeNode({
+          new TreeNode({
             chunks: newChunks,
             type: 'user'
           } as never)
@@ -347,7 +347,7 @@ export function useChatPage(
       );
     });
     parentNode.addChild(
-      new ReactiveTreeNode<TMessage>({
+      new TreeNode<TMessage>({
         chunks: newChunks,
         type: 'user'
       })
@@ -461,7 +461,7 @@ export function useChatPage(
         });
       } else {
         currentNode().addChild(
-          new ReactiveTreeNode({
+          new TreeNode({
             chunks: [
               {
                 filename: file.name,

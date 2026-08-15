@@ -2,13 +2,16 @@ import { createConnectivitySignal } from '@solid-primitives/connectivity';
 import { createPageVisibility } from '@solid-primitives/page-visibility';
 import { createScheduled, debounce } from '@solid-primitives/scheduled';
 import {
+  type Accessor,
   batch,
   createComputed,
   createEffect,
   createMemo,
   createResource,
+  createSignal,
   onCleanup,
   onMount,
+  type Setter,
   type Signal,
   untrack
 } from 'solid-js';
@@ -16,6 +19,15 @@ import { createStore, reconcile } from 'solid-js/store';
 
 const isOnline = createConnectivitySignal();
 const pageVisible = createPageVisibility();
+
+export function createWritableMemo<T>(
+  fn: (prev: NoInfer<T> | undefined) => T,
+  value?: NoInfer<T>,
+  options?: { equals: (a: T, b: T) => boolean; name?: string }
+): [Accessor<T>, Setter<T>] {
+  const m = createMemo((prev) => createSignal(fn(prev?.[0]())), value, options);
+  return [() => m()[0](), (...args) => m()[1](...(args as never))];
+}
 
 function createDebouncedMemo<T>(
   fn: (p: T | undefined) => T,

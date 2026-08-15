@@ -1,4 +1,4 @@
-import { createWritableMemo } from '@solid-primitives/memo';
+import { createWritableMemo } from '~/utils/signals';
 import { useLocation } from '@tanstack/solid-router';
 import { Separator } from 'ui/separator';
 

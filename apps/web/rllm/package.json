@@ -38,7 +38,6 @@
     "@solid-primitives/event-listener": "^2.4.5",
     "@solid-primitives/map": "^0.7.3",
     "@solid-primitives/media": "^2.3.5",
-    "@solid-primitives/memo": "^1.5.0",
     "@solid-primitives/page-visibility": "^2.1.5",
     "@solid-primitives/range": "^0.2.4",
     "@solid-primitives/resize-observer": "^2.1.5",
