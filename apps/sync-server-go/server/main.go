@@ -50,7 +50,6 @@ func (s EventsHandler) GetMessagesStream(w http.ResponseWriter, r *http.Request)
 		}
 		query += " ORDER BY timestamp ASC LIMIT ?"
 		params = append(params, pageSize+1)
-		log.Printf("query: %s", query)
 		rows, err := s.Db.Query(query, params...)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to query messages: %v", err), http.StatusInternalServerError)
