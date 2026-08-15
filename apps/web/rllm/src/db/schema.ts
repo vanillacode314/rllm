@@ -3,4 +3,4 @@ import { tables as eventTables } from './events-schema';
 
 export const tables = { ...appTables, ...eventTables };
 export const { chatPresets, chats, documents, mcps, providers, userMetadata } = appTables;
-export const { events, metadata } = eventTables;
+export const { events, metadata, updates } = eventTables;

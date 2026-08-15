@@ -36,7 +36,8 @@
   "dependencies": {
     "hlc": "workspace:*",
     "merkle-tree": "workspace:*",
-    "mutex": "workspace:*"
+    "mutex": "workspace:*",
+    "nanoid": "^6.0.1"
   },
   "devDependencies": {
     "@capacitor-community/sqlite": "^8.1.0",

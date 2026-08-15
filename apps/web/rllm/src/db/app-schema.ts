@@ -8,20 +8,17 @@ import type { TChat as TChatChat, TMessage as TChatMessage } from '~/types/chat'
 import type { JsonTree } from '~/utils/tree';
 
 const timestamp = () => text().notNull();
-const updatedAt = () => text({ mode: 'json' }).notNull().$type<Record<string, string>>();
 
 const userMetadata = sqliteTable('userMetadata', {
   createdAt: timestamp(),
   id: text().primaryKey().notNull(),
-  updatedAt: updatedAt(),
   value: text().notNull()
 });
 const chatPresets = sqliteTable('chatPresets', {
   createdAt: timestamp(),
   id: text().primaryKey().notNull(),
   name: text().notNull(),
-  settings: text({ mode: 'json' }).notNull().$type<TChatSettings>(),
-  updatedAt: updatedAt()
+  settings: text({ mode: 'json' }).notNull().$type<TChatSettings>()
 });
 const providers = sqliteTable('providers', {
   baseUrl: text().notNull(),
@@ -30,8 +27,7 @@ const providers = sqliteTable('providers', {
   id: text().primaryKey().notNull(),
   name: text().notNull(),
   token: text().notNull(),
-  type: text().notNull().$type<'openai'>(),
-  updatedAt: updatedAt()
+  type: text().notNull().$type<'openai'>()
 });
 const chats = sqliteTable('chats', {
   accessCount: integer().notNull().default(0),
@@ -47,21 +43,18 @@ const chats = sqliteTable('chats', {
     .notNull()
     .$type<string[]>()
     .default(sql`"[]"`),
-  title: text().notNull(),
-  updatedAt: updatedAt()
+  title: text().notNull()
 });
 const mcps = sqliteTable('mcps', {
   createdAt: timestamp(),
   id: text().primaryKey().notNull(),
   name: text().notNull(),
-  updatedAt: updatedAt(),
   url: text().notNull()
 });
 const documents = sqliteTable('documents', {
   createdAt: timestamp(),
   id: text().primaryKey().notNull(),
-  name: text().notNull(),
-  updatedAt: updatedAt()
+  name: text().notNull()
 });
 export const tables = { chatPresets, chats, documents, mcps, providers, userMetadata };
 

@@ -1,6 +1,7 @@
 // oxlint-disable no-await-in-loop
 import { HLC } from 'hlc';
 import { MerkleTree, stringHasher } from 'merkle-tree';
+import { nanoid } from 'nanoid';
 
 export type TConfig<TEvent extends Omit<TBaseEvent, 'timestamp' | 'version'>> = {
   db: TSqlDB;
@@ -102,7 +103,9 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
     sql`CREATE TABLE IF NOT EXISTS \`metadata\` ( \`key\` text PRIMARY KEY NOT NULL, \`value\` text NOT NULL);`,
     sql`INSERT OR IGNORE INTO \`metadata\` (\`key\`, \`value\`) VALUES ('clock', ${newClock.toString()}), ('clientId', ${newClock.clientId});`,
     sql`CREATE TABLE IF NOT EXISTS \`events\` (\`timestamp\` text PRIMARY KEY NOT NULL, \`type\` text NOT NULL, \`data\` text NOT NULL, \`version\` text NOT NULL);`,
-    sql`CREATE TABLE IF NOT EXISTS \`pendingEvents\` (\`id\` text NOT NULL, \`table\` text NOT NULL, \`timestamp\` text NOT NULL, \`data\` text NOT NULL, \`operation\` text NOT NULL, PRIMARY KEY (\`id\`, \`table\`, \`timestamp\`));`
+    sql`CREATE TABLE IF NOT EXISTS \`pendingEvents\` (\`id\` text NOT NULL, \`table\` text NOT NULL, \`timestamp\` text NOT NULL, \`data\` text NOT NULL, \`operation\` text NOT NULL, PRIMARY KEY (\`id\`, \`table\`, \`timestamp\`));`,
+    sql`CREATE TABLE IF NOT EXISTS \`updates\`( \`column\` text NOT NULL, \`id\` text PRIMARY KEY NOT NULL, \`rowId\` text NOT NULL, \`table\` text NOT NULL, \`timestamp\` text NOT NULL);`,
+    sql`CREATE UNIQUE INDEX IF NOT EXISTS \`updates_table_rowId_column_unique\` ON \`updates\` (\`table\`,\`rowId\`,\`column\`);`
   ]);
 
   await migratePendingEventsStatements(db);
@@ -505,7 +508,7 @@ async function convertUpdateToStatement(
     update.operation !== 'delete'
       ? Object.keys(update.operation === 'sql' ? update.statements : update.data).filter(
           (column) =>
-            !['createdAt', 'id', 'updatedAt'].includes(column) &&
+            !['createdAt', 'id'].includes(column) &&
             (update.operation === 'sql' ? update.statements : update.data)[column] !== undefined
         )
       : [];
@@ -520,32 +523,26 @@ async function convertUpdateToStatement(
       const values = columns.map((column) => update.data[column]);
       return [
         {
-          params: [id, ...values, timestamp, {}].map((value) => toSql(value)),
+          params: [id, ...values, timestamp].map((value) => toSql(value)),
           sql: `
               INSERT OR IGNORE INTO "${tableName}"(
                 "id",
                 ${columns.map((column) => `"${column}"`).join(',')},
-                "createdAt",
-                "updatedAt"
+                "createdAt"
               )
               VALUES (
                 ?,
                 ${columns.map(() => '?').join(',')},
-                ?, 
                 ?
               )`
-        }
+        },
+        ...upsertUpdateStatements(tableName, id, columns, timestamp)
       ];
     }
     case 'sql': {
-      const existingUpdatedAt = await tx
-        .query<{ updatedAt: string }>({
-          params: [id],
-          sql: `SELECT updatedAt FROM "${tableName}" WHERE "id" = ?`
-        })
-        .then((rows) => JSON.parse(rows[0]?.updatedAt ?? '{}') as Record<string, string>);
+      const existingTimestamps = await readColumnTimestamps(tx, tableName, id);
       const columnsToUpdate = columns.filter((column) => {
-        const existingTimestamp = existingUpdatedAt[column];
+        const existingTimestamp = existingTimestamps.get(column);
         return typeof existingTimestamp !== 'string' || existingTimestamp < timestamp;
       });
 
@@ -563,53 +560,33 @@ async function convertUpdateToStatement(
       }
       return [
         ...statementsToRun,
-        {
-          params: [
-            Object.fromEntries(columnsToUpdate.map((column) => [column, timestamp])),
-            id
-          ].map(toSql),
-          sql: `UPDATE "${tableName}" SET updatedAt = json_patch(updatedAt, ?) WHERE "id" = ?`
-        }
+        ...upsertUpdateStatements(tableName, id, columnsToUpdate, timestamp)
       ];
     }
     case 'update': {
-      const existingUpdatedAt = await tx
-        .query<{ updatedAt: string }>({
-          params: [id],
-          sql: `SELECT updatedAt FROM "${tableName}" WHERE "id" = ?`
-        })
-        .then((rows) => JSON.parse(rows[0]?.updatedAt ?? '{}') as Record<string, string>);
+      const existingTimestamps = await readColumnTimestamps(tx, tableName, id);
       const columnsToUpdate = columns.filter((column) => {
-        const existingTimestamp = existingUpdatedAt[column];
+        const existingTimestamp = existingTimestamps.get(column);
         return typeof existingTimestamp !== 'string' || existingTimestamp < timestamp;
       });
       if (columnsToUpdate.length === 0) return null;
       return [
         {
-          params: [
-            ...columnsToUpdate.map((column) => update.data[column]),
-            Object.fromEntries(columnsToUpdate.map((column) => [column, timestamp])),
-            id
-          ].map(toSql),
+          params: [...columnsToUpdate.map((column) => update.data[column]), id].map(toSql),
           sql: `
           UPDATE "${tableName}"
           SET
-            ${columnsToUpdate.map((column) => `"${column}" = ?`).join(',')},
-            updatedAt = json_patch(updatedAt, ?)
+            ${columnsToUpdate.map((column) => `"${column}" = ?`).join(',')}
           WHERE "id" = ?
         `
-        }
+        },
+        ...upsertUpdateStatements(tableName, id, columnsToUpdate, timestamp)
       ];
     }
     case 'upsert': {
-      const existingUpdatedAt = await tx
-        .query<{ updatedAt: string }>({
-          params: [id],
-          sql: `SELECT updatedAt FROM "${tableName}" WHERE "id" = ?`
-        })
-        .then((rows) => JSON.parse(rows[0]?.updatedAt ?? '{}') as Record<string, string>);
+      const existingTimestamps = await readColumnTimestamps(tx, tableName, id);
       const columnsToUpsert = columns.filter((column) => {
-        const existingTimestamp = existingUpdatedAt[column];
+        const existingTimestamp = existingTimestamps.get(column);
         return typeof existingTimestamp !== 'string' || existingTimestamp < timestamp;
       });
       if (columnsToUpsert.length === 0) return null;
@@ -618,45 +595,35 @@ async function convertUpdateToStatement(
               INSERT INTO "${tableName}"(
                 "id",
                 ${columnsToUpsert.map((column) => `"${column}"`).join(',')},
-                "createdAt",
-                "updatedAt"
+                "createdAt"
               )
               VALUES (
                 ?,
                 ${columnsToUpsert.map(() => '?').join(',')},
-                ?, 
                 ?
               )
             `;
-
       const updateSql = `
               SET 
-                ${columnsToUpsert.map((column) => `"${column}" = ?`).join(',')},
-                updatedAt = json_patch(updatedAt, ?)
+                ${columnsToUpsert.map((column) => `"${column}" = ?`).join(',')}
               WHERE "id" = ?
             `;
-
       const upsertSql = `
               ${insertSql}
               ON CONFLICT("id") DO UPDATE
               ${updateSql}
             `;
-
       const insertParams = [
         id,
         ...columnsToUpsert.map((column) => update.data[column]),
-        timestamp,
-        {}
+        timestamp
       ].map(toSql);
-      const updateParams = [
-        ...columnsToUpsert.map((c) => update.data[c]),
-        Object.fromEntries(columnsToUpsert.map((column) => [column, timestamp])),
-        id
-      ].map(toSql);
-
+      const updateParams = [...columnsToUpsert.map((c) => update.data[c]), id].map(toSql);
       const params = [...insertParams, ...updateParams];
-
-      return [{ params, sql: upsertSql }];
+      return [
+        { params, sql: upsertSql },
+        ...upsertUpdateStatements(tableName, id, columnsToUpsert, timestamp)
+      ];
     }
   }
 }
@@ -736,7 +703,17 @@ async function processPendingEvents(
     });
   }
 }
-
+async function readColumnTimestamps(
+  tx: TSqlRunner,
+  table: string,
+  rowId: string
+): Promise<Map<string, string>> {
+  const rows = await tx.query<{ column: string; timestamp: string }>({
+    params: [table, rowId],
+    sql: `SELECT "column", timestamp FROM updates WHERE "table" = ? AND rowId = ?`
+  });
+  return new Map(rows.map((row) => [row.column, row.timestamp]));
+}
 function sql(strings: TemplateStringsArray, ...values: unknown[]): TStatement {
   return {
     params: values.map(toSql),
@@ -762,6 +739,22 @@ async function storePendingEvent(
     ],
     sql: `INSERT OR IGNORE INTO pendingEvents (id, "table", timestamp, data, operation, statements) VALUES (?, ?, ?, ?, ?, ?)`
   });
+}
+
+function upsertUpdateStatements(
+  table: string,
+  rowId: string,
+  columns: string[],
+  timestamp: string
+): TStatement[] {
+  return columns.map((column) => ({
+    params: [nanoid(), rowId, column, table, timestamp].map(toSql),
+    sql: `
+      INSERT INTO updates (id, rowId, "column", "table", timestamp) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT("table","rowId","column") DO UPDATE SET timestamp = excluded.timestamp
+      WHERE excluded.timestamp > updates.timestamp
+    `
+  }));
 }
 
 export { type MerkleTree };
