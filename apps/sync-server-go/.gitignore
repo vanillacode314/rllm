@@ -29,6 +29,7 @@ cover.html
 # ==============================================================================
 # Ignore the vendor folder by default (Go modules handle reproducible builds via go.sum)
 vendor/
+node_modules
 
 # ==============================================================================
 # Environment Variables & Secrets

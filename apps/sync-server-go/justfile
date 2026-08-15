@@ -1,5 +1,13 @@
 default: run
 run:
-  go run .
+  PORT=$SYNC_SERVER_PORT go run .
+migrate:
+  bunx drizzle-kit generate
+build:
+  go build .
+  mkdir bin
+  mv sync-server bin/
 fmt:
   go fmt .
+lint:
+  go vet .

@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1786782887763,
+      "tag": "20260815083447_reflective_moira_mactaggert",
+      "breakpoints": true
+    }
+  ]
+}

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync-server/db/migrations"
 
 	_ "turso.tech/database/tursogo"
 	turso "turso.tech/database/tursogo-serverless"
@@ -31,7 +32,68 @@ func InitDB() (*sql.DB, error) {
 	if dbAuthToken != "" {
 		dbUri += "?authToken=" + dbAuthToken
 	}
-	return sql.Open(driver, dbUri)
+	db, err := sql.Open(driver, dbUri)
+	if err != nil {
+		return nil, err
+	}
+	err = applyMigrations(db, migrations.All())
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
+func applyMigrations(db *sql.DB, migrations map[string][]string) error {
+	db.Exec(`CREATE TABLE IF NOT EXISTS metadata (
+						 key text PRIMARY KEY NOT NULL,
+						 value text NOT NULL
+					 )`)
+	var currentVersion string = "0"
+	err := db.QueryRow("SELECT value FROM metadata WHERE key = ?", "version").Scan(&currentVersion)
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+	log.Printf("current database version: %s", currentVersion)
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	for version, statements := range migrations {
+		if currentVersion >= version {
+			continue
+		}
+		log.Printf("applying migration %s", version)
+		for _, sql := range statements {
+			_, err := tx.Exec(sql)
+			if err != nil {
+				rollbackErr := tx.Rollback()
+				if rollbackErr != nil {
+					panic(errors.Join(errors.New("failed to apply migration "+version), err, rollbackErr))
+				}
+				panic(errors.Join(errors.New("failed to apply migration "+version), err))
+			}
+		}
+		_, err := tx.Exec("INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)", "version", version)
+		if err != nil {
+			rollbackErr := tx.Rollback()
+			if rollbackErr != nil {
+				panic(errors.Join(errors.New("failed to apply migration "+version), err, rollbackErr))
+			}
+			panic(errors.Join(errors.New("failed to apply migration "+version), err))
+		}
+		log.Printf("successfully applied migration %s", version)
+	}
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+	var newVersion string
+	err = db.QueryRow("SELECT value FROM metadata WHERE key = ?", "version").Scan(&newVersion)
+	if err != nil {
+		return err
+	}
+	log.Printf("new database version: %s", newVersion)
+	return nil
 }
 
 func GetMerkleTreeByAccountId(db *sql.DB, accountId string) (*merkletree.MerkleTree[string, string], error) {
