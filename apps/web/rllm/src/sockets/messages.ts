@@ -1,46 +1,49 @@
 import type { MerkleTree } from 'event-logger';
 
 import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
-import { makeReconnectingWS } from '@solid-primitives/websocket';
 import { Batcher } from '@tanstack/solid-pacer';
 import { inArray } from 'drizzle-orm';
 import { ethers } from 'ethers';
 import * as EventPB from 'proto/events/v1/event_pb';
 import * as PeerPB from 'proto/peers/v1/peer_pb';
-import { createComputed, createMemo, untrack } from 'solid-js';
-import { AsyncResult, Option } from 'ts-result-option';
-import { tryBlock } from 'ts-result-option/utils';
 import * as z from 'zod/mini';
 
 import { db, logger } from '~/db/client';
 import { tables } from '~/db/schema';
 import { type TValidEvent, validEventSchema } from '~/queries/mutations';
 import { account } from '~/signals/account';
-import { env } from '~/utils/env';
-import { isOnline } from '~/utils/signals';
 import { decrypt, encrypt } from '~/workers/encryption';
 
-const shouldPoll = createMemo(
-  () => isOnline() && account() !== null && env.VITE_SYNC_SERVER_BASE_URL !== undefined
-);
-
-let connection: ConnectionManager | undefined;
+export interface TTransport {
+  close: () => void;
+  onmessage: (fn: (data: Uint8Array<ArrayBuffer>) => void) => () => void;
+  ready: boolean;
+  send: (data: Uint8Array<ArrayBuffer>) => void;
+}
 
 type EventRow = { data: unknown; timestamp: string; type: string; version: string };
 
-class ConnectionManager {
+export class ConnectionManager {
   readonly accountId: string;
   readonly clientId: string;
-  readonly ws: WebSocket;
 
   private pendingDigestUpdates = 0;
   private sendEventsBatch: Batcher<EventRow>;
   private sendTimestampBatch: Batcher<string>;
+  private readonly transport: TTransport;
 
-  constructor(accountId: string, clientId: string, ws: WebSocket) {
+  private unsubscribe: () => void;
+
+  constructor(
+    accountId: string,
+    clientId: string,
+    transport: TTransport,
+    public readonly type: string
+  ) {
     this.accountId = accountId;
     this.clientId = clientId;
-    this.ws = ws;
+    this.transport = transport;
+    this.unsubscribe = this.transport.onmessage((data) => this.handleMessage(data));
 
     this.sendTimestampBatch = new Batcher(
       (timestamps) => void this.flushSendTimestamp(timestamps),
@@ -65,6 +68,22 @@ class ConnectionManager {
   close() {
     this.sendTimestampBatch.cancel();
     this.sendEventsBatch.cancel();
+    this.transport.close();
+    this.unsubscribe();
+  }
+
+  createAddPeer(clientId: string) {
+    return toBinary(
+      PeerPB.SyncWireMessageSchema,
+      create(PeerPB.SyncWireMessageSchema, {
+        accountId: this.accountId,
+        clientId: this.clientId,
+        payload: {
+          case: 'addPeer',
+          value: { clientId }
+        }
+      })
+    );
   }
 
   createDigestQuery(merkleDepth: number, paths: number[][]) {
@@ -124,11 +143,24 @@ class ConnectionManager {
     );
   }
 
+  createWebRTCSignal(to: string, data: object) {
+    return toBinary(
+      PeerPB.SyncWireMessageSchema,
+      create(PeerPB.SyncWireMessageSchema, {
+        accountId: this.accountId,
+        clientId: this.clientId,
+        payload: {
+          case: 'webrtcSignal',
+          value: { data: JSON.stringify(data), to }
+        }
+      })
+    );
+  }
+
   async flushSendEvents(events: EventRow[]) {
-    if (this.ws.readyState !== WebSocket.OPEN) return;
+    if (!this.transport.ready) return;
     const aesKey = await getAesKey();
     const wallet = getWallet();
-    console.debug('[WS Push] Sending', events.length, 'events');
     const processedEvents = await Promise.all(
       events.map(async ({ data, timestamp, type, version }) => {
         const serializedEvent = toBinary(
@@ -167,7 +199,161 @@ class ConnectionManager {
     await this.flushSendEvents(events);
   }
 
-  init() {
+  async handleMessage(data: Uint8Array<ArrayBuffer>) {
+    const SUPPORTED_EVENTS = [
+      'digestQueries',
+      'digestUpdates',
+      'eventBatch',
+      'handshake',
+      'sendEventsAfterTimestamp'
+    ];
+    const body = fromBinary(PeerPB.SyncWireMessageSchema, data);
+    const { payload } = body;
+    if (!SUPPORTED_EVENTS.includes(payload.case ?? '')) return;
+    console.debug(`[Received Message][${this.type}]`, payload.case, payload.value);
+    switch (payload.case) {
+      case 'digestQueries': {
+        const { merkleDepth, queries } = payload.value;
+        const tree = await logger.getMerkleTree();
+        const result = new Array<{
+          digest: Uint8Array;
+          path: number[];
+          timestamp: string;
+        }>();
+        for (const { path } of queries) {
+          const [digest, timestamp] = resolveDigest(tree, merkleDepth, path);
+          result.push({ digest, path, timestamp });
+        }
+        console.debug(`[Sending Message][${this.type}] digestUpdates`, { result });
+        this.write(
+          toBinary(
+            PeerPB.SyncWireMessageSchema,
+            create(PeerPB.SyncWireMessageSchema, {
+              accountId: this.accountId,
+              clientId: this.clientId,
+              payload: {
+                case: 'digestUpdates',
+                value: {
+                  merkleDepth: tree.maxDepth,
+                  updates: result.map((update) => create(PeerPB.DigestUpdateSchema, update))
+                }
+              }
+            })
+          )
+        );
+        break;
+      }
+      case 'digestUpdates': {
+        const { merkleDepth, updates } = payload.value;
+        const tree = await logger.getMerkleTree();
+        this.subPendingDigestUpdates(updates.length);
+        const MAX_DEPTH = Math.max(merkleDepth, tree.maxDepth);
+        let lastTimestamp = '';
+        for (const update of updates) {
+          const [digest] = resolveDigest(tree, merkleDepth, update.path);
+          const mismatch = digestsDiffer(digest, update.digest);
+
+          if (!mismatch) {
+            lastTimestamp = update.timestamp;
+            continue;
+          }
+
+          const isLeafNode = update.path.length === MAX_DEPTH;
+
+          if (!isLeafNode) {
+            const paths = Array.from({ length: tree.arity }).map((_, i) => [...update.path, i]);
+            this.addPendingDigestUpdates(paths.length);
+            this.write(this.createDigestQuery(tree.maxDepth, paths));
+            break;
+          }
+
+          this.write(this.createSendEventsWithTimestamp(lastTimestamp));
+          void this.sendAfterTimestamp(lastTimestamp);
+          break;
+        }
+        break;
+      }
+      case 'eventBatch': {
+        const aesKey = await getAesKey();
+        const decryptedEvents = await Promise.all(
+          payload.value.events.map(async ({ data, timestamp }) => {
+            const decryptedEvent = await decrypt(data, aesKey);
+            const deserialzedEvent = fromBinary(EventPB.EventSchema, decryptedEvent);
+            const parsedEvent = z
+              .object({
+                data: z.unknown(),
+                timestamp: z.string(),
+                type: z.string(),
+                version: z.string()
+              })
+              .check(
+                z.refine(
+                  (value) => {
+                    return validEventSchema.safeParse({
+                      data: value.data,
+                      type: value.type
+                    }).success;
+                  },
+                  {
+                    error: 'Invalid event'
+                  }
+                )
+              )
+              .parse({
+                data: deserialzedEvent.data!.eventType.value!,
+                timestamp,
+                type: deserialzedEvent.data!.eventType.case!,
+                version: deserialzedEvent.version
+              }) as TValidEvent & { timestamp: string; version: string };
+            return parsedEvent;
+          })
+        );
+        const invalidate = await logger.receive(decryptedEvents);
+        await invalidate();
+        break;
+      }
+      case 'handshake': {
+        if (payload.value.rootDigest === undefined) {
+          console.error('Invalid handshake, root digest missing');
+          return;
+        }
+        if (payload.value.clientId === '') {
+          console.error('Invalid handshake, clientId missing');
+          return;
+        }
+        const tree = await logger.getMerkleTree();
+        const shouldQuery = this.clientId > payload.value.clientId;
+        const ourRootDigest = tree.getRootHash();
+        const mismatch = digestsDiffer(ourRootDigest, payload.value.rootDigest);
+        if (!mismatch) console.debug(`[Handshake][${this.type}] Roots match`);
+        if (!shouldQuery) return;
+
+        if (mismatch) {
+          const paths = Array.from({ length: tree.arity }).map((_, i) => [i]);
+          this.addPendingDigestUpdates(paths.length);
+          this.write(this.createDigestQuery(tree.maxDepth, paths));
+        }
+        break;
+      }
+      case 'sendEventsAfterTimestamp': {
+        void this.sendAfterTimestamp(payload.value.timestamp);
+        break;
+      }
+      default: {
+        console.error('Unknown message type', payload.case);
+      }
+    }
+  }
+
+  async init() {
+    const version = await logger.getVersion();
+    const tree = await logger.getMerkleTree();
+    const rootDigest = tree.getHash([]);
+    if (rootDigest === null) {
+      throw new Error('Unreachable: root digest is always defined');
+    }
+    this.write(this.createHandshake(version ?? '0', rootDigest));
+
     logger.on(
       '*',
       (data, timestamp, version, type) =>
@@ -204,12 +390,34 @@ class ConnectionManager {
   }
 
   write(data: Uint8Array<ArrayBuffer>) {
-    if (this.ws.readyState !== WebSocket.OPEN) return;
-    this.ws.send(data);
+    if (!this.transport.ready) return;
+    this.transport.send(data);
   }
 
   private pendingDigestUpdatesDone() {
     return this.pendingDigestUpdates === 0;
+  }
+}
+
+export class WebRTCTransport implements TTransport {
+  get ready() {
+    return this.dc.readyState === 'open';
+  }
+
+  constructor(readonly dc: RTCDataChannel) {}
+
+  close() {
+    this.dc.close();
+  }
+
+  onmessage(fn: (data: Uint8Array<ArrayBuffer>) => void) {
+    const handler = (e: MessageEvent) => fn(new Uint8Array(e.data));
+    this.dc.addEventListener('message', handler);
+    return () => this.dc.removeEventListener('message', handler);
+  }
+
+  send(data: Uint8Array<ArrayBuffer>) {
+    this.dc.send(data);
   }
 }
 
@@ -234,153 +442,6 @@ function getWallet() {
   const $account = account();
   if ($account === null) throw new Error('No account');
   return new ethers.Wallet($account.privateKey);
-}
-
-function handleMessage(connection: ConnectionManager, event: MessageEvent) {
-  return AsyncResult.from(
-    async function () {
-      const body = fromBinary(
-        PeerPB.SyncWireMessageSchema,
-        new Uint8Array(await event.data.arrayBuffer())
-      );
-      const { payload } = body;
-      console.debug('[WS Received Message]', payload.case, payload.value);
-      switch (payload.case) {
-        case 'digestQueries': {
-          const { merkleDepth, queries } = payload.value;
-          const tree = await logger.getMerkleTree();
-          const result = new Array<{
-            digest: Uint8Array;
-            path: number[];
-            timestamp: string;
-          }>();
-          for (const { path } of queries) {
-            const [digest, timestamp] = resolveDigest(tree, merkleDepth, path);
-            result.push({ digest, path, timestamp });
-          }
-          console.debug('[WS Sending Message] digestUpdates', { result });
-          connection.write(
-            toBinary(
-              PeerPB.SyncWireMessageSchema,
-              create(PeerPB.SyncWireMessageSchema, {
-                accountId: connection.accountId,
-                clientId: connection.clientId,
-                payload: {
-                  case: 'digestUpdates',
-                  value: {
-                    merkleDepth: tree.maxDepth,
-                    updates: result.map((update) => create(PeerPB.DigestUpdateSchema, update))
-                  }
-                }
-              })
-            )
-          );
-          break;
-        }
-        case 'digestUpdates': {
-          const { merkleDepth, updates } = payload.value;
-          const tree = await logger.getMerkleTree();
-          connection.subPendingDigestUpdates(updates.length);
-          const MAX_DEPTH = Math.max(merkleDepth, tree.maxDepth);
-          let lastTimestamp = '';
-          for (const update of updates) {
-            const [digest] = resolveDigest(tree, merkleDepth, update.path);
-            const mismatch = digestsDiffer(digest, update.digest);
-
-            if (!mismatch) {
-              lastTimestamp = update.timestamp;
-              continue;
-            }
-
-            const isLeafNode = update.path.length === MAX_DEPTH;
-
-            if (!isLeafNode) {
-              const paths = Array.from({ length: tree.arity }).map((_, i) => [...update.path, i]);
-              connection.addPendingDigestUpdates(paths.length);
-              connection.write(connection.createDigestQuery(tree.maxDepth, paths));
-              break;
-            }
-
-            connection.write(connection.createSendEventsWithTimestamp(lastTimestamp));
-            void connection.sendAfterTimestamp(lastTimestamp);
-            break;
-          }
-          break;
-        }
-        case 'eventBatch': {
-          const aesKey = await getAesKey();
-          const decryptedEvents = await Promise.all(
-            payload.value.events.map(async ({ data, timestamp }) => {
-              const decryptedEvent = await decrypt(data, aesKey);
-              const deserialzedEvent = fromBinary(EventPB.EventSchema, decryptedEvent);
-              const parsedEvent = z
-                .object({
-                  data: z.unknown(),
-                  timestamp: z.string(),
-                  type: z.string(),
-                  version: z.string()
-                })
-                .check(
-                  z.refine(
-                    (value) => {
-                      return validEventSchema.safeParse({
-                        data: value.data,
-                        type: value.type
-                      }).success;
-                    },
-                    {
-                      error: 'Invalid event'
-                    }
-                  )
-                )
-                .parse({
-                  data: deserialzedEvent.data!.eventType.value!,
-                  timestamp,
-                  type: deserialzedEvent.data!.eventType.case!,
-                  version: deserialzedEvent.version
-                }) as TValidEvent & { timestamp: string; version: string };
-              return parsedEvent;
-            })
-          );
-          const invalidate = await logger.receive(decryptedEvents);
-          await invalidate();
-          console.debug(`[WS Pull] Got ${payload.value.events.length} events`);
-          break;
-        }
-        case 'handshake': {
-          if (payload.value.rootDigest === undefined) {
-            console.error('Invalid handshake, root digest missing');
-            return;
-          }
-          if (payload.value.clientId === '') {
-            console.error('Invalid handshake, clientId missing');
-            return;
-          }
-          const tree = await logger.getMerkleTree();
-          const shouldQuery = connection.clientId > payload.value.clientId;
-          const ourRootDigest = tree.getRootHash();
-          const mismatch = digestsDiffer(ourRootDigest, payload.value.rootDigest);
-          if (!mismatch) console.debug('[WS Handshake] Roots match');
-          if (!shouldQuery) return;
-
-          if (mismatch) {
-            const paths = Array.from({ length: tree.arity }).map((_, i) => [i]);
-            connection.addPendingDigestUpdates(paths.length);
-            connection.write(connection.createDigestQuery(tree.maxDepth, paths));
-          }
-          break;
-        }
-        case 'sendEventsAfterTimestamp': {
-          void connection.sendAfterTimestamp(payload.value.timestamp);
-          break;
-        }
-        default: {
-          console.error('Unknown message type', payload.case);
-        }
-      }
-    },
-    (e) => new Error(`Error while handling websocket message`, { cause: e })
-  );
 }
 
 function isVirtualPath(segments: number[], prefixLen: number): boolean {
@@ -416,63 +477,3 @@ function resolveDigest(
   const timestamp = tree.getMetaByPath(path);
   return [digest, timestamp ?? ''];
 }
-
-const initSocket = () =>
-  tryBlock(
-    async function* () {
-      const clientId = yield* Option.from(await logger.getMetadata('clientId')).okOrElse(
-        () => new Error('Missing clientId in local database metadata')
-      );
-
-      const setupWs = () =>
-        AsyncResult.from(
-          async function () {
-            const $account = account();
-            if ($account === null) return;
-            if (connection && connection.ws.readyState < 2) return;
-
-            const socketUrl = new URL(env.VITE_SYNC_SERVER_BASE_URL!);
-            socketUrl.protocol = socketUrl.protocol.replace('http', 'ws');
-            socketUrl.pathname = '/api/v1/ws';
-            socketUrl.searchParams.set('clientId', clientId);
-            socketUrl.searchParams.set('accountId', $account.id);
-
-            const ws = makeReconnectingWS(socketUrl.toString());
-            const manager = new ConnectionManager($account.id, clientId, ws);
-            connection = manager;
-            manager.init();
-
-            ws.addEventListener('open', async () => {
-              const version = await logger.getVersion();
-              const tree = await logger.getMerkleTree();
-              const rootDigest = tree.getHash([]);
-              if (rootDigest === null) {
-                throw new Error('Unreachable: root digest is always defined');
-              }
-              manager.write(manager.createHandshake(version ?? '0', rootDigest));
-              console.debug('[WS] Connected');
-            });
-
-            ws.addEventListener('message', (e) => void handleMessage(manager, e).unwrap());
-          },
-          (e) => new Error(`Error while setting up websocket`, { cause: e })
-        );
-
-      createComputed(() => {
-        const $shouldPoll = shouldPoll();
-        untrack(() => {
-          if (!$shouldPoll) {
-            console.debug('[WS] Offline');
-            connection?.close();
-            if (connection && connection.ws.readyState < 2) connection.ws.close();
-            return;
-          }
-          console.debug('[WS] Online');
-          setupWs().unwrap();
-        });
-      });
-    },
-    (e) => new Error(`Error while initializing websocket`, { cause: e })
-  );
-
-export { ConnectionManager, initSocket };

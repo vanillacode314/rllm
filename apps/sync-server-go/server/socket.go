@@ -31,6 +31,8 @@ func (s SocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	accountID := r.URL.Query().Get("accountId")
+	clientID := r.URL.Query().Get("clientId")
+	peer := r.URL.Query().Get("peer") == "true"
 	if accountID == "" {
 		http.Error(w, "missing accountId query parameter", http.StatusBadRequest)
 		return
@@ -48,10 +50,19 @@ func (s SocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		conn.CloseNow()
 		return
 	}
-	connectionManager := newConnectionManager(s.Db, accountID, clock.ClientID, conn, s.Hub)
-	s.Hub.Subscribe(accountID, conn)
+	connectionManager := newConnectionManager(s.Db, accountID, clock.ClientID, conn, s.Hub, &Client{
+		id:   clientID,
+		conn: conn,
+		peer: peer,
+	},
+	)
+	s.Hub.Subscribe(accountID, connectionManager.client)
+	if peer {
+		s.Hub.Publish(accountID, connectionManager.client, connectionManager.createPeerConnected(clientID))
+	}
 	defer func() {
-		s.Hub.Unsubscribe(accountID, conn)
+		s.Hub.Unsubscribe(accountID, connectionManager.client)
+		s.Hub.RemovePeer(accountID, clientID)
 		connectionManager.close()
 		conn.CloseNow()
 	}()
@@ -176,6 +187,31 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 		log.Printf("[WS SendEventsAfterTimestamp] accountId=%s", accountID)
 		connectionManager.sendAfterTimestamp(payload.SendEventsAfterTimestamp.Timestamp)
 
+	case *peers.SyncWireMessage_WebrtcSignal:
+		log.Printf("[WS WebrtcSignal] accountId=%s to=%s data=%s", accountID, payload.WebrtcSignal.To, payload.WebrtcSignal.Data)
+		var peers []*Client
+		if m, ok := s.Hub.subs[accountID]; ok {
+			for client, _ := range m {
+				if client.peer && client.id == payload.WebrtcSignal.To {
+					peers = append(peers, client)
+					break
+				}
+			}
+		}
+		for _, peer := range peers {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			err := peer.conn.Write(ctx, websocket.MessageBinary, connectionManager.createWebRTCSignal(message.ClientId, payload.WebrtcSignal.To, payload.WebrtcSignal.Data))
+			cancel()
+			if err != nil {
+				log.Printf("[WS Error] Failed to send WebRTC signal: %v", err)
+			}
+			log.Printf("[WS WebrtcSignal] Sent WebRTC signal to %s", peer.id)
+		}
+
+	case *peers.SyncWireMessage_AddPeer:
+		log.Printf("[WS AddPeer] accountId=%s", accountID)
+		s.Hub.AddPeer(accountID, message.ClientId, payload.AddPeer.ClientId)
+
 	case *peers.SyncWireMessage_EventBatch:
 		events := payload.EventBatch.GetEvents()
 		log.Printf("[WS EventBatch] accountId=%s events=%d", accountID, len(events))
@@ -214,7 +250,7 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 			return
 		}
 		log.Printf("[WS EventBatch] Inserted %d messages", nInserted)
-		s.Hub.Publish(accountID, connectionManager.conn, connectionManager.createEventBatch(events))
+		s.Hub.Publish(accountID, connectionManager.client, connectionManager.createEventBatch(events))
 		connectionManager.recomputeMerkleTree()
 
 	default:

@@ -437,6 +437,146 @@ func (x *EventBatch) GetEvents() []*EventBatchPayload {
 	return nil
 }
 
+type WebRTCSignal struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	To            string                 `protobuf:"bytes,1,opt,name=to,proto3" json:"to,omitempty"`
+	Data          string                 `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WebRTCSignal) Reset() {
+	*x = WebRTCSignal{}
+	mi := &file_peers_v1_peer_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WebRTCSignal) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WebRTCSignal) ProtoMessage() {}
+
+func (x *WebRTCSignal) ProtoReflect() protoreflect.Message {
+	mi := &file_peers_v1_peer_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WebRTCSignal.ProtoReflect.Descriptor instead.
+func (*WebRTCSignal) Descriptor() ([]byte, []int) {
+	return file_peers_v1_peer_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *WebRTCSignal) GetTo() string {
+	if x != nil {
+		return x.To
+	}
+	return ""
+}
+
+func (x *WebRTCSignal) GetData() string {
+	if x != nil {
+		return x.Data
+	}
+	return ""
+}
+
+type AddPeer struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ClientId      string                 `protobuf:"bytes,1,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddPeer) Reset() {
+	*x = AddPeer{}
+	mi := &file_peers_v1_peer_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddPeer) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddPeer) ProtoMessage() {}
+
+func (x *AddPeer) ProtoReflect() protoreflect.Message {
+	mi := &file_peers_v1_peer_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddPeer.ProtoReflect.Descriptor instead.
+func (*AddPeer) Descriptor() ([]byte, []int) {
+	return file_peers_v1_peer_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *AddPeer) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
+type PeerConnected struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ClientId      string                 `protobuf:"bytes,1,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PeerConnected) Reset() {
+	*x = PeerConnected{}
+	mi := &file_peers_v1_peer_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PeerConnected) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PeerConnected) ProtoMessage() {}
+
+func (x *PeerConnected) ProtoReflect() protoreflect.Message {
+	mi := &file_peers_v1_peer_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PeerConnected.ProtoReflect.Descriptor instead.
+func (*PeerConnected) Descriptor() ([]byte, []int) {
+	return file_peers_v1_peer_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *PeerConnected) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
 type SyncWireMessage struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	AccountId string                 `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
@@ -448,6 +588,9 @@ type SyncWireMessage struct {
 	//	*SyncWireMessage_DigestUpdates
 	//	*SyncWireMessage_EventBatch
 	//	*SyncWireMessage_SendEventsAfterTimestamp
+	//	*SyncWireMessage_WebrtcSignal
+	//	*SyncWireMessage_AddPeer
+	//	*SyncWireMessage_PeerConnected
 	Payload       isSyncWireMessage_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -455,7 +598,7 @@ type SyncWireMessage struct {
 
 func (x *SyncWireMessage) Reset() {
 	*x = SyncWireMessage{}
-	mi := &file_peers_v1_peer_proto_msgTypes[8]
+	mi := &file_peers_v1_peer_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -467,7 +610,7 @@ func (x *SyncWireMessage) String() string {
 func (*SyncWireMessage) ProtoMessage() {}
 
 func (x *SyncWireMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_peers_v1_peer_proto_msgTypes[8]
+	mi := &file_peers_v1_peer_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -480,7 +623,7 @@ func (x *SyncWireMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncWireMessage.ProtoReflect.Descriptor instead.
 func (*SyncWireMessage) Descriptor() ([]byte, []int) {
-	return file_peers_v1_peer_proto_rawDescGZIP(), []int{8}
+	return file_peers_v1_peer_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *SyncWireMessage) GetAccountId() string {
@@ -549,6 +692,33 @@ func (x *SyncWireMessage) GetSendEventsAfterTimestamp() *SendEventsAfterTimestam
 	return nil
 }
 
+func (x *SyncWireMessage) GetWebrtcSignal() *WebRTCSignal {
+	if x != nil {
+		if x, ok := x.Payload.(*SyncWireMessage_WebrtcSignal); ok {
+			return x.WebrtcSignal
+		}
+	}
+	return nil
+}
+
+func (x *SyncWireMessage) GetAddPeer() *AddPeer {
+	if x != nil {
+		if x, ok := x.Payload.(*SyncWireMessage_AddPeer); ok {
+			return x.AddPeer
+		}
+	}
+	return nil
+}
+
+func (x *SyncWireMessage) GetPeerConnected() *PeerConnected {
+	if x != nil {
+		if x, ok := x.Payload.(*SyncWireMessage_PeerConnected); ok {
+			return x.PeerConnected
+		}
+	}
+	return nil
+}
+
 type isSyncWireMessage_Payload interface {
 	isSyncWireMessage_Payload()
 }
@@ -573,6 +743,18 @@ type SyncWireMessage_SendEventsAfterTimestamp struct {
 	SendEventsAfterTimestamp *SendEventsAfterTimestamp `protobuf:"bytes,7,opt,name=send_events_after_timestamp,json=sendEventsAfterTimestamp,proto3,oneof"`
 }
 
+type SyncWireMessage_WebrtcSignal struct {
+	WebrtcSignal *WebRTCSignal `protobuf:"bytes,8,opt,name=webrtc_signal,json=webrtcSignal,proto3,oneof"`
+}
+
+type SyncWireMessage_AddPeer struct {
+	AddPeer *AddPeer `protobuf:"bytes,9,opt,name=add_peer,json=addPeer,proto3,oneof"`
+}
+
+type SyncWireMessage_PeerConnected struct {
+	PeerConnected *PeerConnected `protobuf:"bytes,10,opt,name=peer_connected,json=peerConnected,proto3,oneof"`
+}
+
 func (*SyncWireMessage_Handshake) isSyncWireMessage_Payload() {}
 
 func (*SyncWireMessage_DigestQueries) isSyncWireMessage_Payload() {}
@@ -582,6 +764,12 @@ func (*SyncWireMessage_DigestUpdates) isSyncWireMessage_Payload() {}
 func (*SyncWireMessage_EventBatch) isSyncWireMessage_Payload() {}
 
 func (*SyncWireMessage_SendEventsAfterTimestamp) isSyncWireMessage_Payload() {}
+
+func (*SyncWireMessage_WebrtcSignal) isSyncWireMessage_Payload() {}
+
+func (*SyncWireMessage_AddPeer) isSyncWireMessage_Payload() {}
+
+func (*SyncWireMessage_PeerConnected) isSyncWireMessage_Payload() {}
 
 var File_peers_v1_peer_proto protoreflect.FileDescriptor
 
@@ -614,7 +802,14 @@ const file_peers_v1_peer_proto_rawDesc = "" +
 	"\ttimestamp\x18\x01 \x01(\tR\ttimestamp\"A\n" +
 	"\n" +
 	"EventBatch\x123\n" +
-	"\x06events\x18\x01 \x03(\v2\x1b.peers.v1.EventBatchPayloadR\x06events\"\xb3\x03\n" +
+	"\x06events\x18\x01 \x03(\v2\x1b.peers.v1.EventBatchPayloadR\x06events\"2\n" +
+	"\fWebRTCSignal\x12\x0e\n" +
+	"\x02to\x18\x01 \x01(\tR\x02to\x12\x12\n" +
+	"\x04data\x18\x02 \x01(\tR\x04data\"&\n" +
+	"\aAddPeer\x12\x1b\n" +
+	"\tclient_id\x18\x01 \x01(\tR\bclientId\",\n" +
+	"\rPeerConnected\x12\x1b\n" +
+	"\tclient_id\x18\x01 \x01(\tR\bclientId\"\xe4\x04\n" +
 	"\x0fSyncWireMessage\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x12\x1b\n" +
@@ -624,7 +819,11 @@ const file_peers_v1_peer_proto_rawDesc = "" +
 	"\x0edigest_updates\x18\x05 \x01(\v2\x17.peers.v1.DigestUpdatesH\x00R\rdigestUpdates\x127\n" +
 	"\vevent_batch\x18\x06 \x01(\v2\x14.peers.v1.EventBatchH\x00R\n" +
 	"eventBatch\x12c\n" +
-	"\x1bsend_events_after_timestamp\x18\a \x01(\v2\".peers.v1.SendEventsAfterTimestampH\x00R\x18sendEventsAfterTimestampB\t\n" +
+	"\x1bsend_events_after_timestamp\x18\a \x01(\v2\".peers.v1.SendEventsAfterTimestampH\x00R\x18sendEventsAfterTimestamp\x12=\n" +
+	"\rwebrtc_signal\x18\b \x01(\v2\x16.peers.v1.WebRTCSignalH\x00R\fwebrtcSignal\x12.\n" +
+	"\badd_peer\x18\t \x01(\v2\x11.peers.v1.AddPeerH\x00R\aaddPeer\x12@\n" +
+	"\x0epeer_connected\x18\n" +
+	" \x01(\v2\x17.peers.v1.PeerConnectedH\x00R\rpeerConnectedB\t\n" +
 	"\apayloadB\rZ\vproto/peersb\x06proto3"
 
 var (
@@ -639,7 +838,7 @@ func file_peers_v1_peer_proto_rawDescGZIP() []byte {
 	return file_peers_v1_peer_proto_rawDescData
 }
 
-var file_peers_v1_peer_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_peers_v1_peer_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_peers_v1_peer_proto_goTypes = []any{
 	(*SyncHandshake)(nil),            // 0: peers.v1.SyncHandshake
 	(*DigestQuery)(nil),              // 1: peers.v1.DigestQuery
@@ -649,22 +848,28 @@ var file_peers_v1_peer_proto_goTypes = []any{
 	(*EventBatchPayload)(nil),        // 5: peers.v1.EventBatchPayload
 	(*SendEventsAfterTimestamp)(nil), // 6: peers.v1.SendEventsAfterTimestamp
 	(*EventBatch)(nil),               // 7: peers.v1.EventBatch
-	(*SyncWireMessage)(nil),          // 8: peers.v1.SyncWireMessage
+	(*WebRTCSignal)(nil),             // 8: peers.v1.WebRTCSignal
+	(*AddPeer)(nil),                  // 9: peers.v1.AddPeer
+	(*PeerConnected)(nil),            // 10: peers.v1.PeerConnected
+	(*SyncWireMessage)(nil),          // 11: peers.v1.SyncWireMessage
 }
 var file_peers_v1_peer_proto_depIdxs = []int32{
-	1, // 0: peers.v1.DigestQueries.queries:type_name -> peers.v1.DigestQuery
-	3, // 1: peers.v1.DigestUpdates.updates:type_name -> peers.v1.DigestUpdate
-	5, // 2: peers.v1.EventBatch.events:type_name -> peers.v1.EventBatchPayload
-	0, // 3: peers.v1.SyncWireMessage.handshake:type_name -> peers.v1.SyncHandshake
-	2, // 4: peers.v1.SyncWireMessage.digest_queries:type_name -> peers.v1.DigestQueries
-	4, // 5: peers.v1.SyncWireMessage.digest_updates:type_name -> peers.v1.DigestUpdates
-	7, // 6: peers.v1.SyncWireMessage.event_batch:type_name -> peers.v1.EventBatch
-	6, // 7: peers.v1.SyncWireMessage.send_events_after_timestamp:type_name -> peers.v1.SendEventsAfterTimestamp
-	8, // [8:8] is the sub-list for method output_type
-	8, // [8:8] is the sub-list for method input_type
-	8, // [8:8] is the sub-list for extension type_name
-	8, // [8:8] is the sub-list for extension extendee
-	0, // [0:8] is the sub-list for field type_name
+	1,  // 0: peers.v1.DigestQueries.queries:type_name -> peers.v1.DigestQuery
+	3,  // 1: peers.v1.DigestUpdates.updates:type_name -> peers.v1.DigestUpdate
+	5,  // 2: peers.v1.EventBatch.events:type_name -> peers.v1.EventBatchPayload
+	0,  // 3: peers.v1.SyncWireMessage.handshake:type_name -> peers.v1.SyncHandshake
+	2,  // 4: peers.v1.SyncWireMessage.digest_queries:type_name -> peers.v1.DigestQueries
+	4,  // 5: peers.v1.SyncWireMessage.digest_updates:type_name -> peers.v1.DigestUpdates
+	7,  // 6: peers.v1.SyncWireMessage.event_batch:type_name -> peers.v1.EventBatch
+	6,  // 7: peers.v1.SyncWireMessage.send_events_after_timestamp:type_name -> peers.v1.SendEventsAfterTimestamp
+	8,  // 8: peers.v1.SyncWireMessage.webrtc_signal:type_name -> peers.v1.WebRTCSignal
+	9,  // 9: peers.v1.SyncWireMessage.add_peer:type_name -> peers.v1.AddPeer
+	10, // 10: peers.v1.SyncWireMessage.peer_connected:type_name -> peers.v1.PeerConnected
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_peers_v1_peer_proto_init() }
@@ -673,12 +878,15 @@ func file_peers_v1_peer_proto_init() {
 		return
 	}
 	file_peers_v1_peer_proto_msgTypes[0].OneofWrappers = []any{}
-	file_peers_v1_peer_proto_msgTypes[8].OneofWrappers = []any{
+	file_peers_v1_peer_proto_msgTypes[11].OneofWrappers = []any{
 		(*SyncWireMessage_Handshake)(nil),
 		(*SyncWireMessage_DigestQueries)(nil),
 		(*SyncWireMessage_DigestUpdates)(nil),
 		(*SyncWireMessage_EventBatch)(nil),
 		(*SyncWireMessage_SendEventsAfterTimestamp)(nil),
+		(*SyncWireMessage_WebrtcSignal)(nil),
+		(*SyncWireMessage_AddPeer)(nil),
+		(*SyncWireMessage_PeerConnected)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -686,7 +894,7 @@ func file_peers_v1_peer_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_peers_v1_peer_proto_rawDesc), len(file_peers_v1_peer_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

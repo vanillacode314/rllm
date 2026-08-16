@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file peers/v1/peer.proto.
  */
 export const file_peers_v1_peer: GenFile = /*@__PURE__*/
-  fileDesc("ChNwZWVycy92MS9wZWVyLnByb3RvEghwZWVycy52MSJdCg1TeW5jSGFuZHNoYWtlEg8KB3ZlcnNpb24YASABKAkSGAoLcm9vdF9kaWdlc3QYAiABKAxIAIgBARIRCgljbGllbnRfaWQYAyABKAlCDgoMX3Jvb3RfZGlnZXN0IhsKC0RpZ2VzdFF1ZXJ5EgwKBHBhdGgYASADKA0iTQoNRGlnZXN0UXVlcmllcxIUCgxtZXJrbGVfZGVwdGgYASABKA0SJgoHcXVlcmllcxgCIAMoCzIVLnBlZXJzLnYxLkRpZ2VzdFF1ZXJ5Ij8KDERpZ2VzdFVwZGF0ZRIMCgRwYXRoGAEgAygNEg4KBmRpZ2VzdBgCIAEoDBIRCgl0aW1lc3RhbXAYAyABKAkiTgoNRGlnZXN0VXBkYXRlcxIUCgxtZXJrbGVfZGVwdGgYASABKA0SJwoHdXBkYXRlcxgCIAMoCzIWLnBlZXJzLnYxLkRpZ2VzdFVwZGF0ZSJHChFFdmVudEJhdGNoUGF5bG9hZBIRCgl0aW1lc3RhbXAYASABKAkSEQoJc2lnbmF0dXJlGAIgASgJEgwKBGRhdGEYAyABKAwiLQoYU2VuZEV2ZW50c0FmdGVyVGltZXN0YW1wEhEKCXRpbWVzdGFtcBgBIAEoCSI5CgpFdmVudEJhdGNoEisKBmV2ZW50cxgBIAMoCzIbLnBlZXJzLnYxLkV2ZW50QmF0Y2hQYXlsb2FkIs8CCg9TeW5jV2lyZU1lc3NhZ2USEgoKYWNjb3VudF9pZBgBIAEoCRIRCgljbGllbnRfaWQYAiABKAkSLAoJaGFuZHNoYWtlGAMgASgLMhcucGVlcnMudjEuU3luY0hhbmRzaGFrZUgAEjEKDmRpZ2VzdF9xdWVyaWVzGAQgASgLMhcucGVlcnMudjEuRGlnZXN0UXVlcmllc0gAEjEKDmRpZ2VzdF91cGRhdGVzGAUgASgLMhcucGVlcnMudjEuRGlnZXN0VXBkYXRlc0gAEisKC2V2ZW50X2JhdGNoGAYgASgLMhQucGVlcnMudjEuRXZlbnRCYXRjaEgAEkkKG3NlbmRfZXZlbnRzX2FmdGVyX3RpbWVzdGFtcBgHIAEoCzIiLnBlZXJzLnYxLlNlbmRFdmVudHNBZnRlclRpbWVzdGFtcEgAQgkKB3BheWxvYWRCDVoLcHJvdG8vcGVlcnNiBnByb3RvMw");
+  fileDesc("ChNwZWVycy92MS9wZWVyLnByb3RvEghwZWVycy52MSJdCg1TeW5jSGFuZHNoYWtlEg8KB3ZlcnNpb24YASABKAkSGAoLcm9vdF9kaWdlc3QYAiABKAxIAIgBARIRCgljbGllbnRfaWQYAyABKAlCDgoMX3Jvb3RfZGlnZXN0IhsKC0RpZ2VzdFF1ZXJ5EgwKBHBhdGgYASADKA0iTQoNRGlnZXN0UXVlcmllcxIUCgxtZXJrbGVfZGVwdGgYASABKA0SJgoHcXVlcmllcxgCIAMoCzIVLnBlZXJzLnYxLkRpZ2VzdFF1ZXJ5Ij8KDERpZ2VzdFVwZGF0ZRIMCgRwYXRoGAEgAygNEg4KBmRpZ2VzdBgCIAEoDBIRCgl0aW1lc3RhbXAYAyABKAkiTgoNRGlnZXN0VXBkYXRlcxIUCgxtZXJrbGVfZGVwdGgYASABKA0SJwoHdXBkYXRlcxgCIAMoCzIWLnBlZXJzLnYxLkRpZ2VzdFVwZGF0ZSJHChFFdmVudEJhdGNoUGF5bG9hZBIRCgl0aW1lc3RhbXAYASABKAkSEQoJc2lnbmF0dXJlGAIgASgJEgwKBGRhdGEYAyABKAwiLQoYU2VuZEV2ZW50c0FmdGVyVGltZXN0YW1wEhEKCXRpbWVzdGFtcBgBIAEoCSI5CgpFdmVudEJhdGNoEisKBmV2ZW50cxgBIAMoCzIbLnBlZXJzLnYxLkV2ZW50QmF0Y2hQYXlsb2FkIigKDFdlYlJUQ1NpZ25hbBIKCgJ0bxgBIAEoCRIMCgRkYXRhGAIgASgJIhwKB0FkZFBlZXISEQoJY2xpZW50X2lkGAEgASgJIiIKDVBlZXJDb25uZWN0ZWQSEQoJY2xpZW50X2lkGAEgASgJItoDCg9TeW5jV2lyZU1lc3NhZ2USEgoKYWNjb3VudF9pZBgBIAEoCRIRCgljbGllbnRfaWQYAiABKAkSLAoJaGFuZHNoYWtlGAMgASgLMhcucGVlcnMudjEuU3luY0hhbmRzaGFrZUgAEjEKDmRpZ2VzdF9xdWVyaWVzGAQgASgLMhcucGVlcnMudjEuRGlnZXN0UXVlcmllc0gAEjEKDmRpZ2VzdF91cGRhdGVzGAUgASgLMhcucGVlcnMudjEuRGlnZXN0VXBkYXRlc0gAEisKC2V2ZW50X2JhdGNoGAYgASgLMhQucGVlcnMudjEuRXZlbnRCYXRjaEgAEkkKG3NlbmRfZXZlbnRzX2FmdGVyX3RpbWVzdGFtcBgHIAEoCzIiLnBlZXJzLnYxLlNlbmRFdmVudHNBZnRlclRpbWVzdGFtcEgAEi8KDXdlYnJ0Y19zaWduYWwYCCABKAsyFi5wZWVycy52MS5XZWJSVENTaWduYWxIABIlCghhZGRfcGVlchgJIAEoCzIRLnBlZXJzLnYxLkFkZFBlZXJIABIxCg5wZWVyX2Nvbm5lY3RlZBgKIAEoCzIXLnBlZXJzLnYxLlBlZXJDb25uZWN0ZWRIAEIJCgdwYXlsb2FkQg1aC3Byb3RvL3BlZXJzYgZwcm90bzM");
 
 /**
  * @generated from message peers.v1.SyncHandshake
@@ -189,6 +189,62 @@ export const EventBatchSchema: GenMessage<EventBatch> = /*@__PURE__*/
   messageDesc(file_peers_v1_peer, 7);
 
 /**
+ * @generated from message peers.v1.WebRTCSignal
+ */
+export type WebRTCSignal = Message<"peers.v1.WebRTCSignal"> & {
+  /**
+   * @generated from field: string to = 1;
+   */
+  to: string;
+
+  /**
+   * @generated from field: string data = 2;
+   */
+  data: string;
+};
+
+/**
+ * Describes the message peers.v1.WebRTCSignal.
+ * Use `create(WebRTCSignalSchema)` to create a new message.
+ */
+export const WebRTCSignalSchema: GenMessage<WebRTCSignal> = /*@__PURE__*/
+  messageDesc(file_peers_v1_peer, 8);
+
+/**
+ * @generated from message peers.v1.AddPeer
+ */
+export type AddPeer = Message<"peers.v1.AddPeer"> & {
+  /**
+   * @generated from field: string client_id = 1;
+   */
+  clientId: string;
+};
+
+/**
+ * Describes the message peers.v1.AddPeer.
+ * Use `create(AddPeerSchema)` to create a new message.
+ */
+export const AddPeerSchema: GenMessage<AddPeer> = /*@__PURE__*/
+  messageDesc(file_peers_v1_peer, 9);
+
+/**
+ * @generated from message peers.v1.PeerConnected
+ */
+export type PeerConnected = Message<"peers.v1.PeerConnected"> & {
+  /**
+   * @generated from field: string client_id = 1;
+   */
+  clientId: string;
+};
+
+/**
+ * Describes the message peers.v1.PeerConnected.
+ * Use `create(PeerConnectedSchema)` to create a new message.
+ */
+export const PeerConnectedSchema: GenMessage<PeerConnected> = /*@__PURE__*/
+  messageDesc(file_peers_v1_peer, 10);
+
+/**
  * @generated from message peers.v1.SyncWireMessage
  */
 export type SyncWireMessage = Message<"peers.v1.SyncWireMessage"> & {
@@ -235,6 +291,24 @@ export type SyncWireMessage = Message<"peers.v1.SyncWireMessage"> & {
      */
     value: SendEventsAfterTimestamp;
     case: "sendEventsAfterTimestamp";
+  } | {
+    /**
+     * @generated from field: peers.v1.WebRTCSignal webrtc_signal = 8;
+     */
+    value: WebRTCSignal;
+    case: "webrtcSignal";
+  } | {
+    /**
+     * @generated from field: peers.v1.AddPeer add_peer = 9;
+     */
+    value: AddPeer;
+    case: "addPeer";
+  } | {
+    /**
+     * @generated from field: peers.v1.PeerConnected peer_connected = 10;
+     */
+    value: PeerConnected;
+    case: "peerConnected";
   } | { case: undefined; value?: undefined };
 };
 
@@ -243,5 +317,5 @@ export type SyncWireMessage = Message<"peers.v1.SyncWireMessage"> & {
  * Use `create(SyncWireMessageSchema)` to create a new message.
  */
 export const SyncWireMessageSchema: GenMessage<SyncWireMessage> = /*@__PURE__*/
-  messageDesc(file_peers_v1_peer, 8);
+  messageDesc(file_peers_v1_peer, 11);
 

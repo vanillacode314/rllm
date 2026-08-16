@@ -1,6 +1,6 @@
 {
   "name": "rllm",
-  "version": "0.0.39",
+  "version": "0.0.40",
   "private": true,
   "type": "module",
   "scripts": {
@@ -32,6 +32,7 @@
     "@corvu/drawer": "^0.2.4",
     "@huggingface/transformers": "^4.2.0",
     "@kobalte/core": "^0.13.11",
+    "@salvatoret/iroh": "^0.1.3",
     "@solid-devtools/overlay": "^0.33.5",
     "@solid-primitives/active-element": "^2.1.6",
     "@solid-primitives/connectivity": "^0.4.5",
@@ -85,6 +86,7 @@
     "nanoid": "^5.1.11",
     "object-pool": "workspace:*",
     "pdf-parse": "^2.4.5",
+    "peerjs": "^1.5.5",
     "property-information": "^7.2.0",
     "proto": "workspace:*",
     "rehype-highlight": "^7.0.2",
@@ -148,6 +150,7 @@
     "vite-bundle-analyzer": "^1.3.8",
     "vite-plugin-compression2": "^2.5.3",
     "vite-plugin-solid": "^2.11.12",
+    "vite-plugin-wasm": "^3.6.0",
     "workbox-build": "^7.4.1"
   }
 }

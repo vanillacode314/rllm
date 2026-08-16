@@ -44,6 +44,19 @@ message EventBatch {
   repeated EventBatchPayload events = 1;
 }
 
+message WebRTCSignal {
+  string to = 1;
+  string data = 2;
+}
+
+message AddPeer {
+  string client_id = 1;
+}
+
+message PeerConnected {
+  string client_id = 1;
+}
+
 message SyncWireMessage {
   string account_id = 1;
   string client_id = 2;
@@ -53,5 +66,8 @@ message SyncWireMessage {
     DigestUpdates digest_updates = 5;
     EventBatch event_batch = 6;
     SendEventsAfterTimestamp send_events_after_timestamp = 7;
+    WebRTCSignal webrtc_signal = 8;
+    AddPeer add_peer = 9;
+    PeerConnected peer_connected = 10;
   }
 }

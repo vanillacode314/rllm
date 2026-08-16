@@ -16,32 +16,78 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+type Client struct {
+	conn *websocket.Conn
+	id   string
+	peer bool
+}
+
 // Hub tracks WebSocket connections per account topic and broadcasts event
 // batches. Publish excludes the sender.
 type Hub struct {
-	mu   sync.Mutex
-	subs map[string]map[*websocket.Conn]struct{}
+	mu    sync.Mutex
+	subs  map[string]map[*Client]struct{}
+	peers map[string]map[string]map[string]struct{}
 }
 
 // NewHub creates an empty Hub.
 func NewHub() *Hub {
-	return &Hub{subs: make(map[string]map[*websocket.Conn]struct{})}
+	return &Hub{
+		subs:  make(map[string]map[*Client]struct{}),
+		peers: make(map[string]map[string]map[string]struct{}),
+	}
 }
 
 // Subscribe registers conn for the account topic.
-func (h *Hub) Subscribe(accountID string, c *websocket.Conn) {
+func (h *Hub) AddPeer(accountID string, clientId string, otherClientId string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	m := h.peers[accountID]
+	if m == nil {
+		m = make(map[string]map[string]struct{})
+		h.peers[accountID] = m
+	}
+	m2 := m[clientId]
+	if m2 == nil {
+		m2 = make(map[string]struct{})
+		m[clientId] = m2
+	}
+	m2[otherClientId] = struct{}{}
+}
+
+func (h *Hub) RemovePeer(accountID string, clientId string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	m := h.peers[accountID]
+	if m == nil {
+		return
+	}
+	delete(m, clientId)
+	if len(m) == 0 {
+		delete(m, accountID)
+		return
+	}
+	for _, m2 := range m {
+		delete(m2, clientId)
+		if len(m2) == 0 {
+			delete(m, clientId)
+		}
+	}
+}
+
+func (h *Hub) Subscribe(accountID string, c *Client) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	m := h.subs[accountID]
 	if m == nil {
-		m = make(map[*websocket.Conn]struct{})
+		m = make(map[*Client]struct{})
 		h.subs[accountID] = m
 	}
 	m[c] = struct{}{}
 }
 
 // Unsubscribe removes conn from the account topic.
-func (h *Hub) Unsubscribe(accountID string, c *websocket.Conn) {
+func (h *Hub) Unsubscribe(accountID string, c *Client) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	m := h.subs[accountID]
@@ -56,19 +102,24 @@ func (h *Hub) Unsubscribe(accountID string, c *websocket.Conn) {
 
 // Publish sends data to every connection subscribed to the topic except the
 // publishing connection.
-func (h *Hub) Publish(accountID string, except *websocket.Conn, data []byte) {
+func (h *Hub) Publish(accountID string, except *Client, data []byte) {
 	h.mu.Lock()
 	m := h.subs[accountID]
-	conns := make([]*websocket.Conn, 0, len(m))
+	conns := make([]*Client, 0, len(m))
+	peers := h.peers[accountID][except.id]
 	for c := range m {
-		if c != except {
-			conns = append(conns, c)
+		if c == except {
+			continue
 		}
+		if _, ok := peers[c.id]; ok {
+			continue
+		}
+		conns = append(conns, c)
 	}
 	h.mu.Unlock()
 	for _, c := range conns {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		err := c.Write(ctx, websocket.MessageBinary, data)
+		err := c.conn.Write(ctx, websocket.MessageBinary, data)
 		cancel()
 		if err != nil {
 			log.Printf("[WS Publish] write failed: %v", err)
@@ -79,6 +130,7 @@ func (h *Hub) Publish(accountID string, except *websocket.Conn, data []byte) {
 // ConnectionManager owns the per-connection state: the account and the
 // server's clock client ID.
 type ConnectionManager struct {
+	client    *Client
 	accountID string
 	clientID  string
 	conn      *websocket.Conn
@@ -97,8 +149,9 @@ type ConnectionManager struct {
 
 // newConnectionManager wires the batchers and debouncer with the same
 // parameters as the reference implementation.
-func newConnectionManager(db *sql.DB, accountID string, clientID string, conn *websocket.Conn, hub *Hub) *ConnectionManager {
+func newConnectionManager(db *sql.DB, accountID string, clientID string, conn *websocket.Conn, hub *Hub, c *Client) *ConnectionManager {
 	m := &ConnectionManager{
+		client:    c,
 		accountID: accountID,
 		clientID:  clientID,
 		conn:      conn,
@@ -183,6 +236,16 @@ func (m *ConnectionManager) createHandshake(version string, rootDigest []byte, c
 	})
 }
 
+func (m *ConnectionManager) createPeerConnected(clientId string) []byte {
+	return marshalMessage(&peers.SyncWireMessage{
+		AccountId: m.accountID,
+		ClientId:  m.clientID,
+		Payload: &peers.SyncWireMessage_PeerConnected{
+			PeerConnected: &peers.PeerConnected{ClientId: clientId},
+		},
+	})
+}
+
 func (m *ConnectionManager) createDigestQuery(merkleDepth uint32, paths [][]uint32) []byte {
 	queries := make([]*peers.DigestQuery, 0, len(paths))
 	for _, path := range paths {
@@ -204,6 +267,14 @@ func (m *ConnectionManager) createEventBatch(events []*peers.EventBatchPayload) 
 		Payload: &peers.SyncWireMessage_EventBatch{
 			EventBatch: &peers.EventBatch{Events: events},
 		},
+	})
+}
+
+func (m *ConnectionManager) createWebRTCSignal(clientID string, to string, data string) []byte {
+	return marshalMessage(&peers.SyncWireMessage{
+		AccountId: m.accountID,
+		ClientId:  clientID,
+		Payload:   &peers.SyncWireMessage_WebrtcSignal{WebrtcSignal: &peers.WebRTCSignal{Data: data, To: to}},
 	})
 }
 

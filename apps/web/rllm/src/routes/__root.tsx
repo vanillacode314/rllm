@@ -22,7 +22,9 @@ import { initChatSettings } from '~/lib/chat/settings';
 import { retryFailedTitleAndTags } from '~/lib/chat/tasks';
 import { MCPManager } from '~/lib/mcp/manager';
 import { ProxyManager } from '~/lib/proxy';
-import { initSocket } from '~/sockets/messages';
+import { initPeerJSTransport } from '~/sockets/transports/peerjs';
+import { initWebRTCTransport } from '~/sockets/transports/webrtc';
+import { initWebsocketTransport } from '~/sockets/transports/websocket';
 import { syncColorMode } from '~/utils/color-mode';
 import { once } from '~/utils/functions';
 import { queryClient } from '~/utils/query-client';
@@ -37,7 +39,19 @@ export const Route = createRootRouteWithContext()({
     await setupDb(logger).unwrap();
     console.debug('[Finished DB Setup]');
     await initChatSettings();
-    void initSocket().unwrap();
+    void initWebsocketTransport().catch((err) =>
+      console.error(new Error('Failed to init websocket transport', { cause: err }))
+    );
+    void initWebRTCTransport().catch((err) => {
+      console.error(new Error('Failed to init webrtc transport', { cause: err }));
+      void initPeerJSTransport().catch((err) => {
+        console.error(new Error('Failed to init peerjs transport', { cause: err }));
+      });
+    });
+    // NOTE: priortize when iroh supports p2p without relay in browsers
+    // void initIrohTransport().catch((err) =>
+    //   console.error(new Error('Failed to init iroh transport', { cause: err }))
+    // );
     void ProxyManager.initialize().finally(() => void MCPManager.initialize());
     void BackgroundTaskManager.init();
 

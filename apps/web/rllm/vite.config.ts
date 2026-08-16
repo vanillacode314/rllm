@@ -1,4 +1,3 @@
-// oxlint-disable perfectionist/sort-objects
 import { serwist } from '@serwist/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
@@ -10,6 +9,8 @@ import { defineConfig, type PluginOption } from 'vite';
 import { comlink } from 'vite-plugin-comlink';
 import { compression } from 'vite-plugin-compression2';
 import solidPlugin from 'vite-plugin-solid';
+// oxlint-disable perfectionist/sort-objects
+import wasm from 'vite-plugin-wasm';
 
 import pkgJson from './package.json' with { type: 'json' };
 
@@ -17,6 +18,7 @@ import pkgJson from './package.json' with { type: 'json' };
 export default defineConfig(({ mode }) => {
   const plugins: PluginOption[] = [
     // analyzer(),
+    wasm(),
     AutoImport({
       dirs: [{ glob: './src/utils/debug.ts' }],
       include: [/\.[tj]sx?$/]
