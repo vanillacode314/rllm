@@ -519,7 +519,10 @@ async function convertUpdateToStatement(
 
   switch (update.operation) {
     case 'delete': {
-      return [{ params: [id], sql: `DELETE FROM "${tableName}" WHERE "id" = ?` }];
+      return [
+        { params: [id], sql: `DELETE FROM "${tableName}" WHERE "id" = ?` },
+        { params: [tableName, id], sql: `DELETE FROM "updates" WHERE "table" = ? AND "rowId" = ?` }
+      ];
     }
     case 'insert': {
       const values = columns.map((column) => update.data[column]);
@@ -642,7 +645,6 @@ async function migratePendingEventsStatements(db: TSqlDB): Promise<void> {
     sql`INSERT INTO metadata (key, value) VALUES (${MIGRATION_KEY}, 'done') ON CONFLICT(key) DO UPDATE SET value = 'done'`
   ]);
 }
-
 function partitionArray<T, U extends T>(
   array: T[],
   predicate: (value: T) => value is U
@@ -716,6 +718,7 @@ async function readColumnTimestamps(
   });
   return new Map(rows.map((row) => [row.column, row.timestamp]));
 }
+
 function sql(strings: TemplateStringsArray, ...values: unknown[]): TStatement {
   return {
     params: values.map(toSql),
