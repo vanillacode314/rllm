@@ -34,7 +34,6 @@ class ConnectionManager {
   readonly ws: WebSocket;
 
   private askTimestampBatch: Batcher<string>;
-  private hasQueryBatch: Batcher<string>;
   private pendingDigestUpdates = 0;
   private sendEventsBatch: Batcher<EventRow>;
   private sendTimestampBatch: Batcher<string>;
@@ -44,16 +43,12 @@ class ConnectionManager {
     this.clientId = clientId;
     this.ws = ws;
 
-    this.sendTimestampBatch = new Batcher<string>(
+    this.sendTimestampBatch = new Batcher(
       (timestamps) => void this.flushSendTimestamp(timestamps),
       { maxSize: 30, wait: 5000 }
     );
-    this.askTimestampBatch = new Batcher<string>(
+    this.askTimestampBatch = new Batcher(
       (timestamps) => void this.flushSendEventWithTimestamp(timestamps),
-      { maxSize: 100, wait: 5000 }
-    );
-    this.hasQueryBatch = new Batcher<string>(
-      (timestamps) => void this.flushHasEventQuery(timestamps),
       { maxSize: 100, wait: 5000 }
     );
     this.sendEventsBatch = new Batcher<EventRow>((events) => void this.flushSendEvents(events), {
@@ -66,12 +61,6 @@ class ConnectionManager {
     if (timestamps.length === 0) return;
     for (const timestamp of timestamps) this.askTimestampBatch.addItem(timestamp);
     if (this.pendingDigestUpdatesDone()) this.askTimestampBatch.flush();
-  }
-
-  addHasEventQuery(timestamps: string[]) {
-    if (timestamps.length === 0) return;
-    for (const timestamp of timestamps) this.hasQueryBatch.addItem(timestamp);
-    if (this.pendingDigestUpdatesDone()) this.hasQueryBatch.flush();
   }
 
   addPendingDigestUpdates(n: number) {
@@ -87,7 +76,6 @@ class ConnectionManager {
   close() {
     this.sendTimestampBatch.cancel();
     this.askTimestampBatch.cancel();
-    this.hasQueryBatch.cancel();
     this.sendEventsBatch.cancel();
   }
 
@@ -98,17 +86,17 @@ class ConnectionManager {
         accountId: this.accountId,
         clientId: this.clientId,
         payload: {
-          case: 'digestQuery',
+          case: 'digestQueries',
           value: {
             merkleDepth,
-            paths: paths.map((path) => create(PeerPB.TreePathSchema, { segments: path }))
+            queries: paths.map((path) => create(PeerPB.DigestQuerySchema, { path }))
           }
         }
       })
     );
   }
 
-  createEventBatch(events: PeerPB.PeerEvent[]) {
+  createEventBatch(events: PeerPB.EventBatchPayload[]) {
     return toBinary(
       PeerPB.SyncWireMessageSchema,
       create(PeerPB.SyncWireMessageSchema, {
@@ -137,54 +125,15 @@ class ConnectionManager {
     );
   }
 
-  createHasEventWithTimestampQuery(timestamps: string[]) {
+  createSendEventsWithTimestamp(timestamps: string[]) {
     return toBinary(
       PeerPB.SyncWireMessageSchema,
       create(PeerPB.SyncWireMessageSchema, {
         accountId: this.accountId,
         clientId: this.clientId,
-        payload: { case: 'hasEventWithTimestampQuery', value: { timestamps } }
+        payload: { case: 'sendEventsWithTimestamps', value: { timestamps } }
       })
     );
-  }
-
-  createHasEventWithTimestampUpdates(updates: PeerPB.HasEventWithTimestampUpdate[]) {
-    return toBinary(
-      PeerPB.SyncWireMessageSchema,
-      create(PeerPB.SyncWireMessageSchema, {
-        accountId: this.accountId,
-        clientId: this.clientId,
-        payload: { case: 'hasEventWithTimestampUpdates', value: { updates } }
-      })
-    );
-  }
-
-  createSendEventWithTimestamp(timestamps: string[]) {
-    return toBinary(
-      PeerPB.SyncWireMessageSchema,
-      create(PeerPB.SyncWireMessageSchema, {
-        accountId: this.accountId,
-        clientId: this.clientId,
-        payload: { case: 'sendEventWithTimestamp', value: { timestamps } }
-      })
-    );
-  }
-
-  flushHasEventQuery(timestamps: string[]) {
-    console.debug('[WS Sending Message] hasEventWithTimestampQuery', { timestamps });
-    this.write(this.createHasEventWithTimestampQuery([...new Set(timestamps)]));
-  }
-
-  async flushHasEventUpdate(timestamps: string[]) {
-    const tree = await logger.getMerkleTree();
-    const updates = timestamps.map((timestamp) =>
-      create(PeerPB.HasEventWithTimestampUpdateSchema, {
-        timestamp,
-        yes: tree.getIndexByMeta(timestamp, (a, b) => (a === b ? 0 : a < b ? -1 : 1)) > -1
-      })
-    );
-    console.debug('[WS Sending Message] hasEventWithTimestampUpdates', { updates });
-    this.write(this.createHasEventWithTimestampUpdates(updates));
   }
 
   async flushSendEvents(events: EventRow[]) {
@@ -209,13 +158,15 @@ class ConnectionManager {
       })
     );
     this.write(
-      this.createEventBatch(processedEvents.map((event) => create(PeerPB.PeerEventSchema, event)))
+      this.createEventBatch(
+        processedEvents.map((event) => create(PeerPB.EventBatchPayloadSchema, event))
+      )
     );
   }
 
   flushSendEventWithTimestamp(timestamps: string[]) {
-    console.debug('[WS Sending Message] sendEventWithTimestamp', { timestamps });
-    this.write(this.createSendEventWithTimestamp([...new Set(timestamps)]));
+    console.debug('[WS Sending Message] sendEventsWithTimestamp', { timestamps });
+    this.write(this.createSendEventsWithTimestamp([...new Set(timestamps)]));
   }
 
   async flushSendTimestamp(timestamps: string[]) {
@@ -289,19 +240,19 @@ function handleMessage(connection: ConnectionManager, event: MessageEvent) {
       const { payload } = body;
       console.debug('[WS Received Message]', payload.case, payload.value);
       switch (payload.case) {
-        case 'digestQuery': {
-          const { merkleDepth, paths } = payload.value;
+        case 'digestQueries': {
+          const { merkleDepth, queries } = payload.value;
           const tree = await logger.getMerkleTree();
           const result = new Array<{
             digest: Uint8Array;
             path: number[];
             timestamp: string;
           }>();
-          for (const { segments } of paths) {
-            const [digest, timestamp] = resolveDigest(tree, merkleDepth, segments);
-            result.push({ digest, path: segments, timestamp });
+          for (const { path } of queries) {
+            const [digest, timestamp] = resolveDigest(tree, merkleDepth, path);
+            result.push({ digest, path, timestamp });
           }
-          console.debug('[WS Sending Message] digestUpdate', { result });
+          console.debug('[WS Sending Message] digestUpdates', { result });
           connection.write(
             toBinary(
               PeerPB.SyncWireMessageSchema,
@@ -309,10 +260,10 @@ function handleMessage(connection: ConnectionManager, event: MessageEvent) {
                 accountId: connection.accountId,
                 clientId: connection.clientId,
                 payload: {
-                  case: 'digestUpdate',
+                  case: 'digestUpdates',
                   value: {
-                    digests: result.map((value) => create(PeerPB.DigestWithPathSchema, value)),
-                    merkleDepth: tree.maxDepth
+                    merkleDepth: tree.maxDepth,
+                    updates: result.map((update) => create(PeerPB.DigestUpdateSchema, update))
                   }
                 }
               })
@@ -320,48 +271,48 @@ function handleMessage(connection: ConnectionManager, event: MessageEvent) {
           );
           break;
         }
-        case 'digestUpdate': {
-          const { digests, merkleDepth } = payload.value;
+        case 'digestUpdates': {
+          const { merkleDepth, updates } = payload.value;
           const tree = await logger.getMerkleTree();
-          connection.subPendingDigestUpdates(digests.length);
+          connection.subPendingDigestUpdates(updates.length);
           const MAX_DEPTH = Math.max(merkleDepth, tree.maxDepth);
           const timestampsToAsk = [] as string[];
           const timestampsToSend = [] as string[];
-          const timestampsToQuery = [] as string[];
-          for (const { digest: theirDigest, path, timestamp: theirTimestamp } of digests) {
-            const [ourDigest] = resolveDigest(tree, merkleDepth, path);
-            const mismatch = digestsDiffer(ourDigest, theirDigest);
+          for (const update of updates) {
+            const [digest, timestamp] = resolveDigest(tree, merkleDepth, update.path);
+            const mismatch = digestsDiffer(digest, update.digest);
 
             if (!mismatch) continue;
 
-            const isLeafNode = path.length === MAX_DEPTH;
+            const isLeafNode = update.path.length === MAX_DEPTH;
             if (isLeafNode) {
-              if (isZeroDigest(ourDigest)) {
-                timestampsToAsk.push(theirTimestamp);
+              if (timestamp === '' && update.timestamp === '') {
                 continue;
               }
-              const timestamp = tree.getMetaByPath(path.slice(MAX_DEPTH - tree.maxDepth));
-              if (timestamp === null) {
-                console.error(
-                  'data integrity error: timestamp missing in our tree for path',
-                  path.slice(MAX_DEPTH - tree.maxDepth)
+              if (timestamp === update.timestamp) {
+                console.debug(
+                  '[WS Error] digests mismatch but timestamps match at path:',
+                  update.path
                 );
                 continue;
               }
-              if (isZeroDigest(theirDigest)) {
+              if (timestamp === '') {
+                timestampsToAsk.push(update.timestamp);
+              } else if (update.timestamp === '') {
                 timestampsToSend.push(timestamp);
-                continue;
+              } else if (update.timestamp > timestamp) {
+                timestampsToSend.push(timestamp);
+              } else {
+                timestampsToAsk.push(update.timestamp);
               }
-              timestampsToQuery.push(timestamp);
             } else {
-              const paths = Array.from({ length: tree.arity }).map((_, i) => [...path, i]);
+              const paths = Array.from({ length: tree.arity }).map((_, i) => [...update.path, i]);
               connection.addPendingDigestUpdates(paths.length);
               connection.write(connection.createDigestQuery(tree.maxDepth, paths));
             }
           }
           connection.addAskTimestamps(timestampsToAsk);
           connection.addSendTimestamps(timestampsToSend);
-          connection.addHasEventQuery(timestampsToQuery);
           break;
         }
         case 'eventBatch': {
@@ -427,24 +378,13 @@ function handleMessage(connection: ConnectionManager, event: MessageEvent) {
           }
           break;
         }
-        case 'hasEventWithTimestampQuery': {
-          const { timestamps } = payload.value;
-          await connection.flushHasEventUpdate(timestamps);
-          break;
-        }
-        case 'hasEventWithTimestampUpdates': {
-          const { updates } = payload.value;
-          const timestamps = [] as string[];
-          for (const { timestamp, yes } of updates) {
-            if (!yes) timestamps.push(timestamp);
-          }
-          connection.addSendTimestamps(timestamps);
-          break;
-        }
-        case 'sendEventWithTimestamp': {
+        case 'sendEventsWithTimestamps': {
           const { timestamps } = payload.value;
           connection.addSendTimestamps(timestamps);
           break;
+        }
+        default: {
+          console.error('Unknown message type', payload.case);
         }
       }
     },
@@ -462,10 +402,6 @@ function isVirtualPath(segments: number[], prefixLen: number): boolean {
     }
   }
   return false;
-}
-
-function isZeroDigest(digest: Uint8Array) {
-  return digest.length === 0;
 }
 
 function resolveDigest(

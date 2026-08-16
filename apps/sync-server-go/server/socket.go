@@ -132,44 +132,43 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 			return
 		}
 
-	case *peers.SyncWireMessage_DigestQuery:
-		q := payload.DigestQuery
-		log.Printf("[WS DigestQuery] accountId=%s merkleDepth=%d paths=%d", accountID, q.GetMerkleDepth(), len(q.GetPaths()))
+	case *peers.SyncWireMessage_DigestQueries:
+		q := payload.DigestQueries
+		log.Printf("[WS DigestQueries] accountId=%s merkleDepth=%d queries=%d", accountID, q.GetMerkleDepth(), len(q.GetQueries()))
 		tree, err := client.GetMerkleTreeByAccountId(s.Db, accountID)
 		if err != nil {
 			log.Printf("[WS Error] Failed to load tree: %v", err)
 			return
 		}
-		digests := digest.HandleDigestQuery(tree, q.GetMerkleDepth(), q.GetPaths())
+		updates := digest.HandleDigestQuery(tree, q.GetMerkleDepth(), q.GetQueries())
 		connectionManager.write(marshalMessage(&peers.SyncWireMessage{
 			AccountId: accountID,
 			ClientId:  connectionManager.clientID,
-			Payload: &peers.SyncWireMessage_DigestUpdate{
-				DigestUpdate: &peers.MerkleDigestUpdate{
+			Payload: &peers.SyncWireMessage_DigestUpdates{
+				DigestUpdates: &peers.DigestUpdates{
 					MerkleDepth: uint32(tree.MaxDepth()),
-					Digests:     digests,
+					Updates:     updates,
 				},
 			},
 		}))
 
-	case *peers.SyncWireMessage_SendEventWithTimestamp:
-		log.Printf("[WS SendEventWithTimestampQuery] accountId=%s", accountID)
-		timestamps := payload.SendEventWithTimestamp.Timestamps
+	case *peers.SyncWireMessage_SendEventsWithTimestamps:
+		log.Printf("[WS SendEventsWithTimestamp] accountId=%s", accountID)
+		timestamps := payload.SendEventsWithTimestamps.Timestamps
 		connectionManager.addSendTimestamp(timestamps)
 
-	case *peers.SyncWireMessage_DigestUpdate:
-		u := payload.DigestUpdate
-		log.Printf("[WS DigestUpdate] accountId=%s digests=%d merkleDepth=%d", accountID, len(u.GetDigests()), u.GetMerkleDepth())
+	case *peers.SyncWireMessage_DigestUpdates:
+		u := payload.DigestUpdates
+		log.Printf("[WS DigestUpdates] accountId=%s updates=%d merkleDepth=%d", accountID, len(u.GetUpdates()), u.GetMerkleDepth())
 		tree, err := client.GetMerkleTreeByAccountId(s.Db, accountID)
 		if err != nil {
 			log.Printf("[WS Error] Failed to load tree: %v", err)
 			return
 		}
-		connectionManager.subPendingDigestUpdates(len(u.GetDigests()))
+		connectionManager.subPendingDigestUpdates(len(u.GetUpdates()))
 		timestampsToSend := []string{}
 		timestampsToAsk := []string{}
-		timestampsToQuery := []string{}
-		for _, action := range digest.HandleDigestUpdate(tree, u.GetMerkleDepth(), u.GetDigests()) {
+		for _, action := range digest.HandleDigestUpdate(tree, u.GetMerkleDepth(), u.GetUpdates()) {
 			switch action.Kind {
 			case digest.KindQueryChildren:
 				connectionManager.addPendingDigestUpdates(len(action.Children))
@@ -178,30 +177,10 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 				timestampsToSend = append(timestampsToSend, action.Timestamp)
 			case digest.KindAskTimestamp:
 				timestampsToAsk = append(timestampsToAsk, action.Timestamp)
-			case digest.KindHasEventQuery:
-				timestampsToQuery = append(timestampsToQuery, action.Timestamp)
 			}
 		}
 		connectionManager.addSendTimestamp(timestampsToSend)
 		connectionManager.addAskTimestamp(timestampsToAsk)
-		connectionManager.addHasEventQuery(timestampsToQuery)
-
-	case *peers.SyncWireMessage_HasEventWithTimestampQuery:
-		q := payload.HasEventWithTimestampQuery
-		log.Printf("[WS HasEventQuery] accountId=%s timestamps=%v", accountID, q.GetTimestamps())
-		connectionManager.flushHasEventUpdate(q.GetTimestamps())
-
-	case *peers.SyncWireMessage_HasEventWithTimestampUpdates:
-		u := payload.HasEventWithTimestampUpdates
-		log.Printf("[WS HasEventUpdate] accountId=%s updates=%d", accountID, len(u.GetUpdates()))
-		updates := u.GetUpdates()
-		timestamps := make([]string, 0, len(updates))
-		for _, update := range updates {
-			if !update.GetYes() {
-				timestamps = append(timestamps, update.Timestamp)
-			}
-		}
-		connectionManager.addSendTimestamp(timestamps)
 
 	case *peers.SyncWireMessage_EventBatch:
 		events := payload.EventBatch.GetEvents()
@@ -230,7 +209,8 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 				Timestamp: event.GetTimestamp(),
 			})
 		}
-		if err := client.ReceiveMessages(tx, accountID, message.ClientId, messages); err != nil {
+		nInserted, err := client.ReceiveMessages(tx, accountID, message.ClientId, messages)
+		if err != nil {
 			_ = tx.Rollback()
 			log.Printf("[WS Error] Failed to receive messages: %v", err)
 			return
@@ -239,6 +219,7 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 			log.Printf("[WS Error] Failed to commit transaction: %v", err)
 			return
 		}
+		log.Printf("[WS EventBatch] Inserted %d messages", nInserted)
 		s.Hub.Publish(accountID, connectionManager.conn, connectionManager.createEventBatch(events))
 		connectionManager.recomputeMerkleTree()
 

@@ -4,57 +4,44 @@ package peers.v1;
 
 option go_package = "proto/peers";
 
-message TreePath {
-  repeated uint32 segments = 1;
-}
-
 message SyncHandshake {
   string version = 2;
   optional bytes root_digest = 3;
   string client_id = 4;
 }
 
-message MerkleDigestQuery {
-  uint32 merkle_depth = 1;
-  repeated TreePath paths = 2;
+message DigestQuery {
+  repeated uint32 path = 1;
 }
 
-message DigestWithPath {
+message DigestQueries {
+  uint32 merkle_depth = 1;
+  repeated DigestQuery queries = 2;
+}
+
+message DigestUpdate {
   repeated uint32 path = 1;
   bytes digest = 2;
   string timestamp = 3;
 }
 
-message MerkleDigestUpdate {
+message DigestUpdates {
   uint32 merkle_depth = 1;
-  repeated DigestWithPath digests = 2;
+  repeated DigestUpdate updates = 2;
 }
 
-message PeerEvent {
+message EventBatchPayload {
   string timestamp = 1;
   string signature = 2;
   bytes data = 3;
 }
 
-message HasEventWithTimestampQuery {
+message SendEventsWithTimestamps {
   repeated string timestamps = 1;
-}
-
-message SendEventWithTimestamp {
-  repeated string timestamps = 1;
-}
-
-message HasEventWithTimestampUpdate {
-  bool yes = 1;
-  string timestamp = 2;
-}
-
-message HasEventWithTimestampUpdates {
-  repeated HasEventWithTimestampUpdate updates = 1;
 }
 
 message EventBatch {
-  repeated PeerEvent events = 1;
+  repeated EventBatchPayload events = 1;
 }
 
 message SyncWireMessage {
@@ -62,11 +49,9 @@ message SyncWireMessage {
   string client_id = 2;
   oneof payload {
     SyncHandshake handshake = 3;
-    MerkleDigestQuery digest_query = 4;
-    MerkleDigestUpdate digest_update = 5;
+    DigestQueries digest_queries = 4;
+    DigestUpdates digest_updates = 5;
     EventBatch event_batch = 6;
-    HasEventWithTimestampQuery has_event_with_timestamp_query = 7;
-    HasEventWithTimestampUpdates has_event_with_timestamp_updates = 8;
-    SendEventWithTimestamp send_event_with_timestamp = 9;
+    SendEventsWithTimestamps send_events_with_timestamps = 7;
   }
 }

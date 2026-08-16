@@ -19,20 +19,26 @@ type Message struct {
 // ReceiveMessages inserts events into the messages table, skipping rows that
 // already exist (primary key: accountId + timestamp). All rows are written in
 // a single transaction owned by the caller.
-func ReceiveMessages(tx *sql.Tx, accountID string, clientID string, events []Message) error {
+func ReceiveMessages(tx *sql.Tx, accountID string, clientID string, events []Message) (int, error) {
 	stmt, err := tx.Prepare("INSERT INTO messages (accountId, clientId, data, signature, timestamp) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING")
 	if err != nil {
-		return fmt.Errorf("failed to prepare insert statement: %w", err)
+		return -1, fmt.Errorf("failed to prepare insert statement: %w", err)
 	}
 	defer stmt.Close()
 
+	nInserted := 0
 	for _, event := range events {
-		_, err := stmt.Exec(accountID, clientID, event.Data, event.Signature, event.Timestamp)
+		result, err := stmt.Exec(accountID, clientID, event.Data, event.Signature, event.Timestamp)
 		if err != nil {
-			return fmt.Errorf("failed to insert message %s: %w", event.Timestamp, err)
+			return -1, fmt.Errorf("failed to insert message %s: %w", event.Timestamp, err)
+		}
+		n, err := result.RowsAffected()
+		nInserted += int(n)
+		if err != nil {
+			return -1, fmt.Errorf("failed to insert message %s: %w", event.Timestamp, err)
 		}
 	}
-	return nil
+	return nInserted, nil
 }
 
 // GetMessagesByTimestamps returns stored events for the given timestamps,
@@ -89,20 +95,20 @@ func RecomputeMerkleTree(db *sql.DB, accountID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create merkle tree: %w", err)
 	}
-	after := ""
-	query := "SELECT timestamp FROM messages WHERE accountId = ? AND timestamp > ? ORDER BY timestamp ASC LIMIT ?"
-	stmt, err := db.Prepare(query)
+	cursor := ""
+	hasMore := true
+	stmt, err := db.Prepare("SELECT timestamp FROM messages WHERE accountId = ? AND timestamp > ? ORDER BY timestamp ASC LIMIT ?")
 	if err != nil {
 		return fmt.Errorf("failed to prepare timestamp query: %w", err)
 	}
 	defer stmt.Close()
 
 	for {
-		rows, err := stmt.Query(accountID, after, merkleTreePageSize)
+		rows, err := stmt.Query(accountID, cursor, merkleTreePageSize+1)
 		if err != nil {
 			return fmt.Errorf("failed to query timestamps: %w", err)
 		}
-		timestamps := make([]string, 0, merkleTreePageSize)
+		timestamps := make([]string, 0, merkleTreePageSize+1)
 		for rows.Next() {
 			var ts string
 			if err := rows.Scan(&ts); err != nil {
@@ -111,6 +117,11 @@ func RecomputeMerkleTree(db *sql.DB, accountID string) error {
 			}
 			timestamps = append(timestamps, ts)
 		}
+		hasMore = len(timestamps) > merkleTreePageSize
+		if hasMore {
+			timestamps = timestamps[:merkleTreePageSize]
+		}
+		cursor = timestamps[len(timestamps)-1]
 		closeErr := rows.Close()
 		if err := rows.Err(); err != nil {
 			return fmt.Errorf("failed to iterate timestamps: %w", err)
@@ -127,11 +138,9 @@ func RecomputeMerkleTree(db *sql.DB, accountID string) error {
 			})
 		}
 		tree.Insert(items)
-
-		if len(timestamps) < merkleTreePageSize {
+		if !hasMore {
 			break
 		}
-		after = timestamps[len(timestamps)-1]
 	}
 
 	serialized, err := tree.ToJSON()

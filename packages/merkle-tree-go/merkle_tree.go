@@ -401,7 +401,7 @@ func (t *MerkleTree[T, TMeta]) MarshalJSON() ([]byte, error) {
 		MaxDepth:  t.maxDepth,
 	}
 	if t.tree.Root != nil {
-		root, err := treeNodeToJSON[TMeta](t.tree.Root)
+		root, err := treeNodeToJSON(t.tree.Root)
 		if err != nil {
 			return nil, err
 		}

@@ -6,7 +6,6 @@ package digest
 
 import (
 	"log"
-
 	"merkle-tree"
 	"proto/peers"
 )
@@ -80,14 +79,14 @@ func ResolveDigest(tree *merkletree.MerkleTree[string, string], merkleDepth uint
 	return digest, *timestamp
 }
 
-// HandleDigestQuery builds the digestUpdate response payload for a digestQuery request. Paths are echoed back unchanged.
-func HandleDigestQuery(tree *merkletree.MerkleTree[string, string], merkleDepth uint32, paths []*peers.TreePath) []*peers.DigestWithPath {
-	result := make([]*peers.DigestWithPath, 0, len(paths))
-	for _, path := range paths {
+// HandleDigestQuery builds the digestUpdates response payload for a digestQueries request. Queries are echoed back unchanged.
+func HandleDigestQuery(tree *merkletree.MerkleTree[string, string], merkleDepth uint32, queries []*peers.DigestQuery) []*peers.DigestUpdate {
+	result := make([]*peers.DigestUpdate, 0, len(queries))
+	for _, query := range queries {
 
-		digest, timestamp := ResolveDigest(tree, merkleDepth, path.Segments)
-		result = append(result, &peers.DigestWithPath{
-			Path:      path.Segments,
+		digest, timestamp := ResolveDigest(tree, merkleDepth, query.Path)
+		result = append(result, &peers.DigestUpdate{
+			Path:      query.Path,
 			Digest:    digest,
 			Timestamp: timestamp,
 		})
@@ -102,50 +101,50 @@ const (
 	KindQueryChildren ActionKind = iota
 	KindSendTimestamp
 	KindAskTimestamp
-	KindHasEventQuery
 )
 
 // Action is one reconciliation step: descend into children, send a stored event, or ask whether the peer has an event.
 type Action struct {
 	Kind      ActionKind
 	Children  [][]uint32 // KindQueryChildren
-	Timestamp string     // KindSendTimestamp / KindHasEventQuery
+	Timestamp string     // KindSendTimestamp
 }
 
 // HandleDigestUpdate reconciles the peer's digest update against the local
 // tree, producing one action per digest. Leaf mismatches with a zero peer digest request the event; other
 // leaf mismatches ask whether the peer has the event; internal mismatches
 // descend into the node's children.
-func HandleDigestUpdate(tree *merkletree.MerkleTree[string, string], merkleDepth uint32, digests []*peers.DigestWithPath) []Action {
+func HandleDigestUpdate(tree *merkletree.MerkleTree[string, string], merkleDepth uint32, updates []*peers.DigestUpdate) []Action {
 	maxDepth := int(merkleDepth)
 	if t := tree.MaxDepth(); t > maxDepth {
 		maxDepth = t
 	}
-	prefixLen := maxDepth - tree.MaxDepth()
-
-	actions := make([]Action, 0, len(digests))
-	for _, d := range digests {
-		path := d.Path
-		theirDigest := d.Digest
-		ourDigest, _ := ResolveDigest(tree, merkleDepth, path)
+	actions := make([]Action, 0, len(updates))
+	for _, update := range updates {
+		path := update.Path
+		theirDigest := update.Digest
+		ourDigest, timestamp := ResolveDigest(tree, merkleDepth, path)
 		if !DigestsDiffer(theirDigest, ourDigest) {
 			continue
 		}
 		isLeafNode := len(path) == maxDepth
 		if isLeafNode {
-			if IsZeroDigest(ourDigest) {
-				actions = append(actions, Action{Kind: KindAskTimestamp, Timestamp: d.Timestamp})
+			if update.Timestamp == "" && timestamp == "" {
 				continue
 			}
-			timestamp := tree.GetMetaByPath(SegmentsToInts(path[prefixLen:]))
-			if timestamp == nil {
-				log.Printf("[WS Error] data integrity error: path=%v", path)
+			if update.Timestamp == timestamp {
+				log.Printf("[WS Error] digests mismatch but timestamps match at path: %v", update.Path)
 				continue
 			}
-			if IsZeroDigest(theirDigest) {
-				actions = append(actions, Action{Kind: KindSendTimestamp, Timestamp: *timestamp})
+			if timestamp == "" {
+				actions = append(actions, Action{Kind: KindAskTimestamp, Timestamp: update.Timestamp})
+			} else if update.Timestamp == "" {
+				actions = append(actions, Action{Kind: KindSendTimestamp, Timestamp: timestamp})
+				continue
+			} else if update.Timestamp > timestamp {
+				actions = append(actions, Action{Kind: KindSendTimestamp, Timestamp: timestamp})
 			} else {
-				actions = append(actions, Action{Kind: KindHasEventQuery, Timestamp: *timestamp})
+				actions = append(actions, Action{Kind: KindAskTimestamp, Timestamp: update.Timestamp})
 			}
 			continue
 		}

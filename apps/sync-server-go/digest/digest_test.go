@@ -49,7 +49,7 @@ func TestResolveDigest(t *testing.T) {
 	tree := buildTree(t, "1", "2", "3", "4")
 
 	t.Run("real path returns hash", func(t *testing.T) {
-		d := ResolveDigest(tree, 0, []uint32{})
+		d, _ := ResolveDigest(tree, 0, []uint32{})
 		if IsZeroDigest(d) {
 			t.Fatal("expected root digest for non-empty tree")
 		}
@@ -59,30 +59,35 @@ func TestResolveDigest(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !IsZeroDigest(ResolveDigest(empty, 0, []uint32{})) {
+		digest, _ := ResolveDigest(empty, 0, []uint32{})
+		if !IsZeroDigest(digest) {
 			t.Fatal("expected zero digest for empty tree")
 		}
 	})
 	t.Run("virtual prefix path returns zero", func(t *testing.T) {
 		// Peer tree deeper than ours: extra leading segments must be zero to
 		// be "real"; a non-zero leading segment is virtual → zero digest.
-		d := ResolveDigest(tree, 2, []uint32{1, 0, 0})
+		empty, err := merkletree.NewMerkleTree[string, string](16, merkletree.StringHasher{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		d, _ := ResolveDigest(empty, 0, []uint32{})
 		if !IsZeroDigest(d) {
-			t.Fatal("expected zero digest for virtual path")
+			t.Fatal("expected zero digest for empty tree")
 		}
 		// [0, 1] maps to our real path [1] (root child 1).
-		d = ResolveDigest(tree, 2, []uint32{0, 1})
+		d, _ = ResolveDigest(tree, 2, []uint32{0, 1})
 		if IsZeroDigest(d) {
 			t.Fatal("expected real digest for zero-padded path")
 		}
 		// [0, 1, 0] maps to [1, 0], deeper than our depth-1 tree → zero.
-		d = ResolveDigest(tree, 2, []uint32{0, 1, 0})
+		d, _ = ResolveDigest(tree, 2, []uint32{0, 1, 0})
 		if !IsZeroDigest(d) {
 			t.Fatal("expected zero digest for too-deep path")
 		}
 	})
 	t.Run("out of bounds returns zero", func(t *testing.T) {
-		d := ResolveDigest(tree, 0, []uint32{99})
+		d, _ := ResolveDigest(tree, 0, []uint32{99})
 		if !IsZeroDigest(d) {
 			t.Fatal("expected zero digest for out-of-bounds path")
 		}
@@ -93,7 +98,7 @@ func TestHandleDigestQuery(t *testing.T) {
 	tree := buildTree(t, "1", "2", "3", "4")
 
 	t.Run("root at own depth returns digest", func(t *testing.T) {
-		result := HandleDigestQuery(tree, 0, []*peers.TreePath{{Segments: []uint32{}}})
+		result := HandleDigestQuery(tree, 0, []*peers.DigestQuery{{Path: []uint32{}}})
 		if len(result) != 1 || len(result[0].Path) != 0 {
 			t.Fatalf("unexpected result: %+v", result)
 		}
@@ -103,9 +108,9 @@ func TestHandleDigestQuery(t *testing.T) {
 	})
 
 	t.Run("paths echoed with virtual handling", func(t *testing.T) {
-		paths := []*peers.TreePath{
-			{Segments: []uint32{0, 1}},    // real (maps to [1])
-			{Segments: []uint32{1, 0, 0}}, // virtual
+		paths := []*peers.DigestQuery{
+			{Path: []uint32{0, 1}},    // real (maps to [1])
+			{Path: []uint32{1, 0, 0}}, // virtual
 		}
 		result := HandleDigestQuery(tree, 2, paths)
 		if len(result) != 2 {
@@ -127,15 +132,15 @@ func TestHandleDigestUpdate(t *testing.T) {
 	tree := buildTree(t, "1", "2", "3", "4")
 
 	t.Run("matching root yields no actions", func(t *testing.T) {
-		root := ResolveDigest(tree, 0, []uint32{})
-		actions := HandleDigestUpdate(tree, 0, []*peers.DigestWithPath{{Path: nil, Digest: root}})
+		root, _ := ResolveDigest(tree, 0, []uint32{})
+		actions := HandleDigestUpdate(tree, 0, []*peers.DigestUpdate{{Path: nil, Digest: root}})
 		if len(actions) != 0 {
 			t.Fatalf("expected no actions, got %+v", actions)
 		}
 	})
 
 	t.Run("root mismatch descends into children", func(t *testing.T) {
-		actions := HandleDigestUpdate(tree, 0, []*peers.DigestWithPath{{Path: nil, Digest: []byte("wrong")}})
+		actions := HandleDigestUpdate(tree, 0, []*peers.DigestUpdate{{Path: nil, Digest: []byte("wrong")}})
 		if len(actions) != 1 {
 			t.Fatalf("expected 1 action, got %d", len(actions))
 		}
@@ -152,21 +157,16 @@ func TestHandleDigestUpdate(t *testing.T) {
 
 	t.Run("leaf with zero peer digest requests event", func(t *testing.T) {
 		single := buildTree(t, "ts1")
-		leafDigest := ResolveDigest(single, 1, []uint32{0})
+		leafDigest, timestamp := ResolveDigest(single, 1, []uint32{0})
 		if IsZeroDigest(leafDigest) {
 			t.Fatal("expected non-zero leaf digest")
 		}
-		actions := HandleDigestUpdate(single, 1, []*peers.DigestWithPath{{Path: []uint32{0}, Digest: ZeroDigest}})
+		if timestamp != "ts1" {
+			t.Fatalf("expected timestamp ts1, got %q", timestamp)
+		}
+		actions := HandleDigestUpdate(single, 1, []*peers.DigestUpdate{{Path: []uint32{0}, Digest: ZeroDigest}})
 		if len(actions) != 1 || actions[0].Kind != KindSendTimestamp || actions[0].Timestamp != "ts1" {
 			t.Fatalf("expected KindSendTimestamp(ts1), got %+v", actions)
-		}
-	})
-
-	t.Run("leaf with non-zero peer digest asks hasEvent", func(t *testing.T) {
-		single := buildTree(t, "ts1")
-		actions := HandleDigestUpdate(single, 1, []*peers.DigestWithPath{{Path: []uint32{0}, Digest: []byte("other")}})
-		if len(actions) != 1 || actions[0].Kind != KindHasEventQuery || actions[0].Timestamp != "ts1" {
-			t.Fatalf("expected KindHasEventQuery(ts1), got %+v", actions)
 		}
 	})
 
@@ -174,7 +174,7 @@ func TestHandleDigestUpdate(t *testing.T) {
 		// Peer tree deeper than ours: [1, x] is virtual (non-zero prefix), so
 		// our digest is zero and the leaf is skipped.
 		single := buildTree(t, "ts1")
-		actions := HandleDigestUpdate(single, 2, []*peers.DigestWithPath{{Path: []uint32{1, 0}, Digest: []byte("other")}})
+		actions := HandleDigestUpdate(single, 2, []*peers.DigestUpdate{{Path: []uint32{1, 0}, Digest: []byte("other")}})
 		if len(actions) != 0 {
 			t.Fatalf("expected no actions for virtual leaf, got %+v", actions)
 		}

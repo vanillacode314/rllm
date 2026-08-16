@@ -21,50 +21,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type TreePath struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Segments      []uint32               `protobuf:"varint,1,rep,packed,name=segments,proto3" json:"segments,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *TreePath) Reset() {
-	*x = TreePath{}
-	mi := &file_peers_v1_peer_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *TreePath) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*TreePath) ProtoMessage() {}
-
-func (x *TreePath) ProtoReflect() protoreflect.Message {
-	mi := &file_peers_v1_peer_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use TreePath.ProtoReflect.Descriptor instead.
-func (*TreePath) Descriptor() ([]byte, []int) {
-	return file_peers_v1_peer_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *TreePath) GetSegments() []uint32 {
-	if x != nil {
-		return x.Segments
-	}
-	return nil
-}
-
 type SyncHandshake struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
@@ -76,7 +32,7 @@ type SyncHandshake struct {
 
 func (x *SyncHandshake) Reset() {
 	*x = SyncHandshake{}
-	mi := &file_peers_v1_peer_proto_msgTypes[1]
+	mi := &file_peers_v1_peer_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -88,7 +44,7 @@ func (x *SyncHandshake) String() string {
 func (*SyncHandshake) ProtoMessage() {}
 
 func (x *SyncHandshake) ProtoReflect() protoreflect.Message {
-	mi := &file_peers_v1_peer_proto_msgTypes[1]
+	mi := &file_peers_v1_peer_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -101,7 +57,7 @@ func (x *SyncHandshake) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncHandshake.ProtoReflect.Descriptor instead.
 func (*SyncHandshake) Descriptor() ([]byte, []int) {
-	return file_peers_v1_peer_proto_rawDescGZIP(), []int{1}
+	return file_peers_v1_peer_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *SyncHandshake) GetVersion() string {
@@ -125,28 +81,72 @@ func (x *SyncHandshake) GetClientId() string {
 	return ""
 }
 
-type MerkleDigestQuery struct {
+type DigestQuery struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	MerkleDepth   uint32                 `protobuf:"varint,1,opt,name=merkle_depth,json=merkleDepth,proto3" json:"merkle_depth,omitempty"`
-	Paths         []*TreePath            `protobuf:"bytes,2,rep,name=paths,proto3" json:"paths,omitempty"`
+	Path          []uint32               `protobuf:"varint,1,rep,packed,name=path,proto3" json:"path,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *MerkleDigestQuery) Reset() {
-	*x = MerkleDigestQuery{}
+func (x *DigestQuery) Reset() {
+	*x = DigestQuery{}
+	mi := &file_peers_v1_peer_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DigestQuery) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DigestQuery) ProtoMessage() {}
+
+func (x *DigestQuery) ProtoReflect() protoreflect.Message {
+	mi := &file_peers_v1_peer_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DigestQuery.ProtoReflect.Descriptor instead.
+func (*DigestQuery) Descriptor() ([]byte, []int) {
+	return file_peers_v1_peer_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *DigestQuery) GetPath() []uint32 {
+	if x != nil {
+		return x.Path
+	}
+	return nil
+}
+
+type DigestQueries struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MerkleDepth   uint32                 `protobuf:"varint,1,opt,name=merkle_depth,json=merkleDepth,proto3" json:"merkle_depth,omitempty"`
+	Queries       []*DigestQuery         `protobuf:"bytes,2,rep,name=queries,proto3" json:"queries,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DigestQueries) Reset() {
+	*x = DigestQueries{}
 	mi := &file_peers_v1_peer_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *MerkleDigestQuery) String() string {
+func (x *DigestQueries) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*MerkleDigestQuery) ProtoMessage() {}
+func (*DigestQueries) ProtoMessage() {}
 
-func (x *MerkleDigestQuery) ProtoReflect() protoreflect.Message {
+func (x *DigestQueries) ProtoReflect() protoreflect.Message {
 	mi := &file_peers_v1_peer_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -158,26 +158,26 @@ func (x *MerkleDigestQuery) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use MerkleDigestQuery.ProtoReflect.Descriptor instead.
-func (*MerkleDigestQuery) Descriptor() ([]byte, []int) {
+// Deprecated: Use DigestQueries.ProtoReflect.Descriptor instead.
+func (*DigestQueries) Descriptor() ([]byte, []int) {
 	return file_peers_v1_peer_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *MerkleDigestQuery) GetMerkleDepth() uint32 {
+func (x *DigestQueries) GetMerkleDepth() uint32 {
 	if x != nil {
 		return x.MerkleDepth
 	}
 	return 0
 }
 
-func (x *MerkleDigestQuery) GetPaths() []*TreePath {
+func (x *DigestQueries) GetQueries() []*DigestQuery {
 	if x != nil {
-		return x.Paths
+		return x.Queries
 	}
 	return nil
 }
 
-type DigestWithPath struct {
+type DigestUpdate struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Path          []uint32               `protobuf:"varint,1,rep,packed,name=path,proto3" json:"path,omitempty"`
 	Digest        []byte                 `protobuf:"bytes,2,opt,name=digest,proto3" json:"digest,omitempty"`
@@ -186,20 +186,20 @@ type DigestWithPath struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *DigestWithPath) Reset() {
-	*x = DigestWithPath{}
+func (x *DigestUpdate) Reset() {
+	*x = DigestUpdate{}
 	mi := &file_peers_v1_peer_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *DigestWithPath) String() string {
+func (x *DigestUpdate) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DigestWithPath) ProtoMessage() {}
+func (*DigestUpdate) ProtoMessage() {}
 
-func (x *DigestWithPath) ProtoReflect() protoreflect.Message {
+func (x *DigestUpdate) ProtoReflect() protoreflect.Message {
 	mi := &file_peers_v1_peer_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -211,54 +211,54 @@ func (x *DigestWithPath) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DigestWithPath.ProtoReflect.Descriptor instead.
-func (*DigestWithPath) Descriptor() ([]byte, []int) {
+// Deprecated: Use DigestUpdate.ProtoReflect.Descriptor instead.
+func (*DigestUpdate) Descriptor() ([]byte, []int) {
 	return file_peers_v1_peer_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *DigestWithPath) GetPath() []uint32 {
+func (x *DigestUpdate) GetPath() []uint32 {
 	if x != nil {
 		return x.Path
 	}
 	return nil
 }
 
-func (x *DigestWithPath) GetDigest() []byte {
+func (x *DigestUpdate) GetDigest() []byte {
 	if x != nil {
 		return x.Digest
 	}
 	return nil
 }
 
-func (x *DigestWithPath) GetTimestamp() string {
+func (x *DigestUpdate) GetTimestamp() string {
 	if x != nil {
 		return x.Timestamp
 	}
 	return ""
 }
 
-type MerkleDigestUpdate struct {
+type DigestUpdates struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	MerkleDepth   uint32                 `protobuf:"varint,1,opt,name=merkle_depth,json=merkleDepth,proto3" json:"merkle_depth,omitempty"`
-	Digests       []*DigestWithPath      `protobuf:"bytes,2,rep,name=digests,proto3" json:"digests,omitempty"`
+	Updates       []*DigestUpdate        `protobuf:"bytes,2,rep,name=updates,proto3" json:"updates,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *MerkleDigestUpdate) Reset() {
-	*x = MerkleDigestUpdate{}
+func (x *DigestUpdates) Reset() {
+	*x = DigestUpdates{}
 	mi := &file_peers_v1_peer_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *MerkleDigestUpdate) String() string {
+func (x *DigestUpdates) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*MerkleDigestUpdate) ProtoMessage() {}
+func (*DigestUpdates) ProtoMessage() {}
 
-func (x *MerkleDigestUpdate) ProtoReflect() protoreflect.Message {
+func (x *DigestUpdates) ProtoReflect() protoreflect.Message {
 	mi := &file_peers_v1_peer_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -270,26 +270,26 @@ func (x *MerkleDigestUpdate) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use MerkleDigestUpdate.ProtoReflect.Descriptor instead.
-func (*MerkleDigestUpdate) Descriptor() ([]byte, []int) {
+// Deprecated: Use DigestUpdates.ProtoReflect.Descriptor instead.
+func (*DigestUpdates) Descriptor() ([]byte, []int) {
 	return file_peers_v1_peer_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *MerkleDigestUpdate) GetMerkleDepth() uint32 {
+func (x *DigestUpdates) GetMerkleDepth() uint32 {
 	if x != nil {
 		return x.MerkleDepth
 	}
 	return 0
 }
 
-func (x *MerkleDigestUpdate) GetDigests() []*DigestWithPath {
+func (x *DigestUpdates) GetUpdates() []*DigestUpdate {
 	if x != nil {
-		return x.Digests
+		return x.Updates
 	}
 	return nil
 }
 
-type PeerEvent struct {
+type EventBatchPayload struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Timestamp     string                 `protobuf:"bytes,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	Signature     string                 `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
@@ -298,20 +298,20 @@ type PeerEvent struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *PeerEvent) Reset() {
-	*x = PeerEvent{}
+func (x *EventBatchPayload) Reset() {
+	*x = EventBatchPayload{}
 	mi := &file_peers_v1_peer_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *PeerEvent) String() string {
+func (x *EventBatchPayload) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PeerEvent) ProtoMessage() {}
+func (*EventBatchPayload) ProtoMessage() {}
 
-func (x *PeerEvent) ProtoReflect() protoreflect.Message {
+func (x *EventBatchPayload) ProtoReflect() protoreflect.Message {
 	mi := &file_peers_v1_peer_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -323,53 +323,53 @@ func (x *PeerEvent) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PeerEvent.ProtoReflect.Descriptor instead.
-func (*PeerEvent) Descriptor() ([]byte, []int) {
+// Deprecated: Use EventBatchPayload.ProtoReflect.Descriptor instead.
+func (*EventBatchPayload) Descriptor() ([]byte, []int) {
 	return file_peers_v1_peer_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *PeerEvent) GetTimestamp() string {
+func (x *EventBatchPayload) GetTimestamp() string {
 	if x != nil {
 		return x.Timestamp
 	}
 	return ""
 }
 
-func (x *PeerEvent) GetSignature() string {
+func (x *EventBatchPayload) GetSignature() string {
 	if x != nil {
 		return x.Signature
 	}
 	return ""
 }
 
-func (x *PeerEvent) GetData() []byte {
+func (x *EventBatchPayload) GetData() []byte {
 	if x != nil {
 		return x.Data
 	}
 	return nil
 }
 
-type HasEventWithTimestampQuery struct {
+type SendEventsWithTimestamps struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Timestamps    []string               `protobuf:"bytes,1,rep,name=timestamps,proto3" json:"timestamps,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *HasEventWithTimestampQuery) Reset() {
-	*x = HasEventWithTimestampQuery{}
+func (x *SendEventsWithTimestamps) Reset() {
+	*x = SendEventsWithTimestamps{}
 	mi := &file_peers_v1_peer_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *HasEventWithTimestampQuery) String() string {
+func (x *SendEventsWithTimestamps) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*HasEventWithTimestampQuery) ProtoMessage() {}
+func (*SendEventsWithTimestamps) ProtoMessage() {}
 
-func (x *HasEventWithTimestampQuery) ProtoReflect() protoreflect.Message {
+func (x *SendEventsWithTimestamps) ProtoReflect() protoreflect.Message {
 	mi := &file_peers_v1_peer_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -381,168 +381,28 @@ func (x *HasEventWithTimestampQuery) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use HasEventWithTimestampQuery.ProtoReflect.Descriptor instead.
-func (*HasEventWithTimestampQuery) Descriptor() ([]byte, []int) {
+// Deprecated: Use SendEventsWithTimestamps.ProtoReflect.Descriptor instead.
+func (*SendEventsWithTimestamps) Descriptor() ([]byte, []int) {
 	return file_peers_v1_peer_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *HasEventWithTimestampQuery) GetTimestamps() []string {
+func (x *SendEventsWithTimestamps) GetTimestamps() []string {
 	if x != nil {
 		return x.Timestamps
-	}
-	return nil
-}
-
-type SendEventWithTimestamp struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Timestamps    []string               `protobuf:"bytes,1,rep,name=timestamps,proto3" json:"timestamps,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *SendEventWithTimestamp) Reset() {
-	*x = SendEventWithTimestamp{}
-	mi := &file_peers_v1_peer_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SendEventWithTimestamp) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SendEventWithTimestamp) ProtoMessage() {}
-
-func (x *SendEventWithTimestamp) ProtoReflect() protoreflect.Message {
-	mi := &file_peers_v1_peer_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SendEventWithTimestamp.ProtoReflect.Descriptor instead.
-func (*SendEventWithTimestamp) Descriptor() ([]byte, []int) {
-	return file_peers_v1_peer_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *SendEventWithTimestamp) GetTimestamps() []string {
-	if x != nil {
-		return x.Timestamps
-	}
-	return nil
-}
-
-type HasEventWithTimestampUpdate struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Yes           bool                   `protobuf:"varint,1,opt,name=yes,proto3" json:"yes,omitempty"`
-	Timestamp     string                 `protobuf:"bytes,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *HasEventWithTimestampUpdate) Reset() {
-	*x = HasEventWithTimestampUpdate{}
-	mi := &file_peers_v1_peer_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *HasEventWithTimestampUpdate) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*HasEventWithTimestampUpdate) ProtoMessage() {}
-
-func (x *HasEventWithTimestampUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_peers_v1_peer_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use HasEventWithTimestampUpdate.ProtoReflect.Descriptor instead.
-func (*HasEventWithTimestampUpdate) Descriptor() ([]byte, []int) {
-	return file_peers_v1_peer_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *HasEventWithTimestampUpdate) GetYes() bool {
-	if x != nil {
-		return x.Yes
-	}
-	return false
-}
-
-func (x *HasEventWithTimestampUpdate) GetTimestamp() string {
-	if x != nil {
-		return x.Timestamp
-	}
-	return ""
-}
-
-type HasEventWithTimestampUpdates struct {
-	state         protoimpl.MessageState         `protogen:"open.v1"`
-	Updates       []*HasEventWithTimestampUpdate `protobuf:"bytes,1,rep,name=updates,proto3" json:"updates,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *HasEventWithTimestampUpdates) Reset() {
-	*x = HasEventWithTimestampUpdates{}
-	mi := &file_peers_v1_peer_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *HasEventWithTimestampUpdates) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*HasEventWithTimestampUpdates) ProtoMessage() {}
-
-func (x *HasEventWithTimestampUpdates) ProtoReflect() protoreflect.Message {
-	mi := &file_peers_v1_peer_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use HasEventWithTimestampUpdates.ProtoReflect.Descriptor instead.
-func (*HasEventWithTimestampUpdates) Descriptor() ([]byte, []int) {
-	return file_peers_v1_peer_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *HasEventWithTimestampUpdates) GetUpdates() []*HasEventWithTimestampUpdate {
-	if x != nil {
-		return x.Updates
 	}
 	return nil
 }
 
 type EventBatch struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Events        []*PeerEvent           `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
+	Events        []*EventBatchPayload   `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *EventBatch) Reset() {
 	*x = EventBatch{}
-	mi := &file_peers_v1_peer_proto_msgTypes[10]
+	mi := &file_peers_v1_peer_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -554,7 +414,7 @@ func (x *EventBatch) String() string {
 func (*EventBatch) ProtoMessage() {}
 
 func (x *EventBatch) ProtoReflect() protoreflect.Message {
-	mi := &file_peers_v1_peer_proto_msgTypes[10]
+	mi := &file_peers_v1_peer_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -567,10 +427,10 @@ func (x *EventBatch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventBatch.ProtoReflect.Descriptor instead.
 func (*EventBatch) Descriptor() ([]byte, []int) {
-	return file_peers_v1_peer_proto_rawDescGZIP(), []int{10}
+	return file_peers_v1_peer_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *EventBatch) GetEvents() []*PeerEvent {
+func (x *EventBatch) GetEvents() []*EventBatchPayload {
 	if x != nil {
 		return x.Events
 	}
@@ -584,12 +444,10 @@ type SyncWireMessage struct {
 	// Types that are valid to be assigned to Payload:
 	//
 	//	*SyncWireMessage_Handshake
-	//	*SyncWireMessage_DigestQuery
-	//	*SyncWireMessage_DigestUpdate
+	//	*SyncWireMessage_DigestQueries
+	//	*SyncWireMessage_DigestUpdates
 	//	*SyncWireMessage_EventBatch
-	//	*SyncWireMessage_HasEventWithTimestampQuery
-	//	*SyncWireMessage_HasEventWithTimestampUpdates
-	//	*SyncWireMessage_SendEventWithTimestamp
+	//	*SyncWireMessage_SendEventsWithTimestamps
 	Payload       isSyncWireMessage_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -597,7 +455,7 @@ type SyncWireMessage struct {
 
 func (x *SyncWireMessage) Reset() {
 	*x = SyncWireMessage{}
-	mi := &file_peers_v1_peer_proto_msgTypes[11]
+	mi := &file_peers_v1_peer_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -609,7 +467,7 @@ func (x *SyncWireMessage) String() string {
 func (*SyncWireMessage) ProtoMessage() {}
 
 func (x *SyncWireMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_peers_v1_peer_proto_msgTypes[11]
+	mi := &file_peers_v1_peer_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -622,7 +480,7 @@ func (x *SyncWireMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncWireMessage.ProtoReflect.Descriptor instead.
 func (*SyncWireMessage) Descriptor() ([]byte, []int) {
-	return file_peers_v1_peer_proto_rawDescGZIP(), []int{11}
+	return file_peers_v1_peer_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *SyncWireMessage) GetAccountId() string {
@@ -655,19 +513,19 @@ func (x *SyncWireMessage) GetHandshake() *SyncHandshake {
 	return nil
 }
 
-func (x *SyncWireMessage) GetDigestQuery() *MerkleDigestQuery {
+func (x *SyncWireMessage) GetDigestQueries() *DigestQueries {
 	if x != nil {
-		if x, ok := x.Payload.(*SyncWireMessage_DigestQuery); ok {
-			return x.DigestQuery
+		if x, ok := x.Payload.(*SyncWireMessage_DigestQueries); ok {
+			return x.DigestQueries
 		}
 	}
 	return nil
 }
 
-func (x *SyncWireMessage) GetDigestUpdate() *MerkleDigestUpdate {
+func (x *SyncWireMessage) GetDigestUpdates() *DigestUpdates {
 	if x != nil {
-		if x, ok := x.Payload.(*SyncWireMessage_DigestUpdate); ok {
-			return x.DigestUpdate
+		if x, ok := x.Payload.(*SyncWireMessage_DigestUpdates); ok {
+			return x.DigestUpdates
 		}
 	}
 	return nil
@@ -682,28 +540,10 @@ func (x *SyncWireMessage) GetEventBatch() *EventBatch {
 	return nil
 }
 
-func (x *SyncWireMessage) GetHasEventWithTimestampQuery() *HasEventWithTimestampQuery {
+func (x *SyncWireMessage) GetSendEventsWithTimestamps() *SendEventsWithTimestamps {
 	if x != nil {
-		if x, ok := x.Payload.(*SyncWireMessage_HasEventWithTimestampQuery); ok {
-			return x.HasEventWithTimestampQuery
-		}
-	}
-	return nil
-}
-
-func (x *SyncWireMessage) GetHasEventWithTimestampUpdates() *HasEventWithTimestampUpdates {
-	if x != nil {
-		if x, ok := x.Payload.(*SyncWireMessage_HasEventWithTimestampUpdates); ok {
-			return x.HasEventWithTimestampUpdates
-		}
-	}
-	return nil
-}
-
-func (x *SyncWireMessage) GetSendEventWithTimestamp() *SendEventWithTimestamp {
-	if x != nil {
-		if x, ok := x.Payload.(*SyncWireMessage_SendEventWithTimestamp); ok {
-			return x.SendEventWithTimestamp
+		if x, ok := x.Payload.(*SyncWireMessage_SendEventsWithTimestamps); ok {
+			return x.SendEventsWithTimestamps
 		}
 	}
 	return nil
@@ -717,99 +557,76 @@ type SyncWireMessage_Handshake struct {
 	Handshake *SyncHandshake `protobuf:"bytes,3,opt,name=handshake,proto3,oneof"`
 }
 
-type SyncWireMessage_DigestQuery struct {
-	DigestQuery *MerkleDigestQuery `protobuf:"bytes,4,opt,name=digest_query,json=digestQuery,proto3,oneof"`
+type SyncWireMessage_DigestQueries struct {
+	DigestQueries *DigestQueries `protobuf:"bytes,4,opt,name=digest_queries,json=digestQueries,proto3,oneof"`
 }
 
-type SyncWireMessage_DigestUpdate struct {
-	DigestUpdate *MerkleDigestUpdate `protobuf:"bytes,5,opt,name=digest_update,json=digestUpdate,proto3,oneof"`
+type SyncWireMessage_DigestUpdates struct {
+	DigestUpdates *DigestUpdates `protobuf:"bytes,5,opt,name=digest_updates,json=digestUpdates,proto3,oneof"`
 }
 
 type SyncWireMessage_EventBatch struct {
 	EventBatch *EventBatch `protobuf:"bytes,6,opt,name=event_batch,json=eventBatch,proto3,oneof"`
 }
 
-type SyncWireMessage_HasEventWithTimestampQuery struct {
-	HasEventWithTimestampQuery *HasEventWithTimestampQuery `protobuf:"bytes,7,opt,name=has_event_with_timestamp_query,json=hasEventWithTimestampQuery,proto3,oneof"`
-}
-
-type SyncWireMessage_HasEventWithTimestampUpdates struct {
-	HasEventWithTimestampUpdates *HasEventWithTimestampUpdates `protobuf:"bytes,8,opt,name=has_event_with_timestamp_updates,json=hasEventWithTimestampUpdates,proto3,oneof"`
-}
-
-type SyncWireMessage_SendEventWithTimestamp struct {
-	SendEventWithTimestamp *SendEventWithTimestamp `protobuf:"bytes,9,opt,name=send_event_with_timestamp,json=sendEventWithTimestamp,proto3,oneof"`
+type SyncWireMessage_SendEventsWithTimestamps struct {
+	SendEventsWithTimestamps *SendEventsWithTimestamps `protobuf:"bytes,7,opt,name=send_events_with_timestamps,json=sendEventsWithTimestamps,proto3,oneof"`
 }
 
 func (*SyncWireMessage_Handshake) isSyncWireMessage_Payload() {}
 
-func (*SyncWireMessage_DigestQuery) isSyncWireMessage_Payload() {}
+func (*SyncWireMessage_DigestQueries) isSyncWireMessage_Payload() {}
 
-func (*SyncWireMessage_DigestUpdate) isSyncWireMessage_Payload() {}
+func (*SyncWireMessage_DigestUpdates) isSyncWireMessage_Payload() {}
 
 func (*SyncWireMessage_EventBatch) isSyncWireMessage_Payload() {}
 
-func (*SyncWireMessage_HasEventWithTimestampQuery) isSyncWireMessage_Payload() {}
-
-func (*SyncWireMessage_HasEventWithTimestampUpdates) isSyncWireMessage_Payload() {}
-
-func (*SyncWireMessage_SendEventWithTimestamp) isSyncWireMessage_Payload() {}
+func (*SyncWireMessage_SendEventsWithTimestamps) isSyncWireMessage_Payload() {}
 
 var File_peers_v1_peer_proto protoreflect.FileDescriptor
 
 const file_peers_v1_peer_proto_rawDesc = "" +
 	"\n" +
-	"\x13peers/v1/peer.proto\x12\bpeers.v1\"&\n" +
-	"\bTreePath\x12\x1a\n" +
-	"\bsegments\x18\x01 \x03(\rR\bsegments\"|\n" +
+	"\x13peers/v1/peer.proto\x12\bpeers.v1\"|\n" +
 	"\rSyncHandshake\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\tR\aversion\x12$\n" +
 	"\vroot_digest\x18\x03 \x01(\fH\x00R\n" +
 	"rootDigest\x88\x01\x01\x12\x1b\n" +
 	"\tclient_id\x18\x04 \x01(\tR\bclientIdB\x0e\n" +
-	"\f_root_digest\"`\n" +
-	"\x11MerkleDigestQuery\x12!\n" +
-	"\fmerkle_depth\x18\x01 \x01(\rR\vmerkleDepth\x12(\n" +
-	"\x05paths\x18\x02 \x03(\v2\x12.peers.v1.TreePathR\x05paths\"Z\n" +
-	"\x0eDigestWithPath\x12\x12\n" +
+	"\f_root_digest\"!\n" +
+	"\vDigestQuery\x12\x12\n" +
+	"\x04path\x18\x01 \x03(\rR\x04path\"c\n" +
+	"\rDigestQueries\x12!\n" +
+	"\fmerkle_depth\x18\x01 \x01(\rR\vmerkleDepth\x12/\n" +
+	"\aqueries\x18\x02 \x03(\v2\x15.peers.v1.DigestQueryR\aqueries\"X\n" +
+	"\fDigestUpdate\x12\x12\n" +
 	"\x04path\x18\x01 \x03(\rR\x04path\x12\x16\n" +
 	"\x06digest\x18\x02 \x01(\fR\x06digest\x12\x1c\n" +
-	"\ttimestamp\x18\x03 \x01(\tR\ttimestamp\"k\n" +
-	"\x12MerkleDigestUpdate\x12!\n" +
-	"\fmerkle_depth\x18\x01 \x01(\rR\vmerkleDepth\x122\n" +
-	"\adigests\x18\x02 \x03(\v2\x18.peers.v1.DigestWithPathR\adigests\"[\n" +
-	"\tPeerEvent\x12\x1c\n" +
+	"\ttimestamp\x18\x03 \x01(\tR\ttimestamp\"d\n" +
+	"\rDigestUpdates\x12!\n" +
+	"\fmerkle_depth\x18\x01 \x01(\rR\vmerkleDepth\x120\n" +
+	"\aupdates\x18\x02 \x03(\v2\x16.peers.v1.DigestUpdateR\aupdates\"c\n" +
+	"\x11EventBatchPayload\x12\x1c\n" +
 	"\ttimestamp\x18\x01 \x01(\tR\ttimestamp\x12\x1c\n" +
 	"\tsignature\x18\x02 \x01(\tR\tsignature\x12\x12\n" +
-	"\x04data\x18\x03 \x01(\fR\x04data\"<\n" +
-	"\x1aHasEventWithTimestampQuery\x12\x1e\n" +
+	"\x04data\x18\x03 \x01(\fR\x04data\":\n" +
+	"\x18SendEventsWithTimestamps\x12\x1e\n" +
 	"\n" +
 	"timestamps\x18\x01 \x03(\tR\n" +
-	"timestamps\"8\n" +
-	"\x16SendEventWithTimestamp\x12\x1e\n" +
+	"timestamps\"A\n" +
 	"\n" +
-	"timestamps\x18\x01 \x03(\tR\n" +
-	"timestamps\"M\n" +
-	"\x1bHasEventWithTimestampUpdate\x12\x10\n" +
-	"\x03yes\x18\x01 \x01(\bR\x03yes\x12\x1c\n" +
-	"\ttimestamp\x18\x02 \x01(\tR\ttimestamp\"_\n" +
-	"\x1cHasEventWithTimestampUpdates\x12?\n" +
-	"\aupdates\x18\x01 \x03(\v2%.peers.v1.HasEventWithTimestampUpdateR\aupdates\"9\n" +
-	"\n" +
-	"EventBatch\x12+\n" +
-	"\x06events\x18\x01 \x03(\v2\x13.peers.v1.PeerEventR\x06events\"\x8e\x05\n" +
+	"EventBatch\x123\n" +
+	"\x06events\x18\x01 \x03(\v2\x1b.peers.v1.EventBatchPayloadR\x06events\"\xb3\x03\n" +
 	"\x0fSyncWireMessage\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x12\x1b\n" +
 	"\tclient_id\x18\x02 \x01(\tR\bclientId\x127\n" +
 	"\thandshake\x18\x03 \x01(\v2\x17.peers.v1.SyncHandshakeH\x00R\thandshake\x12@\n" +
-	"\fdigest_query\x18\x04 \x01(\v2\x1b.peers.v1.MerkleDigestQueryH\x00R\vdigestQuery\x12C\n" +
-	"\rdigest_update\x18\x05 \x01(\v2\x1c.peers.v1.MerkleDigestUpdateH\x00R\fdigestUpdate\x127\n" +
+	"\x0edigest_queries\x18\x04 \x01(\v2\x17.peers.v1.DigestQueriesH\x00R\rdigestQueries\x12@\n" +
+	"\x0edigest_updates\x18\x05 \x01(\v2\x17.peers.v1.DigestUpdatesH\x00R\rdigestUpdates\x127\n" +
 	"\vevent_batch\x18\x06 \x01(\v2\x14.peers.v1.EventBatchH\x00R\n" +
-	"eventBatch\x12j\n" +
-	"\x1ehas_event_with_timestamp_query\x18\a \x01(\v2$.peers.v1.HasEventWithTimestampQueryH\x00R\x1ahasEventWithTimestampQuery\x12p\n" +
-	" has_event_with_timestamp_updates\x18\b \x01(\v2&.peers.v1.HasEventWithTimestampUpdatesH\x00R\x1chasEventWithTimestampUpdates\x12]\n" +
-	"\x19send_event_with_timestamp\x18\t \x01(\v2 .peers.v1.SendEventWithTimestampH\x00R\x16sendEventWithTimestampB\t\n" +
+	"eventBatch\x12c\n" +
+	"\x1bsend_events_with_timestamps\x18\a \x01(\v2\".peers.v1.SendEventsWithTimestampsH\x00R\x18sendEventsWithTimestampsB\t\n" +
 	"\apayloadB\rZ\vproto/peersb\x06proto3"
 
 var (
@@ -824,38 +641,32 @@ func file_peers_v1_peer_proto_rawDescGZIP() []byte {
 	return file_peers_v1_peer_proto_rawDescData
 }
 
-var file_peers_v1_peer_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_peers_v1_peer_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_peers_v1_peer_proto_goTypes = []any{
-	(*TreePath)(nil),                     // 0: peers.v1.TreePath
-	(*SyncHandshake)(nil),                // 1: peers.v1.SyncHandshake
-	(*MerkleDigestQuery)(nil),            // 2: peers.v1.MerkleDigestQuery
-	(*DigestWithPath)(nil),               // 3: peers.v1.DigestWithPath
-	(*MerkleDigestUpdate)(nil),           // 4: peers.v1.MerkleDigestUpdate
-	(*PeerEvent)(nil),                    // 5: peers.v1.PeerEvent
-	(*HasEventWithTimestampQuery)(nil),   // 6: peers.v1.HasEventWithTimestampQuery
-	(*SendEventWithTimestamp)(nil),       // 7: peers.v1.SendEventWithTimestamp
-	(*HasEventWithTimestampUpdate)(nil),  // 8: peers.v1.HasEventWithTimestampUpdate
-	(*HasEventWithTimestampUpdates)(nil), // 9: peers.v1.HasEventWithTimestampUpdates
-	(*EventBatch)(nil),                   // 10: peers.v1.EventBatch
-	(*SyncWireMessage)(nil),              // 11: peers.v1.SyncWireMessage
+	(*SyncHandshake)(nil),            // 0: peers.v1.SyncHandshake
+	(*DigestQuery)(nil),              // 1: peers.v1.DigestQuery
+	(*DigestQueries)(nil),            // 2: peers.v1.DigestQueries
+	(*DigestUpdate)(nil),             // 3: peers.v1.DigestUpdate
+	(*DigestUpdates)(nil),            // 4: peers.v1.DigestUpdates
+	(*EventBatchPayload)(nil),        // 5: peers.v1.EventBatchPayload
+	(*SendEventsWithTimestamps)(nil), // 6: peers.v1.SendEventsWithTimestamps
+	(*EventBatch)(nil),               // 7: peers.v1.EventBatch
+	(*SyncWireMessage)(nil),          // 8: peers.v1.SyncWireMessage
 }
 var file_peers_v1_peer_proto_depIdxs = []int32{
-	0,  // 0: peers.v1.MerkleDigestQuery.paths:type_name -> peers.v1.TreePath
-	3,  // 1: peers.v1.MerkleDigestUpdate.digests:type_name -> peers.v1.DigestWithPath
-	8,  // 2: peers.v1.HasEventWithTimestampUpdates.updates:type_name -> peers.v1.HasEventWithTimestampUpdate
-	5,  // 3: peers.v1.EventBatch.events:type_name -> peers.v1.PeerEvent
-	1,  // 4: peers.v1.SyncWireMessage.handshake:type_name -> peers.v1.SyncHandshake
-	2,  // 5: peers.v1.SyncWireMessage.digest_query:type_name -> peers.v1.MerkleDigestQuery
-	4,  // 6: peers.v1.SyncWireMessage.digest_update:type_name -> peers.v1.MerkleDigestUpdate
-	10, // 7: peers.v1.SyncWireMessage.event_batch:type_name -> peers.v1.EventBatch
-	6,  // 8: peers.v1.SyncWireMessage.has_event_with_timestamp_query:type_name -> peers.v1.HasEventWithTimestampQuery
-	9,  // 9: peers.v1.SyncWireMessage.has_event_with_timestamp_updates:type_name -> peers.v1.HasEventWithTimestampUpdates
-	7,  // 10: peers.v1.SyncWireMessage.send_event_with_timestamp:type_name -> peers.v1.SendEventWithTimestamp
-	11, // [11:11] is the sub-list for method output_type
-	11, // [11:11] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	1, // 0: peers.v1.DigestQueries.queries:type_name -> peers.v1.DigestQuery
+	3, // 1: peers.v1.DigestUpdates.updates:type_name -> peers.v1.DigestUpdate
+	5, // 2: peers.v1.EventBatch.events:type_name -> peers.v1.EventBatchPayload
+	0, // 3: peers.v1.SyncWireMessage.handshake:type_name -> peers.v1.SyncHandshake
+	2, // 4: peers.v1.SyncWireMessage.digest_queries:type_name -> peers.v1.DigestQueries
+	4, // 5: peers.v1.SyncWireMessage.digest_updates:type_name -> peers.v1.DigestUpdates
+	7, // 6: peers.v1.SyncWireMessage.event_batch:type_name -> peers.v1.EventBatch
+	6, // 7: peers.v1.SyncWireMessage.send_events_with_timestamps:type_name -> peers.v1.SendEventsWithTimestamps
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_peers_v1_peer_proto_init() }
@@ -863,15 +674,13 @@ func file_peers_v1_peer_proto_init() {
 	if File_peers_v1_peer_proto != nil {
 		return
 	}
-	file_peers_v1_peer_proto_msgTypes[1].OneofWrappers = []any{}
-	file_peers_v1_peer_proto_msgTypes[11].OneofWrappers = []any{
+	file_peers_v1_peer_proto_msgTypes[0].OneofWrappers = []any{}
+	file_peers_v1_peer_proto_msgTypes[8].OneofWrappers = []any{
 		(*SyncWireMessage_Handshake)(nil),
-		(*SyncWireMessage_DigestQuery)(nil),
-		(*SyncWireMessage_DigestUpdate)(nil),
+		(*SyncWireMessage_DigestQueries)(nil),
+		(*SyncWireMessage_DigestUpdates)(nil),
 		(*SyncWireMessage_EventBatch)(nil),
-		(*SyncWireMessage_HasEventWithTimestampQuery)(nil),
-		(*SyncWireMessage_HasEventWithTimestampUpdates)(nil),
-		(*SyncWireMessage_SendEventWithTimestamp)(nil),
+		(*SyncWireMessage_SendEventsWithTimestamps)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -879,7 +688,7 @@ func file_peers_v1_peer_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_peers_v1_peer_proto_rawDesc), len(file_peers_v1_peer_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
