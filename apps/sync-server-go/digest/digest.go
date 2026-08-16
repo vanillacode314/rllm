@@ -5,7 +5,6 @@
 package digest
 
 import (
-	"log"
 	"merkle-tree"
 	"proto/peers"
 )
@@ -99,7 +98,6 @@ type ActionKind int
 
 const (
 	KindQueryChildren ActionKind = iota
-	KindSendTimestamp
 	KindAskTimestamp
 )
 
@@ -120,43 +118,29 @@ func HandleDigestUpdate(tree *merkletree.MerkleTree[string, string], merkleDepth
 		maxDepth = t
 	}
 	actions := make([]Action, 0, len(updates))
+	lastTimestamp := ""
 	for _, update := range updates {
 		path := update.Path
 		theirDigest := update.Digest
-		ourDigest, timestamp := ResolveDigest(tree, merkleDepth, path)
+		ourDigest, _ := ResolveDigest(tree, merkleDepth, path)
 		if !DigestsDiffer(theirDigest, ourDigest) {
+			lastTimestamp = update.Timestamp
 			continue
 		}
 		isLeafNode := len(path) == maxDepth
-		if isLeafNode {
-			if update.Timestamp == "" && timestamp == "" {
-				continue
+		if !isLeafNode {
+			children := make([][]uint32, 0, tree.Arity())
+			for i := range tree.Arity() {
+				child := make([]uint32, 0, len(path)+1)
+				child = append(child, path...)
+				child = append(child, uint32(i))
+				children = append(children, child)
 			}
-			if update.Timestamp == timestamp {
-				log.Printf("[WS Error] digests mismatch but timestamps match at path: %v", update.Path)
-				continue
-			}
-			if timestamp == "" {
-				actions = append(actions, Action{Kind: KindAskTimestamp, Timestamp: update.Timestamp})
-			} else if update.Timestamp == "" {
-				actions = append(actions, Action{Kind: KindSendTimestamp, Timestamp: timestamp})
-				continue
-			} else if update.Timestamp > timestamp {
-				actions = append(actions, Action{Kind: KindSendTimestamp, Timestamp: timestamp})
-			} else {
-				actions = append(actions, Action{Kind: KindAskTimestamp, Timestamp: update.Timestamp})
-			}
-			continue
+			actions = append(actions, Action{Kind: KindQueryChildren, Children: children})
+			return actions
 		}
 
-		children := make([][]uint32, 0, tree.Arity())
-		for i := range tree.Arity() {
-			child := make([]uint32, 0, len(path)+1)
-			child = append(child, path...)
-			child = append(child, uint32(i))
-			children = append(children, child)
-		}
-		actions = append(actions, Action{Kind: KindQueryChildren, Children: children})
+		actions = append(actions, Action{Kind: KindAskTimestamp, Timestamp: lastTimestamp})
 	}
 	return actions
 }

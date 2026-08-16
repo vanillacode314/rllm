@@ -33,7 +33,6 @@ class ConnectionManager {
   readonly clientId: string;
   readonly ws: WebSocket;
 
-  private askTimestampBatch: Batcher<string>;
   private pendingDigestUpdates = 0;
   private sendEventsBatch: Batcher<EventRow>;
   private sendTimestampBatch: Batcher<string>;
@@ -45,22 +44,12 @@ class ConnectionManager {
 
     this.sendTimestampBatch = new Batcher(
       (timestamps) => void this.flushSendTimestamp(timestamps),
-      { maxSize: 30, wait: 5000 }
-    );
-    this.askTimestampBatch = new Batcher(
-      (timestamps) => void this.flushSendEventWithTimestamp(timestamps),
       { maxSize: 100, wait: 5000 }
     );
     this.sendEventsBatch = new Batcher<EventRow>((events) => void this.flushSendEvents(events), {
-      maxSize: 30,
+      maxSize: 100,
       wait: 2000
     });
-  }
-
-  addAskTimestamps(timestamps: string[]) {
-    if (timestamps.length === 0) return;
-    for (const timestamp of timestamps) this.askTimestampBatch.addItem(timestamp);
-    if (this.pendingDigestUpdatesDone()) this.askTimestampBatch.flush();
   }
 
   addPendingDigestUpdates(n: number) {
@@ -75,7 +64,6 @@ class ConnectionManager {
 
   close() {
     this.sendTimestampBatch.cancel();
-    this.askTimestampBatch.cancel();
     this.sendEventsBatch.cancel();
   }
 
@@ -125,13 +113,13 @@ class ConnectionManager {
     );
   }
 
-  createSendEventsWithTimestamp(timestamps: string[]) {
+  createSendEventsWithTimestamp(timestamp: string) {
     return toBinary(
       PeerPB.SyncWireMessageSchema,
       create(PeerPB.SyncWireMessageSchema, {
         accountId: this.accountId,
         clientId: this.clientId,
-        payload: { case: 'sendEventsWithTimestamps', value: { timestamps } }
+        payload: { case: 'sendEventsAfterTimestamp', value: { timestamp } }
       })
     );
   }
@@ -164,11 +152,6 @@ class ConnectionManager {
     );
   }
 
-  flushSendEventWithTimestamp(timestamps: string[]) {
-    console.debug('[WS Sending Message] sendEventsWithTimestamp', { timestamps });
-    this.write(this.createSendEventsWithTimestamp([...new Set(timestamps)]));
-  }
-
   async flushSendTimestamp(timestamps: string[]) {
     const unique = [...new Set(timestamps)];
     if (unique.length === 0) return;
@@ -191,6 +174,29 @@ class ConnectionManager {
         void this.sendEventsBatch.addItem({ data, timestamp, type, version }),
       { remote: false, self: true }
     );
+  }
+
+  async sendAfterTimestamp(timestamp: string) {
+    let pageSize = 100;
+    let cursor = '';
+    let hasMore = false;
+    do {
+      // oxlint-disable-next-line no-await-in-loop
+      const rows = await logger.db.query<{ timestamp: string }>(
+        logger.sql`
+                          SELECT timestamp from events 
+                            WHERE timestamp > ${cursor} 
+                          AND timestamp > ${timestamp} 
+                            ORDER BY timestamp ASC 
+                          LIMIT ${pageSize + 1}
+                        `
+      );
+      const timestamps = rows.map((row) => row.timestamp);
+      hasMore = timestamps.length > pageSize;
+      if (hasMore) timestamps.pop();
+      cursor = timestamps[timestamps.length - 1];
+      this.addSendTimestamps(timestamps);
+    } while (hasMore);
   }
 
   subPendingDigestUpdates(n: number) {
@@ -276,43 +282,29 @@ function handleMessage(connection: ConnectionManager, event: MessageEvent) {
           const tree = await logger.getMerkleTree();
           connection.subPendingDigestUpdates(updates.length);
           const MAX_DEPTH = Math.max(merkleDepth, tree.maxDepth);
-          const timestampsToAsk = [] as string[];
-          const timestampsToSend = [] as string[];
+          let lastTimestamp = '';
           for (const update of updates) {
-            const [digest, timestamp] = resolveDigest(tree, merkleDepth, update.path);
+            const [digest] = resolveDigest(tree, merkleDepth, update.path);
             const mismatch = digestsDiffer(digest, update.digest);
 
-            if (!mismatch) continue;
+            if (!mismatch) {
+              lastTimestamp = update.timestamp;
+              continue;
+            }
 
             const isLeafNode = update.path.length === MAX_DEPTH;
-            if (isLeafNode) {
-              if (timestamp === '' && update.timestamp === '') {
-                continue;
-              }
-              if (timestamp === update.timestamp) {
-                console.debug(
-                  '[WS Error] digests mismatch but timestamps match at path:',
-                  update.path
-                );
-                continue;
-              }
-              if (timestamp === '') {
-                timestampsToAsk.push(update.timestamp);
-              } else if (update.timestamp === '') {
-                timestampsToSend.push(timestamp);
-              } else if (update.timestamp > timestamp) {
-                timestampsToSend.push(timestamp);
-              } else {
-                timestampsToAsk.push(update.timestamp);
-              }
-            } else {
+
+            if (!isLeafNode) {
               const paths = Array.from({ length: tree.arity }).map((_, i) => [...update.path, i]);
               connection.addPendingDigestUpdates(paths.length);
               connection.write(connection.createDigestQuery(tree.maxDepth, paths));
+              break;
             }
+
+            connection.write(connection.createSendEventsWithTimestamp(lastTimestamp));
+            void connection.sendAfterTimestamp(lastTimestamp);
+            break;
           }
-          connection.addAskTimestamps(timestampsToAsk);
-          connection.addSendTimestamps(timestampsToSend);
           break;
         }
         case 'eventBatch': {
@@ -378,9 +370,8 @@ function handleMessage(connection: ConnectionManager, event: MessageEvent) {
           }
           break;
         }
-        case 'sendEventsWithTimestamps': {
-          const { timestamps } = payload.value;
-          connection.addSendTimestamps(timestamps);
+        case 'sendEventsAfterTimestamp': {
+          void connection.sendAfterTimestamp(payload.value.timestamp);
           break;
         }
         default: {

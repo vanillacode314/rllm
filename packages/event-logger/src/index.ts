@@ -480,7 +480,7 @@ const toSql = (value: unknown) => {
     case 'string':
       return value;
     default:
-      throw new Error(`Invalid sql value: ${value}`);
+      throw new Error(`Invalid sql value: ${value} with type ${typeof value}`);
   }
 };
 

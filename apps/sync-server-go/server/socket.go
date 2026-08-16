@@ -152,11 +152,6 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 			},
 		}))
 
-	case *peers.SyncWireMessage_SendEventsWithTimestamps:
-		log.Printf("[WS SendEventsWithTimestamp] accountId=%s", accountID)
-		timestamps := payload.SendEventsWithTimestamps.Timestamps
-		connectionManager.addSendTimestamp(timestamps)
-
 	case *peers.SyncWireMessage_DigestUpdates:
 		u := payload.DigestUpdates
 		log.Printf("[WS DigestUpdates] accountId=%s updates=%d merkleDepth=%d", accountID, len(u.GetUpdates()), u.GetMerkleDepth())
@@ -166,21 +161,20 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 			return
 		}
 		connectionManager.subPendingDigestUpdates(len(u.GetUpdates()))
-		timestampsToSend := []string{}
-		timestampsToAsk := []string{}
 		for _, action := range digest.HandleDigestUpdate(tree, u.GetMerkleDepth(), u.GetUpdates()) {
 			switch action.Kind {
 			case digest.KindQueryChildren:
 				connectionManager.addPendingDigestUpdates(len(action.Children))
 				connectionManager.write(connectionManager.createDigestQuery(uint32(tree.MaxDepth()), action.Children))
-			case digest.KindSendTimestamp:
-				timestampsToSend = append(timestampsToSend, action.Timestamp)
 			case digest.KindAskTimestamp:
-				timestampsToAsk = append(timestampsToAsk, action.Timestamp)
+				connectionManager.write(connectionManager.createSendEventsWithTimestamp(action.Timestamp))
+				connectionManager.sendAfterTimestamp(action.Timestamp)
 			}
 		}
-		connectionManager.addSendTimestamp(timestampsToSend)
-		connectionManager.addAskTimestamp(timestampsToAsk)
+
+	case *peers.SyncWireMessage_SendEventsAfterTimestamp:
+		log.Printf("[WS SendEventsAfterTimestamp] accountId=%s", accountID)
+		connectionManager.sendAfterTimestamp(payload.SendEventsAfterTimestamp.Timestamp)
 
 	case *peers.SyncWireMessage_EventBatch:
 		events := payload.EventBatch.GetEvents()

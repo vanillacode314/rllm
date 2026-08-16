@@ -23,9 +23,9 @@ const (
 
 type SyncHandshake struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
-	RootDigest    []byte                 `protobuf:"bytes,3,opt,name=root_digest,json=rootDigest,proto3,oneof" json:"root_digest,omitempty"`
-	ClientId      string                 `protobuf:"bytes,4,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	Version       string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	RootDigest    []byte                 `protobuf:"bytes,2,opt,name=root_digest,json=rootDigest,proto3,oneof" json:"root_digest,omitempty"`
+	ClientId      string                 `protobuf:"bytes,3,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -349,27 +349,27 @@ func (x *EventBatchPayload) GetData() []byte {
 	return nil
 }
 
-type SendEventsWithTimestamps struct {
+type SendEventsAfterTimestamp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Timestamps    []string               `protobuf:"bytes,1,rep,name=timestamps,proto3" json:"timestamps,omitempty"`
+	Timestamp     string                 `protobuf:"bytes,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SendEventsWithTimestamps) Reset() {
-	*x = SendEventsWithTimestamps{}
+func (x *SendEventsAfterTimestamp) Reset() {
+	*x = SendEventsAfterTimestamp{}
 	mi := &file_peers_v1_peer_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SendEventsWithTimestamps) String() string {
+func (x *SendEventsAfterTimestamp) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SendEventsWithTimestamps) ProtoMessage() {}
+func (*SendEventsAfterTimestamp) ProtoMessage() {}
 
-func (x *SendEventsWithTimestamps) ProtoReflect() protoreflect.Message {
+func (x *SendEventsAfterTimestamp) ProtoReflect() protoreflect.Message {
 	mi := &file_peers_v1_peer_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -381,16 +381,16 @@ func (x *SendEventsWithTimestamps) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SendEventsWithTimestamps.ProtoReflect.Descriptor instead.
-func (*SendEventsWithTimestamps) Descriptor() ([]byte, []int) {
+// Deprecated: Use SendEventsAfterTimestamp.ProtoReflect.Descriptor instead.
+func (*SendEventsAfterTimestamp) Descriptor() ([]byte, []int) {
 	return file_peers_v1_peer_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *SendEventsWithTimestamps) GetTimestamps() []string {
+func (x *SendEventsAfterTimestamp) GetTimestamp() string {
 	if x != nil {
-		return x.Timestamps
+		return x.Timestamp
 	}
-	return nil
+	return ""
 }
 
 type EventBatch struct {
@@ -447,7 +447,7 @@ type SyncWireMessage struct {
 	//	*SyncWireMessage_DigestQueries
 	//	*SyncWireMessage_DigestUpdates
 	//	*SyncWireMessage_EventBatch
-	//	*SyncWireMessage_SendEventsWithTimestamps
+	//	*SyncWireMessage_SendEventsAfterTimestamp
 	Payload       isSyncWireMessage_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -540,10 +540,10 @@ func (x *SyncWireMessage) GetEventBatch() *EventBatch {
 	return nil
 }
 
-func (x *SyncWireMessage) GetSendEventsWithTimestamps() *SendEventsWithTimestamps {
+func (x *SyncWireMessage) GetSendEventsAfterTimestamp() *SendEventsAfterTimestamp {
 	if x != nil {
-		if x, ok := x.Payload.(*SyncWireMessage_SendEventsWithTimestamps); ok {
-			return x.SendEventsWithTimestamps
+		if x, ok := x.Payload.(*SyncWireMessage_SendEventsAfterTimestamp); ok {
+			return x.SendEventsAfterTimestamp
 		}
 	}
 	return nil
@@ -569,8 +569,8 @@ type SyncWireMessage_EventBatch struct {
 	EventBatch *EventBatch `protobuf:"bytes,6,opt,name=event_batch,json=eventBatch,proto3,oneof"`
 }
 
-type SyncWireMessage_SendEventsWithTimestamps struct {
-	SendEventsWithTimestamps *SendEventsWithTimestamps `protobuf:"bytes,7,opt,name=send_events_with_timestamps,json=sendEventsWithTimestamps,proto3,oneof"`
+type SyncWireMessage_SendEventsAfterTimestamp struct {
+	SendEventsAfterTimestamp *SendEventsAfterTimestamp `protobuf:"bytes,7,opt,name=send_events_after_timestamp,json=sendEventsAfterTimestamp,proto3,oneof"`
 }
 
 func (*SyncWireMessage_Handshake) isSyncWireMessage_Payload() {}
@@ -581,7 +581,7 @@ func (*SyncWireMessage_DigestUpdates) isSyncWireMessage_Payload() {}
 
 func (*SyncWireMessage_EventBatch) isSyncWireMessage_Payload() {}
 
-func (*SyncWireMessage_SendEventsWithTimestamps) isSyncWireMessage_Payload() {}
+func (*SyncWireMessage_SendEventsAfterTimestamp) isSyncWireMessage_Payload() {}
 
 var File_peers_v1_peer_proto protoreflect.FileDescriptor
 
@@ -589,10 +589,10 @@ const file_peers_v1_peer_proto_rawDesc = "" +
 	"\n" +
 	"\x13peers/v1/peer.proto\x12\bpeers.v1\"|\n" +
 	"\rSyncHandshake\x12\x18\n" +
-	"\aversion\x18\x02 \x01(\tR\aversion\x12$\n" +
-	"\vroot_digest\x18\x03 \x01(\fH\x00R\n" +
+	"\aversion\x18\x01 \x01(\tR\aversion\x12$\n" +
+	"\vroot_digest\x18\x02 \x01(\fH\x00R\n" +
 	"rootDigest\x88\x01\x01\x12\x1b\n" +
-	"\tclient_id\x18\x04 \x01(\tR\bclientIdB\x0e\n" +
+	"\tclient_id\x18\x03 \x01(\tR\bclientIdB\x0e\n" +
 	"\f_root_digest\"!\n" +
 	"\vDigestQuery\x12\x12\n" +
 	"\x04path\x18\x01 \x03(\rR\x04path\"c\n" +
@@ -609,11 +609,9 @@ const file_peers_v1_peer_proto_rawDesc = "" +
 	"\x11EventBatchPayload\x12\x1c\n" +
 	"\ttimestamp\x18\x01 \x01(\tR\ttimestamp\x12\x1c\n" +
 	"\tsignature\x18\x02 \x01(\tR\tsignature\x12\x12\n" +
-	"\x04data\x18\x03 \x01(\fR\x04data\":\n" +
-	"\x18SendEventsWithTimestamps\x12\x1e\n" +
-	"\n" +
-	"timestamps\x18\x01 \x03(\tR\n" +
-	"timestamps\"A\n" +
+	"\x04data\x18\x03 \x01(\fR\x04data\"8\n" +
+	"\x18SendEventsAfterTimestamp\x12\x1c\n" +
+	"\ttimestamp\x18\x01 \x01(\tR\ttimestamp\"A\n" +
 	"\n" +
 	"EventBatch\x123\n" +
 	"\x06events\x18\x01 \x03(\v2\x1b.peers.v1.EventBatchPayloadR\x06events\"\xb3\x03\n" +
@@ -626,7 +624,7 @@ const file_peers_v1_peer_proto_rawDesc = "" +
 	"\x0edigest_updates\x18\x05 \x01(\v2\x17.peers.v1.DigestUpdatesH\x00R\rdigestUpdates\x127\n" +
 	"\vevent_batch\x18\x06 \x01(\v2\x14.peers.v1.EventBatchH\x00R\n" +
 	"eventBatch\x12c\n" +
-	"\x1bsend_events_with_timestamps\x18\a \x01(\v2\".peers.v1.SendEventsWithTimestampsH\x00R\x18sendEventsWithTimestampsB\t\n" +
+	"\x1bsend_events_after_timestamp\x18\a \x01(\v2\".peers.v1.SendEventsAfterTimestampH\x00R\x18sendEventsAfterTimestampB\t\n" +
 	"\apayloadB\rZ\vproto/peersb\x06proto3"
 
 var (
@@ -649,7 +647,7 @@ var file_peers_v1_peer_proto_goTypes = []any{
 	(*DigestUpdate)(nil),             // 3: peers.v1.DigestUpdate
 	(*DigestUpdates)(nil),            // 4: peers.v1.DigestUpdates
 	(*EventBatchPayload)(nil),        // 5: peers.v1.EventBatchPayload
-	(*SendEventsWithTimestamps)(nil), // 6: peers.v1.SendEventsWithTimestamps
+	(*SendEventsAfterTimestamp)(nil), // 6: peers.v1.SendEventsAfterTimestamp
 	(*EventBatch)(nil),               // 7: peers.v1.EventBatch
 	(*SyncWireMessage)(nil),          // 8: peers.v1.SyncWireMessage
 }
@@ -661,7 +659,7 @@ var file_peers_v1_peer_proto_depIdxs = []int32{
 	2, // 4: peers.v1.SyncWireMessage.digest_queries:type_name -> peers.v1.DigestQueries
 	4, // 5: peers.v1.SyncWireMessage.digest_updates:type_name -> peers.v1.DigestUpdates
 	7, // 6: peers.v1.SyncWireMessage.event_batch:type_name -> peers.v1.EventBatch
-	6, // 7: peers.v1.SyncWireMessage.send_events_with_timestamps:type_name -> peers.v1.SendEventsWithTimestamps
+	6, // 7: peers.v1.SyncWireMessage.send_events_after_timestamp:type_name -> peers.v1.SendEventsAfterTimestamp
 	8, // [8:8] is the sub-list for method output_type
 	8, // [8:8] is the sub-list for method input_type
 	8, // [8:8] is the sub-list for extension type_name
@@ -680,7 +678,7 @@ func file_peers_v1_peer_proto_init() {
 		(*SyncWireMessage_DigestQueries)(nil),
 		(*SyncWireMessage_DigestUpdates)(nil),
 		(*SyncWireMessage_EventBatch)(nil),
-		(*SyncWireMessage_SendEventsWithTimestamps)(nil),
+		(*SyncWireMessage_SendEventsAfterTimestamp)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

@@ -86,7 +86,6 @@ type ConnectionManager struct {
 	hub       *Hub
 
 	sendTimestampBatch *batch.Batcher[string]
-	askTimestampBatch  *batch.Batcher[string]
 	recomputeDebouncer *batch.Debouncer
 
 	// pendingDigestUpdates counts digest queries we sent that have not yet
@@ -107,7 +106,6 @@ func newConnectionManager(db *sql.DB, accountID string, clientID string, conn *w
 		hub:       hub,
 	}
 	m.sendTimestampBatch = batch.NewBatcher(30, 5*time.Second, func(timestamps []string) { m.flushSendTimestamp(timestamps) })
-	m.askTimestampBatch = batch.NewBatcher(100, 5*time.Second, func(timestamps []string) { m.flushSendEventsWithTimestamp(timestamps) })
 	m.recomputeDebouncer = batch.NewDebouncer(time.Second, func() {
 		log.Printf("[WS Debouncer] Recomputing Merkle tree: accountId=%s", m.accountID)
 		if err := client.RecomputeMerkleTree(m.db, m.accountID); err != nil {
@@ -120,7 +118,6 @@ func newConnectionManager(db *sql.DB, accountID string, clientID string, conn *w
 // close stops batchers and runs any pending recompute.
 func (m *ConnectionManager) close() {
 	m.sendTimestampBatch.Cancel()
-	m.askTimestampBatch.Cancel()
 	m.recomputeDebouncer.Flush()
 }
 
@@ -157,20 +154,6 @@ func (m *ConnectionManager) addSendTimestamp(timestamps []string) {
 	}
 	if m.pendingDigestUpdatesDone() {
 		m.sendTimestampBatch.Flush()
-	}
-}
-
-// addAskTimestamp queues a sendEventsWithTimestamp request for timestamp,
-// flushing immediately once the reconciliation round settles.
-func (m *ConnectionManager) addAskTimestamp(timestamps []string) {
-	if len(timestamps) == 0 {
-		return
-	}
-	for _, timestamp := range timestamps {
-		m.askTimestampBatch.Add(timestamp)
-	}
-	if m.pendingDigestUpdatesDone() {
-		m.askTimestampBatch.Flush()
 	}
 }
 
@@ -224,12 +207,12 @@ func (m *ConnectionManager) createEventBatch(events []*peers.EventBatchPayload) 
 	})
 }
 
-func (m *ConnectionManager) createSendEventsWithTimestamp(timestamps []string) []byte {
+func (m *ConnectionManager) createSendEventsWithTimestamp(timestamp string) []byte {
 	return marshalMessage(&peers.SyncWireMessage{
 		AccountId: m.accountID,
 		ClientId:  m.clientID,
-		Payload: &peers.SyncWireMessage_SendEventsWithTimestamps{
-			SendEventsWithTimestamps: &peers.SendEventsWithTimestamps{Timestamps: timestamps},
+		Payload: &peers.SyncWireMessage_SendEventsAfterTimestamp{
+			SendEventsAfterTimestamp: &peers.SendEventsAfterTimestamp{Timestamp: timestamp},
 		}})
 }
 
@@ -260,10 +243,36 @@ func (m *ConnectionManager) flushSendTimestamp(timestamps []string) {
 	m.write(m.createEventBatch(peerEvents))
 }
 
-// flushSendEventsWithTimestamp sends a sendEventsWithTimestamp for the timestamps.
-func (m *ConnectionManager) flushSendEventsWithTimestamp(timestamps []string) {
-	timestamps = digest.Unique(timestamps)
-	m.write(m.createSendEventsWithTimestamp(timestamps))
+func (m *ConnectionManager) sendAfterTimestamp(timestamp string) {
+	pageSize := 100
+	cursor := ""
+	hasMore := false
+	for {
+		rows, err := m.db.Query("SELECT timestamp from events WHERE timestamp > ? AND timestamp > ? ORDER BY timestamp ASC LIMIT ?", cursor, timestamp, pageSize+1)
+		if err != nil {
+			log.Printf("[WS Error] Failed to query events: %v", err)
+			return
+		}
+		timestamps := []string{}
+		for rows.Next() {
+			var timestamp string
+			err := rows.Scan(&timestamp)
+			if err != nil {
+				log.Printf("[WS Error] Failed to scan timestamp: %v", err)
+				return
+			}
+			timestamps = append(timestamps, timestamp)
+		}
+		hasMore = len(timestamps) > pageSize
+		if hasMore {
+			timestamps = timestamps[:pageSize]
+		}
+		cursor = timestamps[len(timestamps)-1]
+		m.addSendTimestamp(timestamps)
+		if !hasMore {
+			break
+		}
+	}
 }
 
 // marshalMessage serializes an outbound wire message, logging on failure.
