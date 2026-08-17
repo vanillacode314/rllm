@@ -138,13 +138,14 @@ function Markdown(props: TProps) {
       file.value = content;
       const tree = processor.runSync(processor.parse(file), file);
       return tree;
-    },
-    { children: [], type: 'root' }
+    }
   );
-  const node = createDerivedStore(parsedTree);
+  const node = createDerivedStore(() =>
+    parsedTree.latest ? parsedTree.latest : { children: [], type: 'root' }
+  );
 
   return (
-    <Show fallback={<MarkdownSkeleton content={local.content} />} when={node}>
+    <Show fallback={<MarkdownSkeleton content={local.content} />} when={parsedTree.latest}>
       <div class={local.class} {...others}>
         <MarkdownRoot
           context={{

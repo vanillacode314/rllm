@@ -1,3 +1,4 @@
+// oxlint-disable solid/reactivity
 import { createConnectivitySignal } from '@solid-primitives/connectivity';
 import { createPageVisibility } from '@solid-primitives/page-visibility';
 import { createScheduled, debounce } from '@solid-primitives/scheduled';
@@ -8,9 +9,11 @@ import {
   createMemo,
   createResource,
   createSignal,
+  type InitializedResource,
   on,
   onCleanup,
   onMount,
+  type Resource,
   type Setter,
   type Signal,
   untrack
@@ -47,13 +50,17 @@ function createDebouncedMemo<T>(
 function createLatestAsync<T, S>(
   source: () => S,
   fetcher: (source: S) => Promise<T>,
-  initial?: T
-): [Accessor<T>, Accessor<boolean>];
+  initial: T
+): [InitializedResource<T | undefined>, Accessor<boolean>];
 function createLatestAsync<T, S>(
   source: () => S,
   fetcher: (source: S) => Promise<T>
-): [Accessor<T | undefined>, Accessor<boolean>];
-function createLatestAsync<T, S>(source: () => S, fetcher: (source: S) => Promise<T>, initial?: T) {
+): [Resource<T>, Accessor<boolean>];
+function createLatestAsync<T, S>(
+  source: () => S,
+  fetcher: (source: S) => Promise<T>,
+  initial?: T
+): [InitializedResource<T | undefined>, Accessor<boolean>] | [Resource<T>, Accessor<boolean>] {
   const [state, setState] = createStore<{
     error: unknown;
     finished: number;
@@ -85,7 +92,7 @@ function createLatestAsync<T, S>(source: () => S, fetcher: (source: S) => Promis
         try {
           const value = await fetcher(source);
           if (state.finished > pending) return;
-          mutate(value);
+          mutate(value as never);
           setState((state) =>
             produce(state, (draft) => {
               draft.error = undefined;
@@ -97,6 +104,7 @@ function createLatestAsync<T, S>(source: () => S, fetcher: (source: S) => Promis
           setState((state) =>
             produce(state, (draft) => {
               draft.error = error;
+              draft.finished = pending;
             })
           );
         }
@@ -104,10 +112,7 @@ function createLatestAsync<T, S>(source: () => S, fetcher: (source: S) => Promis
       { defer: true }
     )
   );
-  return [
-    () => data(),
-    () => data.state === 'refreshing' || state.pending > state.finished
-  ] as const;
+  return [data, () => data.state === 'refreshing' || state.pending > state.finished] as const;
 }
 
 function syncToURLHash(signal: Signal<boolean>, key: string): Signal<boolean> {

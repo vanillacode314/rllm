@@ -402,16 +402,14 @@ function LLMReasoningChunk(props: {
   // if the data is already there if it's loaded by ensureQueryData()
   // we wrap it in a resource to bypass this
   const [hideReasoning, { mutate }] = createResource(
-    () => hideReasoningDuringGeneration.isSuccess && hideReasoningDuringGeneration.data === 'false'
+    () => hideReasoningDuringGeneration.isSuccess && hideReasoningDuringGeneration.data === 'true'
   );
   createEffect(() =>
-    mutate(
-      hideReasoningDuringGeneration.isSuccess && hideReasoningDuringGeneration.data === 'false'
-    )
+    mutate(hideReasoningDuringGeneration.isSuccess && hideReasoningDuringGeneration.data === 'true')
   );
   let openChangedByUser = false;
   const [open, setOpen] = createWritableMemo((prev: boolean | undefined) =>
-    openChangedByUser ? prev : hideReasoning.latest ? props.inProgress : false
+    openChangedByUser ? prev : hideReasoning.latest ? false : props.inProgress
   );
 
   return (
