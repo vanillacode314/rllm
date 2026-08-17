@@ -49,12 +49,16 @@ message WebRTCSignal {
   string data = 2;
 }
 
-message AddPeer {
+message PeerConnected {
   string client_id = 1;
 }
 
-message PeerConnected {
-  string client_id = 1;
+message AddPeer {
+  string peer_id = 1;
+}
+
+message RemovePeer {
+  string peer_id = 1;
 }
 
 message SyncWireMessage {
@@ -69,5 +73,6 @@ message SyncWireMessage {
     WebRTCSignal webrtc_signal = 8;
     AddPeer add_peer = 9;
     PeerConnected peer_connected = 10;
+    RemovePeer remove_peer = 11;
   }
 }

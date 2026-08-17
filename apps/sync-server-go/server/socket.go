@@ -210,7 +210,11 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 
 	case *peers.SyncWireMessage_AddPeer:
 		log.Printf("[WS AddPeer] accountId=%s", accountID)
-		s.Hub.AddPeer(accountID, message.ClientId, payload.AddPeer.ClientId)
+		s.Hub.AddPeer(accountID, message.ClientId, payload.AddPeer.PeerId)
+
+	case *peers.SyncWireMessage_RemovePeer:
+		log.Printf("[WS RemovePeer] accountId=%s", accountID)
+		s.Hub.RemovePeerForMe(accountID, message.ClientId, payload.RemovePeer.PeerId)
 
 	case *peers.SyncWireMessage_EventBatch:
 		events := payload.EventBatch.GetEvents()

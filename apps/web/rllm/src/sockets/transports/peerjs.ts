@@ -1,4 +1,4 @@
-import { fromBinary } from '@bufbuild/protobuf';
+import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
 import { type DataConnection, Peer } from 'peerjs';
 import * as PeerPB from 'proto/peers/v1/peer_pb';
 import { Option } from 'ts-result-option';
@@ -41,17 +41,37 @@ export async function initPeerJSTransport() {
 
   const peer = new Peer(clientId);
   peer.on('open', () => {
-    peer.on('connection', (conn) => {
+    const ws = createPeerSocket(clientId, accountId, true);
+    function handleConnection(conn: DataConnection) {
       conn.on('open', async () => {
-        conn.on('close', () => connection.close());
-        conn.on('error', () => connection.close());
+        function cleanup() {
+          connection.close();
+          if (ws.readyState !== WebSocket.OPEN) return;
+          ws.send(
+            toBinary(
+              PeerPB.SyncWireMessageSchema,
+              create(PeerPB.SyncWireMessageSchema, {
+                accountId,
+                payload: {
+                  case: 'removePeer',
+                  value: { peerId: conn.peer }
+                }
+              })
+            )
+          );
+        }
+        conn.on('close', cleanup);
+        conn.on('error', (err) => {
+          console.error(`[PeerJS] error from "${conn.peer}"`, err);
+          cleanup();
+        });
         console.debug(`[PeerJS] connected to "${conn.peer}"`);
         const transport = new PeerJSTransport(conn);
-        const connection = new ConnectionManager($account.id, clientId, transport, 'PeerJS');
+        const connection = new ConnectionManager(accountId, clientId, transport, 'PeerJS');
         connection.init();
       });
-    });
-    const ws = createPeerSocket(clientId, accountId, true);
+    }
+    peer.on('connection', handleConnection);
     ws.addEventListener('message', async (e) => {
       const SUPPORTED_EVENTS = ['peerConnected'];
       const body = fromBinary(
@@ -65,13 +85,7 @@ export async function initPeerJSTransport() {
           const remoteId = body.payload.value.clientId;
           console.debug(`[PeerJS] new peer connected "${remoteId}`);
           const conn = peer.connect(remoteId);
-          conn.on('open', async () => {
-            conn.on('close', () => connection.close());
-            conn.on('error', () => connection.close());
-            const transport = new PeerJSTransport(conn);
-            const connection = new ConnectionManager($account.id, clientId, transport, 'PeerJS');
-            connection.init();
-          });
+          handleConnection(conn);
         }
       }
     });

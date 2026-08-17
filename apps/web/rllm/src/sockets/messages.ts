@@ -72,7 +72,7 @@ export class ConnectionManager {
     this.unsubscribe();
   }
 
-  createAddPeer(clientId: string) {
+  createAddPeer(peerId: string) {
     return toBinary(
       PeerPB.SyncWireMessageSchema,
       create(PeerPB.SyncWireMessageSchema, {
@@ -80,7 +80,7 @@ export class ConnectionManager {
         clientId: this.clientId,
         payload: {
           case: 'addPeer',
-          value: { clientId }
+          value: { peerId }
         }
       })
     );

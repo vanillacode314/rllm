@@ -18,7 +18,6 @@ interface TPeerState {
 }
 
 const PEERS = new Map<string, TPeerState>();
-
 export class WebRTCTransport implements TTransport {
   get ready() {
     return this.dc.readyState === 'open';
@@ -64,6 +63,22 @@ export async function initWebRTCTransport() {
       type: z.literal('ice')
     })
   ]);
+
+  function sendRemovePeer(peerId: string) {
+    ws.send(
+      toBinary(
+        PeerPB.SyncWireMessageSchema,
+        create(PeerPB.SyncWireMessageSchema, {
+          accountId: $account!.id,
+          clientId,
+          payload: {
+            case: 'removePeer',
+            value: { peerId }
+          }
+        })
+      )
+    );
+  }
 
   function sendSignal(to: string, data: z.output<typeof signalSchema>) {
     ws.send(
@@ -134,6 +149,20 @@ export async function initWebRTCTransport() {
     const pc = new RTCPeerConnection({
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     });
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'failed') {
+        console.error(`[WebRTC] connection failed with "${remoteId}"`);
+        cleanup(remoteId);
+      }
+      if (pc.connectionState === 'disconnected') {
+        setTimeout(() => {
+          if (pc.connectionState === 'disconnected') {
+            console.error(`[WebRTC] connection disconnected with "${remoteId}"`);
+            cleanup(remoteId);
+          }
+        }, 3000);
+      }
+    };
     pc.onicecandidate = ({ candidate }) => {
       if (!candidate) return;
       sendSignal(remoteId, { candidate, type: 'ice' });
@@ -147,10 +176,6 @@ export async function initWebRTCTransport() {
     PEERS.set(remoteId, peer);
     pc.ondatachannel = (e) => {
       const dc = e.channel;
-      dc.onclose = () => {
-        PEERS.delete(remoteId);
-        pc.close();
-      };
       console.debug(`[WebRTC] connected to "${remoteId}"`);
       const transport = new WebRTCTransport(dc);
       const connection = new ConnectionManager(accountId, clientId, transport, 'WebRTC');
@@ -170,11 +195,37 @@ export async function initWebRTCTransport() {
     return answer;
   }
 
+  function cleanup(peerId: string) {
+    const peer = PEERS.get(peerId);
+    if (!peer) return;
+    try {
+      peer.dc?.close();
+    } catch {}
+    peer.pc.close();
+    sendRemovePeer(peerId);
+  }
+
   async function createOffer(remoteId: string) {
     const pc = new RTCPeerConnection({
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     });
     const dc = pc.createDataChannel('sync');
+
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'failed') {
+        console.error(`[WebRTC] connection failed with "${remoteId}"`);
+        cleanup(remoteId);
+      }
+      if (pc.connectionState === 'disconnected') {
+        setTimeout(() => {
+          if (pc.connectionState === 'disconnected') {
+            console.error(`[WebRTC] connection disconnected with "${remoteId}"`);
+            cleanup(remoteId);
+          }
+        }, 3000);
+      }
+    };
+
     pc.onicecandidate = ({ candidate }) => {
       if (!candidate) return;
       sendSignal(remoteId, { candidate, type: 'ice' });
@@ -188,10 +239,6 @@ export async function initWebRTCTransport() {
     PEERS.set(remoteId, peer);
 
     dc.onopen = () => {
-      dc.onclose = () => {
-        PEERS.delete(remoteId);
-        pc.close();
-      };
       console.debug(`[WebRTC] connected to "${remoteId}"`);
       const transport = new WebRTCTransport(dc);
       const connection = new ConnectionManager(accountId, clientId, transport, 'WebRTC');

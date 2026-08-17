@@ -39,7 +39,7 @@ func NewHub() *Hub {
 }
 
 // Subscribe registers conn for the account topic.
-func (h *Hub) AddPeer(accountID string, clientId string, otherClientId string) {
+func (h *Hub) AddPeer(accountID string, clientId string, peerId string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	m := h.peers[accountID]
@@ -52,7 +52,24 @@ func (h *Hub) AddPeer(accountID string, clientId string, otherClientId string) {
 		m2 = make(map[string]struct{})
 		m[clientId] = m2
 	}
-	m2[otherClientId] = struct{}{}
+	m2[peerId] = struct{}{}
+}
+
+func (h *Hub) RemovePeerForMe(accountID string, clientId string, peerId string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	m := h.peers[accountID]
+	if m == nil {
+		return
+	}
+	m2 := m[clientId]
+	if m2 == nil {
+		return
+	}
+	delete(m2, peerId)
+	if len(m2) == 0 {
+		delete(m, clientId)
+	}
 }
 
 func (h *Hub) RemovePeer(accountID string, clientId string) {

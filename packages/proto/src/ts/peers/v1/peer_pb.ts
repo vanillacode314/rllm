@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file peers/v1/peer.proto.
  */
 export const file_peers_v1_peer: GenFile = /*@__PURE__*/
-  fileDesc("ChNwZWVycy92MS9wZWVyLnByb3RvEghwZWVycy52MSJdCg1TeW5jSGFuZHNoYWtlEg8KB3ZlcnNpb24YASABKAkSGAoLcm9vdF9kaWdlc3QYAiABKAxIAIgBARIRCgljbGllbnRfaWQYAyABKAlCDgoMX3Jvb3RfZGlnZXN0IhsKC0RpZ2VzdFF1ZXJ5EgwKBHBhdGgYASADKA0iTQoNRGlnZXN0UXVlcmllcxIUCgxtZXJrbGVfZGVwdGgYASABKA0SJgoHcXVlcmllcxgCIAMoCzIVLnBlZXJzLnYxLkRpZ2VzdFF1ZXJ5Ij8KDERpZ2VzdFVwZGF0ZRIMCgRwYXRoGAEgAygNEg4KBmRpZ2VzdBgCIAEoDBIRCgl0aW1lc3RhbXAYAyABKAkiTgoNRGlnZXN0VXBkYXRlcxIUCgxtZXJrbGVfZGVwdGgYASABKA0SJwoHdXBkYXRlcxgCIAMoCzIWLnBlZXJzLnYxLkRpZ2VzdFVwZGF0ZSJHChFFdmVudEJhdGNoUGF5bG9hZBIRCgl0aW1lc3RhbXAYASABKAkSEQoJc2lnbmF0dXJlGAIgASgJEgwKBGRhdGEYAyABKAwiLQoYU2VuZEV2ZW50c0FmdGVyVGltZXN0YW1wEhEKCXRpbWVzdGFtcBgBIAEoCSI5CgpFdmVudEJhdGNoEisKBmV2ZW50cxgBIAMoCzIbLnBlZXJzLnYxLkV2ZW50QmF0Y2hQYXlsb2FkIigKDFdlYlJUQ1NpZ25hbBIKCgJ0bxgBIAEoCRIMCgRkYXRhGAIgASgJIhwKB0FkZFBlZXISEQoJY2xpZW50X2lkGAEgASgJIiIKDVBlZXJDb25uZWN0ZWQSEQoJY2xpZW50X2lkGAEgASgJItoDCg9TeW5jV2lyZU1lc3NhZ2USEgoKYWNjb3VudF9pZBgBIAEoCRIRCgljbGllbnRfaWQYAiABKAkSLAoJaGFuZHNoYWtlGAMgASgLMhcucGVlcnMudjEuU3luY0hhbmRzaGFrZUgAEjEKDmRpZ2VzdF9xdWVyaWVzGAQgASgLMhcucGVlcnMudjEuRGlnZXN0UXVlcmllc0gAEjEKDmRpZ2VzdF91cGRhdGVzGAUgASgLMhcucGVlcnMudjEuRGlnZXN0VXBkYXRlc0gAEisKC2V2ZW50X2JhdGNoGAYgASgLMhQucGVlcnMudjEuRXZlbnRCYXRjaEgAEkkKG3NlbmRfZXZlbnRzX2FmdGVyX3RpbWVzdGFtcBgHIAEoCzIiLnBlZXJzLnYxLlNlbmRFdmVudHNBZnRlclRpbWVzdGFtcEgAEi8KDXdlYnJ0Y19zaWduYWwYCCABKAsyFi5wZWVycy52MS5XZWJSVENTaWduYWxIABIlCghhZGRfcGVlchgJIAEoCzIRLnBlZXJzLnYxLkFkZFBlZXJIABIxCg5wZWVyX2Nvbm5lY3RlZBgKIAEoCzIXLnBlZXJzLnYxLlBlZXJDb25uZWN0ZWRIAEIJCgdwYXlsb2FkQg1aC3Byb3RvL3BlZXJzYgZwcm90bzM");
+  fileDesc("ChNwZWVycy92MS9wZWVyLnByb3RvEghwZWVycy52MSJdCg1TeW5jSGFuZHNoYWtlEg8KB3ZlcnNpb24YASABKAkSGAoLcm9vdF9kaWdlc3QYAiABKAxIAIgBARIRCgljbGllbnRfaWQYAyABKAlCDgoMX3Jvb3RfZGlnZXN0IhsKC0RpZ2VzdFF1ZXJ5EgwKBHBhdGgYASADKA0iTQoNRGlnZXN0UXVlcmllcxIUCgxtZXJrbGVfZGVwdGgYASABKA0SJgoHcXVlcmllcxgCIAMoCzIVLnBlZXJzLnYxLkRpZ2VzdFF1ZXJ5Ij8KDERpZ2VzdFVwZGF0ZRIMCgRwYXRoGAEgAygNEg4KBmRpZ2VzdBgCIAEoDBIRCgl0aW1lc3RhbXAYAyABKAkiTgoNRGlnZXN0VXBkYXRlcxIUCgxtZXJrbGVfZGVwdGgYASABKA0SJwoHdXBkYXRlcxgCIAMoCzIWLnBlZXJzLnYxLkRpZ2VzdFVwZGF0ZSJHChFFdmVudEJhdGNoUGF5bG9hZBIRCgl0aW1lc3RhbXAYASABKAkSEQoJc2lnbmF0dXJlGAIgASgJEgwKBGRhdGEYAyABKAwiLQoYU2VuZEV2ZW50c0FmdGVyVGltZXN0YW1wEhEKCXRpbWVzdGFtcBgBIAEoCSI5CgpFdmVudEJhdGNoEisKBmV2ZW50cxgBIAMoCzIbLnBlZXJzLnYxLkV2ZW50QmF0Y2hQYXlsb2FkIigKDFdlYlJUQ1NpZ25hbBIKCgJ0bxgBIAEoCRIMCgRkYXRhGAIgASgJIiIKDVBlZXJDb25uZWN0ZWQSEQoJY2xpZW50X2lkGAEgASgJIhoKB0FkZFBlZXISDwoHcGVlcl9pZBgBIAEoCSIdCgpSZW1vdmVQZWVyEg8KB3BlZXJfaWQYASABKAkihwQKD1N5bmNXaXJlTWVzc2FnZRISCgphY2NvdW50X2lkGAEgASgJEhEKCWNsaWVudF9pZBgCIAEoCRIsCgloYW5kc2hha2UYAyABKAsyFy5wZWVycy52MS5TeW5jSGFuZHNoYWtlSAASMQoOZGlnZXN0X3F1ZXJpZXMYBCABKAsyFy5wZWVycy52MS5EaWdlc3RRdWVyaWVzSAASMQoOZGlnZXN0X3VwZGF0ZXMYBSABKAsyFy5wZWVycy52MS5EaWdlc3RVcGRhdGVzSAASKwoLZXZlbnRfYmF0Y2gYBiABKAsyFC5wZWVycy52MS5FdmVudEJhdGNoSAASSQobc2VuZF9ldmVudHNfYWZ0ZXJfdGltZXN0YW1wGAcgASgLMiIucGVlcnMudjEuU2VuZEV2ZW50c0FmdGVyVGltZXN0YW1wSAASLwoNd2VicnRjX3NpZ25hbBgIIAEoCzIWLnBlZXJzLnYxLldlYlJUQ1NpZ25hbEgAEiUKCGFkZF9wZWVyGAkgASgLMhEucGVlcnMudjEuQWRkUGVlckgAEjEKDnBlZXJfY29ubmVjdGVkGAogASgLMhcucGVlcnMudjEuUGVlckNvbm5lY3RlZEgAEisKC3JlbW92ZV9wZWVyGAsgASgLMhQucGVlcnMudjEuUmVtb3ZlUGVlckgAQgkKB3BheWxvYWRCDVoLcHJvdG8vcGVlcnNiBnByb3RvMw");
 
 /**
  * @generated from message peers.v1.SyncHandshake
@@ -211,23 +211,6 @@ export const WebRTCSignalSchema: GenMessage<WebRTCSignal> = /*@__PURE__*/
   messageDesc(file_peers_v1_peer, 8);
 
 /**
- * @generated from message peers.v1.AddPeer
- */
-export type AddPeer = Message<"peers.v1.AddPeer"> & {
-  /**
-   * @generated from field: string client_id = 1;
-   */
-  clientId: string;
-};
-
-/**
- * Describes the message peers.v1.AddPeer.
- * Use `create(AddPeerSchema)` to create a new message.
- */
-export const AddPeerSchema: GenMessage<AddPeer> = /*@__PURE__*/
-  messageDesc(file_peers_v1_peer, 9);
-
-/**
  * @generated from message peers.v1.PeerConnected
  */
 export type PeerConnected = Message<"peers.v1.PeerConnected"> & {
@@ -242,7 +225,41 @@ export type PeerConnected = Message<"peers.v1.PeerConnected"> & {
  * Use `create(PeerConnectedSchema)` to create a new message.
  */
 export const PeerConnectedSchema: GenMessage<PeerConnected> = /*@__PURE__*/
+  messageDesc(file_peers_v1_peer, 9);
+
+/**
+ * @generated from message peers.v1.AddPeer
+ */
+export type AddPeer = Message<"peers.v1.AddPeer"> & {
+  /**
+   * @generated from field: string peer_id = 1;
+   */
+  peerId: string;
+};
+
+/**
+ * Describes the message peers.v1.AddPeer.
+ * Use `create(AddPeerSchema)` to create a new message.
+ */
+export const AddPeerSchema: GenMessage<AddPeer> = /*@__PURE__*/
   messageDesc(file_peers_v1_peer, 10);
+
+/**
+ * @generated from message peers.v1.RemovePeer
+ */
+export type RemovePeer = Message<"peers.v1.RemovePeer"> & {
+  /**
+   * @generated from field: string peer_id = 1;
+   */
+  peerId: string;
+};
+
+/**
+ * Describes the message peers.v1.RemovePeer.
+ * Use `create(RemovePeerSchema)` to create a new message.
+ */
+export const RemovePeerSchema: GenMessage<RemovePeer> = /*@__PURE__*/
+  messageDesc(file_peers_v1_peer, 11);
 
 /**
  * @generated from message peers.v1.SyncWireMessage
@@ -309,6 +326,12 @@ export type SyncWireMessage = Message<"peers.v1.SyncWireMessage"> & {
      */
     value: PeerConnected;
     case: "peerConnected";
+  } | {
+    /**
+     * @generated from field: peers.v1.RemovePeer remove_peer = 11;
+     */
+    value: RemovePeer;
+    case: "removePeer";
   } | { case: undefined; value?: undefined };
 };
 
@@ -317,5 +340,5 @@ export type SyncWireMessage = Message<"peers.v1.SyncWireMessage"> & {
  * Use `create(SyncWireMessageSchema)` to create a new message.
  */
 export const SyncWireMessageSchema: GenMessage<SyncWireMessage> = /*@__PURE__*/
-  messageDesc(file_peers_v1_peer, 11);
+  messageDesc(file_peers_v1_peer, 12);
 

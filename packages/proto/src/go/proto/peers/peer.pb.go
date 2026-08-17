@@ -489,50 +489,6 @@ func (x *WebRTCSignal) GetData() string {
 	return ""
 }
 
-type AddPeer struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ClientId      string                 `protobuf:"bytes,1,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AddPeer) Reset() {
-	*x = AddPeer{}
-	mi := &file_peers_v1_peer_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AddPeer) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AddPeer) ProtoMessage() {}
-
-func (x *AddPeer) ProtoReflect() protoreflect.Message {
-	mi := &file_peers_v1_peer_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AddPeer.ProtoReflect.Descriptor instead.
-func (*AddPeer) Descriptor() ([]byte, []int) {
-	return file_peers_v1_peer_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *AddPeer) GetClientId() string {
-	if x != nil {
-		return x.ClientId
-	}
-	return ""
-}
-
 type PeerConnected struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ClientId      string                 `protobuf:"bytes,1,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
@@ -542,7 +498,7 @@ type PeerConnected struct {
 
 func (x *PeerConnected) Reset() {
 	*x = PeerConnected{}
-	mi := &file_peers_v1_peer_proto_msgTypes[10]
+	mi := &file_peers_v1_peer_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -554,7 +510,7 @@ func (x *PeerConnected) String() string {
 func (*PeerConnected) ProtoMessage() {}
 
 func (x *PeerConnected) ProtoReflect() protoreflect.Message {
-	mi := &file_peers_v1_peer_proto_msgTypes[10]
+	mi := &file_peers_v1_peer_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -567,12 +523,100 @@ func (x *PeerConnected) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PeerConnected.ProtoReflect.Descriptor instead.
 func (*PeerConnected) Descriptor() ([]byte, []int) {
-	return file_peers_v1_peer_proto_rawDescGZIP(), []int{10}
+	return file_peers_v1_peer_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *PeerConnected) GetClientId() string {
 	if x != nil {
 		return x.ClientId
+	}
+	return ""
+}
+
+type AddPeer struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PeerId        string                 `protobuf:"bytes,1,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddPeer) Reset() {
+	*x = AddPeer{}
+	mi := &file_peers_v1_peer_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddPeer) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddPeer) ProtoMessage() {}
+
+func (x *AddPeer) ProtoReflect() protoreflect.Message {
+	mi := &file_peers_v1_peer_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddPeer.ProtoReflect.Descriptor instead.
+func (*AddPeer) Descriptor() ([]byte, []int) {
+	return file_peers_v1_peer_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *AddPeer) GetPeerId() string {
+	if x != nil {
+		return x.PeerId
+	}
+	return ""
+}
+
+type RemovePeer struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PeerId        string                 `protobuf:"bytes,1,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemovePeer) Reset() {
+	*x = RemovePeer{}
+	mi := &file_peers_v1_peer_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemovePeer) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemovePeer) ProtoMessage() {}
+
+func (x *RemovePeer) ProtoReflect() protoreflect.Message {
+	mi := &file_peers_v1_peer_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemovePeer.ProtoReflect.Descriptor instead.
+func (*RemovePeer) Descriptor() ([]byte, []int) {
+	return file_peers_v1_peer_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *RemovePeer) GetPeerId() string {
+	if x != nil {
+		return x.PeerId
 	}
 	return ""
 }
@@ -591,6 +635,7 @@ type SyncWireMessage struct {
 	//	*SyncWireMessage_WebrtcSignal
 	//	*SyncWireMessage_AddPeer
 	//	*SyncWireMessage_PeerConnected
+	//	*SyncWireMessage_RemovePeer
 	Payload       isSyncWireMessage_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -598,7 +643,7 @@ type SyncWireMessage struct {
 
 func (x *SyncWireMessage) Reset() {
 	*x = SyncWireMessage{}
-	mi := &file_peers_v1_peer_proto_msgTypes[11]
+	mi := &file_peers_v1_peer_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -610,7 +655,7 @@ func (x *SyncWireMessage) String() string {
 func (*SyncWireMessage) ProtoMessage() {}
 
 func (x *SyncWireMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_peers_v1_peer_proto_msgTypes[11]
+	mi := &file_peers_v1_peer_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -623,7 +668,7 @@ func (x *SyncWireMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncWireMessage.ProtoReflect.Descriptor instead.
 func (*SyncWireMessage) Descriptor() ([]byte, []int) {
-	return file_peers_v1_peer_proto_rawDescGZIP(), []int{11}
+	return file_peers_v1_peer_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *SyncWireMessage) GetAccountId() string {
@@ -719,6 +764,15 @@ func (x *SyncWireMessage) GetPeerConnected() *PeerConnected {
 	return nil
 }
 
+func (x *SyncWireMessage) GetRemovePeer() *RemovePeer {
+	if x != nil {
+		if x, ok := x.Payload.(*SyncWireMessage_RemovePeer); ok {
+			return x.RemovePeer
+		}
+	}
+	return nil
+}
+
 type isSyncWireMessage_Payload interface {
 	isSyncWireMessage_Payload()
 }
@@ -755,6 +809,10 @@ type SyncWireMessage_PeerConnected struct {
 	PeerConnected *PeerConnected `protobuf:"bytes,10,opt,name=peer_connected,json=peerConnected,proto3,oneof"`
 }
 
+type SyncWireMessage_RemovePeer struct {
+	RemovePeer *RemovePeer `protobuf:"bytes,11,opt,name=remove_peer,json=removePeer,proto3,oneof"`
+}
+
 func (*SyncWireMessage_Handshake) isSyncWireMessage_Payload() {}
 
 func (*SyncWireMessage_DigestQueries) isSyncWireMessage_Payload() {}
@@ -770,6 +828,8 @@ func (*SyncWireMessage_WebrtcSignal) isSyncWireMessage_Payload() {}
 func (*SyncWireMessage_AddPeer) isSyncWireMessage_Payload() {}
 
 func (*SyncWireMessage_PeerConnected) isSyncWireMessage_Payload() {}
+
+func (*SyncWireMessage_RemovePeer) isSyncWireMessage_Payload() {}
 
 var File_peers_v1_peer_proto protoreflect.FileDescriptor
 
@@ -805,11 +865,14 @@ const file_peers_v1_peer_proto_rawDesc = "" +
 	"\x06events\x18\x01 \x03(\v2\x1b.peers.v1.EventBatchPayloadR\x06events\"2\n" +
 	"\fWebRTCSignal\x12\x0e\n" +
 	"\x02to\x18\x01 \x01(\tR\x02to\x12\x12\n" +
-	"\x04data\x18\x02 \x01(\tR\x04data\"&\n" +
-	"\aAddPeer\x12\x1b\n" +
-	"\tclient_id\x18\x01 \x01(\tR\bclientId\",\n" +
+	"\x04data\x18\x02 \x01(\tR\x04data\",\n" +
 	"\rPeerConnected\x12\x1b\n" +
-	"\tclient_id\x18\x01 \x01(\tR\bclientId\"\xe4\x04\n" +
+	"\tclient_id\x18\x01 \x01(\tR\bclientId\"\"\n" +
+	"\aAddPeer\x12\x17\n" +
+	"\apeer_id\x18\x01 \x01(\tR\x06peerId\"%\n" +
+	"\n" +
+	"RemovePeer\x12\x17\n" +
+	"\apeer_id\x18\x01 \x01(\tR\x06peerId\"\x9d\x05\n" +
 	"\x0fSyncWireMessage\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x12\x1b\n" +
@@ -823,7 +886,9 @@ const file_peers_v1_peer_proto_rawDesc = "" +
 	"\rwebrtc_signal\x18\b \x01(\v2\x16.peers.v1.WebRTCSignalH\x00R\fwebrtcSignal\x12.\n" +
 	"\badd_peer\x18\t \x01(\v2\x11.peers.v1.AddPeerH\x00R\aaddPeer\x12@\n" +
 	"\x0epeer_connected\x18\n" +
-	" \x01(\v2\x17.peers.v1.PeerConnectedH\x00R\rpeerConnectedB\t\n" +
+	" \x01(\v2\x17.peers.v1.PeerConnectedH\x00R\rpeerConnected\x127\n" +
+	"\vremove_peer\x18\v \x01(\v2\x14.peers.v1.RemovePeerH\x00R\n" +
+	"removePeerB\t\n" +
 	"\apayloadB\rZ\vproto/peersb\x06proto3"
 
 var (
@@ -838,7 +903,7 @@ func file_peers_v1_peer_proto_rawDescGZIP() []byte {
 	return file_peers_v1_peer_proto_rawDescData
 }
 
-var file_peers_v1_peer_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_peers_v1_peer_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_peers_v1_peer_proto_goTypes = []any{
 	(*SyncHandshake)(nil),            // 0: peers.v1.SyncHandshake
 	(*DigestQuery)(nil),              // 1: peers.v1.DigestQuery
@@ -849,9 +914,10 @@ var file_peers_v1_peer_proto_goTypes = []any{
 	(*SendEventsAfterTimestamp)(nil), // 6: peers.v1.SendEventsAfterTimestamp
 	(*EventBatch)(nil),               // 7: peers.v1.EventBatch
 	(*WebRTCSignal)(nil),             // 8: peers.v1.WebRTCSignal
-	(*AddPeer)(nil),                  // 9: peers.v1.AddPeer
-	(*PeerConnected)(nil),            // 10: peers.v1.PeerConnected
-	(*SyncWireMessage)(nil),          // 11: peers.v1.SyncWireMessage
+	(*PeerConnected)(nil),            // 9: peers.v1.PeerConnected
+	(*AddPeer)(nil),                  // 10: peers.v1.AddPeer
+	(*RemovePeer)(nil),               // 11: peers.v1.RemovePeer
+	(*SyncWireMessage)(nil),          // 12: peers.v1.SyncWireMessage
 }
 var file_peers_v1_peer_proto_depIdxs = []int32{
 	1,  // 0: peers.v1.DigestQueries.queries:type_name -> peers.v1.DigestQuery
@@ -863,13 +929,14 @@ var file_peers_v1_peer_proto_depIdxs = []int32{
 	7,  // 6: peers.v1.SyncWireMessage.event_batch:type_name -> peers.v1.EventBatch
 	6,  // 7: peers.v1.SyncWireMessage.send_events_after_timestamp:type_name -> peers.v1.SendEventsAfterTimestamp
 	8,  // 8: peers.v1.SyncWireMessage.webrtc_signal:type_name -> peers.v1.WebRTCSignal
-	9,  // 9: peers.v1.SyncWireMessage.add_peer:type_name -> peers.v1.AddPeer
-	10, // 10: peers.v1.SyncWireMessage.peer_connected:type_name -> peers.v1.PeerConnected
-	11, // [11:11] is the sub-list for method output_type
-	11, // [11:11] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	10, // 9: peers.v1.SyncWireMessage.add_peer:type_name -> peers.v1.AddPeer
+	9,  // 10: peers.v1.SyncWireMessage.peer_connected:type_name -> peers.v1.PeerConnected
+	11, // 11: peers.v1.SyncWireMessage.remove_peer:type_name -> peers.v1.RemovePeer
+	12, // [12:12] is the sub-list for method output_type
+	12, // [12:12] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_peers_v1_peer_proto_init() }
@@ -878,7 +945,7 @@ func file_peers_v1_peer_proto_init() {
 		return
 	}
 	file_peers_v1_peer_proto_msgTypes[0].OneofWrappers = []any{}
-	file_peers_v1_peer_proto_msgTypes[11].OneofWrappers = []any{
+	file_peers_v1_peer_proto_msgTypes[12].OneofWrappers = []any{
 		(*SyncWireMessage_Handshake)(nil),
 		(*SyncWireMessage_DigestQueries)(nil),
 		(*SyncWireMessage_DigestUpdates)(nil),
@@ -887,6 +954,7 @@ func file_peers_v1_peer_proto_init() {
 		(*SyncWireMessage_WebrtcSignal)(nil),
 		(*SyncWireMessage_AddPeer)(nil),
 		(*SyncWireMessage_PeerConnected)(nil),
+		(*SyncWireMessage_RemovePeer)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -894,7 +962,7 @@ func file_peers_v1_peer_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_peers_v1_peer_proto_rawDesc), len(file_peers_v1_peer_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
