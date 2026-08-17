@@ -247,8 +247,13 @@ func (m *ConnectionManager) sendAfterTimestamp(timestamp string) {
 	pageSize := 100
 	cursor := ""
 	hasMore := false
+	stmt, err := m.db.Prepare("SELECT timestamp from messages WHERE timestamp > ? AND timestamp > ? ORDER BY timestamp ASC LIMIT ?")
+	if err != nil {
+		log.Printf("[WS Error] Failed to prepare query: %v", err)
+		return
+	}
 	for {
-		rows, err := m.db.Query("SELECT timestamp from events WHERE timestamp > ? AND timestamp > ? ORDER BY timestamp ASC LIMIT ?", cursor, timestamp, pageSize+1)
+		rows, err := stmt.Query(cursor, timestamp, pageSize+1)
 		if err != nil {
 			log.Printf("[WS Error] Failed to query events: %v", err)
 			return
@@ -266,8 +271,8 @@ func (m *ConnectionManager) sendAfterTimestamp(timestamp string) {
 		hasMore = len(timestamps) > pageSize
 		if hasMore {
 			timestamps = timestamps[:pageSize]
+			cursor = timestamps[pageSize-1]
 		}
-		cursor = timestamps[len(timestamps)-1]
 		m.addSendTimestamp(timestamps)
 		if !hasMore {
 			break

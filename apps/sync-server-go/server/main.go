@@ -19,7 +19,7 @@ type EventsHandler struct {
 	Db *sql.DB
 }
 
-const defaultPageSize uint16 = 50
+const defaultPageSize = 50
 
 func (s EventsHandler) GetMessagesStream(w http.ResponseWriter, r *http.Request) {
 	accountId := r.URL.Query().Get("accountId")
@@ -32,30 +32,22 @@ func (s EventsHandler) GetMessagesStream(w http.ResponseWriter, r *http.Request)
 			http.Error(w, fmt.Sprintf("invalid pageSize got '%s', expected a positive integer", raw), http.StatusBadRequest)
 			return
 		}
-		pageSize = uint16(parsed)
+		pageSize = int(parsed)
 	}
 	hasMore := false
-	nextAfter := after
+	cursor := after
+	stmt, err := s.Db.Prepare("SELECT data, signature, timestamp FROM messages WHERE accountId = ? AND clientId != ? AND timestamp > ?")
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to prepare statement: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer stmt.Close()
 	for {
-		var params = make([]any, 0, 4)
-		query := "SELECT data, signature, timestamp FROM messages WHERE accountId = ?"
-		params = append(params, accountId)
-		if clientId != "" {
-			query += " AND clientId != ?"
-			params = append(params, clientId)
-		}
-		if nextAfter != "" {
-			query += " AND timestamp > ?"
-			params = append(params, nextAfter)
-		}
-		query += " ORDER BY timestamp ASC LIMIT ?"
-		params = append(params, pageSize+1)
-		rows, err := s.Db.Query(query, params...)
+		rows, err := stmt.Query(accountId, clientId, cursor)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to query messages: %v", err), http.StatusInternalServerError)
 			return
 		}
-		defer rows.Close()
 
 		events := []*eventspb.SyncServerGetEventsResponsePayload{}
 		for rows.Next() {
@@ -66,6 +58,11 @@ func (s EventsHandler) GetMessagesStream(w http.ResponseWriter, r *http.Request)
 			}
 			events = append(events, event)
 		}
+		closeError := rows.Close()
+		if closeError != nil {
+			http.Error(w, fmt.Sprintf("failed to close rows: %v", closeError), http.StatusInternalServerError)
+			return
+		}
 		if err := rows.Err(); err != nil {
 			http.Error(w, fmt.Sprintf("failed to iterate rows: %v", err), http.StatusInternalServerError)
 			return
@@ -74,11 +71,11 @@ func (s EventsHandler) GetMessagesStream(w http.ResponseWriter, r *http.Request)
 		hasMore = len(events) > int(pageSize)
 		if hasMore {
 			events = events[:pageSize]
-			nextAfter = events[len(events)-1].Timestamp
+			cursor = events[pageSize-1].Timestamp
 		}
 		message, err := proto.Marshal(&eventspb.SyncServerGetEventsResponse{
 			HasMore:   hasMore,
-			NextAfter: &nextAfter,
+			NextAfter: &cursor,
 			PageSize:  uint32(pageSize),
 			Events:    events,
 		})
