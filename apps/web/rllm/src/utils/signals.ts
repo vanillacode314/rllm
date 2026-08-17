@@ -104,7 +104,7 @@ function createLatestAsync<T, S>(
           setState((state) =>
             produce(state, (draft) => {
               draft.error = error;
-              draft.finished = pending;
+              draft.pending--;
             })
           );
         }
