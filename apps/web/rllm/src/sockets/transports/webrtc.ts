@@ -198,6 +198,7 @@ export async function initWebRTCTransport() {
   function cleanup(peerId: string) {
     const peer = PEERS.get(peerId);
     if (!peer) return;
+    PEERS.delete(peerId);
     try {
       peer.dc?.close();
     } catch {}
