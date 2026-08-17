@@ -39,15 +39,20 @@ export const Route = createRootRouteWithContext()({
     await setupDb(logger).unwrap();
     console.debug('[Finished DB Setup]');
     await initChatSettings();
-    void initWebsocketTransport().catch((err) =>
-      console.error(new Error('Failed to init websocket transport', { cause: err }))
-    );
-    void initWebRTCTransport().catch((err) => {
-      console.error(new Error('Failed to init webrtc transport', { cause: err }));
-      void initPeerJSTransport().catch((err) => {
-        console.error(new Error('Failed to init peerjs transport', { cause: err }));
+    void initWebRTCTransport()
+      .catch((err) => {
+        console.error(new Error('Failed to init webrtc transport', { cause: err }));
+        return initPeerJSTransport().catch((err) => {
+          console.error(new Error('Failed to init peerjs transport', { cause: err }));
+        });
+      })
+      .finally(async () => {
+        // grace period of 10s for client to find all peers and get up to date before connecting to socket server
+        await new Promise((resolve) => setTimeout(resolve, 10000));
+        return initWebsocketTransport().catch((err) =>
+          console.error(new Error('Failed to init websocket transport', { cause: err }))
+        );
       });
-    });
     // NOTE: priortize when iroh supports p2p without relay in browsers
     // void initIrohTransport().catch((err) =>
     //   console.error(new Error('Failed to init iroh transport', { cause: err }))
