@@ -188,16 +188,8 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 		connectionManager.sendAfterTimestamp(payload.SendEventsAfterTimestamp.Timestamp)
 
 	case *peers.SyncWireMessage_WebrtcSignal:
-		log.Printf("[WS WebrtcSignal] accountId=%s to=%s data=%s", accountID, payload.WebrtcSignal.To, payload.WebrtcSignal.Data)
-		var peers []*Client
-		if m, ok := s.Hub.subs[accountID]; ok {
-			for client, _ := range m {
-				if client.peer && client.id == payload.WebrtcSignal.To {
-					peers = append(peers, client)
-					break
-				}
-			}
-		}
+		log.Printf("[WS WebrtcSignal] accountId=%s to=%s", accountID, payload.WebrtcSignal.To)
+		peers := s.Hub.PeerClients(accountID, payload.WebrtcSignal.To)
 		for _, peer := range peers {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			err := peer.conn.Write(ctx, websocket.MessageBinary, connectionManager.createWebRTCSignal(message.ClientId, payload.WebrtcSignal.To, payload.WebrtcSignal.Data))
@@ -250,6 +242,7 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 			return
 		}
 		if err := tx.Commit(); err != nil {
+			_ = tx.Rollback()
 			log.Printf("[WS Error] Failed to commit transaction: %v", err)
 			return
 		}

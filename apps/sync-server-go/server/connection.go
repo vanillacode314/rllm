@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log"
 	"sync"
 	"time"
@@ -38,6 +39,18 @@ func NewHub() *Hub {
 	}
 }
 
+func (h *Hub) PeerClients(accountID string, clientId string) []*Client {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	peers := []*Client{}
+	for client, _ := range h.subs[accountID] {
+		if client.peer && client.id == clientId {
+			peers = append(peers, client)
+		}
+	}
+	return peers
+}
+
 // Subscribe registers conn for the account topic.
 func (h *Hub) AddPeer(accountID string, clientId string, peerId string) {
 	h.mu.Lock()
@@ -70,25 +83,28 @@ func (h *Hub) RemovePeerForMe(accountID string, clientId string, peerId string) 
 	if len(m2) == 0 {
 		delete(m, clientId)
 	}
+	if len(m) == 0 {
+		delete(h.peers, accountID)
+	}
 }
 
-func (h *Hub) RemovePeer(accountID string, clientId string) {
+func (h *Hub) RemovePeer(accountID string, peerId string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	m := h.peers[accountID]
 	if m == nil {
 		return
 	}
-	delete(m, clientId)
-	if len(m) == 0 {
-		delete(m, accountID)
-		return
-	}
-	for _, m2 := range m {
-		delete(m2, clientId)
+	delete(m, peerId)
+	for clientId, m2 := range m {
+		delete(m2, peerId)
 		if len(m2) == 0 {
 			delete(m, clientId)
 		}
+	}
+	if len(m) == 0 {
+		delete(h.peers, accountID)
+		return
 	}
 }
 
@@ -333,15 +349,16 @@ func (m *ConnectionManager) flushSendTimestamp(timestamps []string) {
 
 func (m *ConnectionManager) sendAfterTimestamp(timestamp string) {
 	pageSize := 100
-	cursor := ""
+	cursor := timestamp
 	hasMore := false
-	stmt, err := m.db.Prepare("SELECT timestamp from messages WHERE timestamp > ? AND timestamp > ? ORDER BY timestamp ASC LIMIT ?")
+	stmt, err := m.db.Prepare("SELECT timestamp from messages WHERE accountId = ? AND timestamp > ? ORDER BY timestamp ASC LIMIT ?")
 	if err != nil {
 		log.Printf("[WS Error] Failed to prepare query: %v", err)
 		return
 	}
+	defer stmt.Close()
 	for {
-		rows, err := stmt.Query(cursor, timestamp, pageSize+1)
+		rows, err := stmt.Query(m.accountID, cursor, pageSize+1)
 		if err != nil {
 			log.Printf("[WS Error] Failed to query events: %v", err)
 			return
@@ -349,12 +366,25 @@ func (m *ConnectionManager) sendAfterTimestamp(timestamp string) {
 		timestamps := []string{}
 		for rows.Next() {
 			var timestamp string
-			err := rows.Scan(&timestamp)
-			if err != nil {
+			if err := rows.Scan(&timestamp); err != nil {
+				closeError := rows.Close()
+				if closeError != nil {
+					log.Printf("[WS Error] failed to close rows: %v", errors.Join(err, closeError))
+					return
+				}
 				log.Printf("[WS Error] Failed to scan timestamp: %v", err)
 				return
 			}
 			timestamps = append(timestamps, timestamp)
+		}
+		closeError := rows.Close()
+		if closeError != nil {
+			log.Printf("[WS Error] failed to close rows: %v", closeError)
+			return
+		}
+		if err := rows.Err(); err != nil {
+			log.Printf("[WS Error] Failed to iterate rows: %v", err)
+			return
 		}
 		hasMore = len(timestamps) > pageSize
 		if hasMore {

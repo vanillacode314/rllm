@@ -20,15 +20,19 @@ func InitDB() (*sql.DB, error) {
 		return nil, errors.New("DATABASE_CONNECTION_URL is not set")
 	}
 	driver := "turso"
-	log.Printf("using database: %s", dbUri)
 	dbAuthToken := os.Getenv("DATABASE_AUTH_TOKEN")
 	if strings.HasPrefix(dbUri, "turso://") {
 		db := sql.OpenDB(turso.NewConnector(
 			dbUri,
 			dbAuthToken,
 		))
+		err := applyMigrations(db, migrations.All())
+		if err != nil {
+			return nil, err
+		}
 		return db, nil
 	}
+	log.Printf("using database: %s", dbUri)
 	if dbAuthToken != "" {
 		dbUri += "?authToken=" + dbAuthToken
 	}
@@ -85,7 +89,11 @@ func applyMigrations(db *sql.DB, migrations map[string][]string) error {
 	}
 	err = tx.Commit()
 	if err != nil {
-		return err
+		rollbackErr := tx.Rollback()
+		if rollbackErr != nil {
+			panic(errors.Join(errors.New("failed to commit migrations"), err, rollbackErr))
+		}
+		panic(errors.Join(errors.New("failed to commit migrations"), err))
 	}
 	var newVersion string
 	err = db.QueryRow("SELECT value FROM metadata WHERE key = ?", "version").Scan(&newVersion)

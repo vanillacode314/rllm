@@ -2,6 +2,7 @@ package client
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -112,7 +113,10 @@ func RecomputeMerkleTree(db *sql.DB, accountID string) error {
 		for rows.Next() {
 			var ts string
 			if err := rows.Scan(&ts); err != nil {
-				rows.Close()
+				closeError := rows.Close()
+				if closeError != nil {
+					return fmt.Errorf("failed to close rows: %w", errors.Join(err, closeError))
+				}
 				return fmt.Errorf("failed to scan timestamp: %w", err)
 			}
 			timestamps = append(timestamps, ts)
@@ -120,14 +124,14 @@ func RecomputeMerkleTree(db *sql.DB, accountID string) error {
 		hasMore = len(timestamps) > merkleTreePageSize
 		if hasMore {
 			timestamps = timestamps[:merkleTreePageSize]
+			cursor = timestamps[len(timestamps)-1]
 		}
-		cursor = timestamps[len(timestamps)-1]
-		closeErr := rows.Close()
+		closeError := rows.Close()
+		if closeError != nil {
+			return fmt.Errorf("failed to close rows: %w", closeError)
+		}
 		if err := rows.Err(); err != nil {
 			return fmt.Errorf("failed to iterate timestamps: %w", err)
-		}
-		if closeErr != nil {
-			return fmt.Errorf("failed to close rows: %w", closeErr)
 		}
 
 		items := make([]merkletree.Item[string, string], 0, len(timestamps))

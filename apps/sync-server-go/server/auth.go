@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -48,7 +49,7 @@ func (s EventsHandler) GetRequestChallenge(w http.ResponseWriter, r *http.Reques
 	}
 	expiresAt := time.Now().Add(time.Minute * 2)
 	challenge := challengeData{
-		nonce:     fmt.Sprintf("%x", time.Now().UnixNano()),
+		nonce:     rand.Text(),
 		expiresAt: uint(expiresAt.Unix()),
 	}
 	time.AfterFunc(
@@ -63,9 +64,13 @@ func (s EventsHandler) GetRequestChallenge(w http.ResponseWriter, r *http.Reques
 	challenges.items[accountId] = challenge
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(struct {
+	err := json.NewEncoder(w).Encode(struct {
 		Nonce string `json:"nonce"`
 	}{Nonce: challenge.nonce})
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to encode JSON: %v", err), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (s EventsHandler) PostVerifyChallenge(w http.ResponseWriter, r *http.Request) {
@@ -104,7 +109,7 @@ func (s EventsHandler) PostVerifyChallenge(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	token := fmt.Sprintf("%x", time.Now().UnixNano())
+	token := rand.Text()
 	expiresAt := time.Now().Add(time.Minute * 5)
 	tokens.items[token] = tokenData{
 		accountId: body.AccountId,

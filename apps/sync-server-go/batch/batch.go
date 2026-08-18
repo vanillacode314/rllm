@@ -138,7 +138,9 @@ func (d *Debouncer) run(gen int) {
 	d.mu.Lock()
 	if d.generation == gen {
 		d.timer = nil
+		d.mu.Unlock()
+		d.fn()
+		return
 	}
 	d.mu.Unlock()
-	d.fn()
 }
