@@ -1,28 +1,144 @@
-import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
-import * as PeerPB from 'proto/peers/v1/peer_pb';
-import { Option } from 'ts-result-option';
-import { safeParseJson } from 'ts-result-option/utils';
 import * as z from 'zod/mini';
 
-import { logger } from '~/db/client';
-import { account } from '~/signals/account';
+import type { TTransportFactory, TTransport, TSignal } from '.';
 
-import { ConnectionManager, type TTransport } from '../messages';
-import { createPeerSocket } from '../utils';
-
-interface TPeerState {
-  connection: ConnectionManager | null;
-  dc: null | RTCDataChannel;
-  pc: RTCPeerConnection;
-  pendingCandidates: RTCIceCandidate[];
+class WebRTCEndpoint {
+  #pc = new RTCPeerConnection();
+  #pendingIceCandidates = new Array<RTCIceCandidate>();
+  #subscribers = new Map<'error' | 'signal' | 'close', Set<(...args: any[]) => void>>();
+  async acceptAnswer(answer: RTCSessionDescriptionInit) {
+    await this.#pc.setRemoteDescription(answer);
+    while (this.#pendingIceCandidates.length > 0) {
+      const candidate = this.#pendingIceCandidates.shift();
+      // oxlint-disable-next-line no-await-in-loop
+      await this.#pc.addIceCandidate(candidate);
+    }
+  }
+  async acceptOffer(id: string, offer: RTCSessionDescriptionInit) {
+    const { promise, reject, resolve } = Promise.withResolvers<RTCDataChannel>();
+    this.#pc.ondatachannel = (e) => {
+      const dc = e.channel;
+      dc.onopen = () => resolve(dc);
+      dc.onerror = reject;
+    };
+    this.#pc.onicecandidate = ({ candidate }) => {
+      if (!candidate) return;
+      this.emitSignal(id, { data: candidate, type: 'ice' });
+    };
+    this.#pc.onconnectionstatechange = () => {
+      if (this.#pc.connectionState === 'closed') {
+        this.emitClose();
+        return;
+      }
+      if (this.#pc.connectionState === 'failed') {
+        this.emitError();
+        return;
+      }
+      if (this.#pc.connectionState === 'disconnected') {
+        setTimeout(() => {
+          if (this.#pc.connectionState === 'disconnected') {
+            this.emitClose();
+          }
+        }, 2000);
+        return;
+      }
+    };
+    await this.#pc.setRemoteDescription(offer);
+    while (this.#pendingIceCandidates.length > 0) {
+      const candidate = this.#pendingIceCandidates.shift();
+      // oxlint-disable-next-line no-await-in-loop
+      await this.#pc.addIceCandidate(candidate);
+    }
+    const answer = await this.#pc.createAnswer();
+    await this.#pc.setLocalDescription(answer);
+    this.emitSignal(id, { data: answer, type: 'answer' });
+    return promise;
+  }
+  onSignal(handler: (to: string, signal: object) => void) {
+    const subscribers = this.#subscribers.get('signal') ?? new Set();
+    subscribers.add(handler);
+    this.#subscribers.set('signal', subscribers);
+    return () => this.#subscribers.get('signal')?.delete(handler);
+  }
+  async addIceCandidate(candidate: RTCIceCandidate) {
+    if (this.#pc.remoteDescription) {
+      await this.#pc.addIceCandidate(candidate);
+    } else {
+      this.#pendingIceCandidates.push(candidate);
+    }
+  }
+  emitClose() {
+    const subscribers = this.#subscribers.get('close');
+    if (!subscribers) return;
+    for (const handler of subscribers) {
+      handler();
+    }
+  }
+  async connect(id: string) {
+    const { promise, reject, resolve } = Promise.withResolvers<RTCDataChannel>();
+    const dc = this.#pc.createDataChannel('sync');
+    this.#pc.onicecandidate = ({ candidate }) => {
+      if (!candidate) return;
+      this.emitSignal(id, { data: candidate, type: 'ice' });
+    };
+    this.#pc.onconnectionstatechange = () => {
+      if (this.#pc.connectionState === 'closed') {
+        this.emitClose();
+        return;
+      }
+      if (this.#pc.connectionState === 'failed') {
+        this.emitError();
+        return;
+      }
+      if (this.#pc.connectionState === 'disconnected') {
+        setTimeout(() => {
+          if (this.#pc.connectionState === 'disconnected') {
+            this.emitClose();
+          }
+        }, 2000);
+        return;
+      }
+    };
+    dc.onopen = () => resolve(dc);
+    dc.onerror = reject;
+    const offer = await this.#pc.createOffer();
+    this.#pc.setLocalDescription(offer);
+    this.emitSignal(id, { data: offer, type: 'offer' });
+    return promise;
+  }
+  onClose(fn: () => void): () => void {
+    const subscribers = this.#subscribers.get('close') ?? new Set();
+    subscribers.add(fn);
+    this.#subscribers.set('close', subscribers);
+    return () => this.#subscribers.get('close')?.delete(fn);
+  }
+  emitSignal(to: string, signal: object) {
+    const subscribers = this.#subscribers.get('signal');
+    if (!subscribers) return;
+    for (const handler of subscribers) {
+      handler(to, signal);
+    }
+  }
+  onError(fn: (error: Error) => void) {
+    const subscribers = this.#subscribers.get('error') ?? new Set();
+    subscribers.add(fn);
+    this.#subscribers.set('error', subscribers);
+    return () => this.#subscribers.get('error')?.delete(fn);
+  }
+  emitError(error?: Error) {
+    const subscribers = this.#subscribers.get('error');
+    if (!subscribers) return;
+    for (const handler of subscribers) {
+      handler(error);
+    }
+  }
 }
 
-const PEERS = new Map<string, TPeerState>();
-export class WebRTCTransport implements TTransport {
+class WebRTCTransport implements TTransport {
+  id = 'WebRTC';
   get ready() {
     return this.dc.readyState === 'open';
   }
-
   constructor(readonly dc: RTCDataChannel) {}
 
   close() {
@@ -40,242 +156,129 @@ export class WebRTCTransport implements TTransport {
   }
 }
 
-export async function initWebRTCTransport() {
-  const clientId = Option.from(await logger.getMetadata('clientId'))
-    .okOrElse(() => new Error('Missing clientId in local database metadata'))
-    .unwrap();
-  const $account = account();
-  if ($account === null) return;
-  const accountId = $account.id;
+class WebRTCTransportFactory implements TTransportFactory {
+  peers = new Map<string, WebRTCEndpoint>();
+  subscribers = new Map<
+    'error' | 'close' | 'signal' | 'transport',
+    Set<(...args: any[]) => void>
+  >();
+  ready = () => Promise.resolve();
 
-  const ws = createPeerSocket(clientId, accountId, true);
-  const signalSchema = z.discriminatedUnion('type', [
-    z.object({
-      offer: z.any(),
-      type: z.literal('offer')
-    }),
-    z.object({
-      answer: z.any(),
-      type: z.literal('answer')
-    }),
-    z.object({
-      candidate: z.any(),
-      type: z.literal('ice')
-    })
-  ]);
-
-  function sendRemovePeer(peerId: string) {
-    ws.send(
-      toBinary(
-        PeerPB.SyncWireMessageSchema,
-        create(PeerPB.SyncWireMessageSchema, {
-          accountId: $account!.id,
-          clientId,
-          payload: {
-            case: 'removePeer',
-            value: { peerId }
-          }
-        })
-      )
-    );
+  onNewTransport(handler: (remoteId: string, transport: TTransport) => void) {
+    const subscribers = this.subscribers.get('transport') ?? new Set();
+    subscribers.add(handler);
+    this.subscribers.set('transport', subscribers);
+    return () => this.subscribers.get('transport')?.delete(handler);
   }
 
-  function sendSignal(to: string, data: z.output<typeof signalSchema>) {
-    ws.send(
-      toBinary(
-        PeerPB.SyncWireMessageSchema,
-        create(PeerPB.SyncWireMessageSchema, {
-          accountId: $account!.id,
-          clientId,
-          payload: {
-            case: 'webrtcSignal',
-            value: {
-              data: JSON.stringify(data),
-              to
-            }
-          }
-        })
-      )
-    );
+  onError(fn: (remoteId: string, error: unknown) => void) {
+    const subscribers = this.subscribers.get('error') ?? new Set();
+    subscribers.add(fn);
+    this.subscribers.set('error', subscribers);
+    return () => this.subscribers.get('error')?.delete(fn);
   }
 
-  async function handleSignal(remoteId: string, signal: z.output<typeof signalSchema>) {
-    switch (signal.type) {
+  emitError(remoteId: string, error?: Error) {
+    const subscribers = this.subscribers.get('error');
+    if (!subscribers) return;
+    for (const handler of subscribers) {
+      handler(remoteId, error);
+    }
+  }
+
+  onClose(fn: (remoteId: string) => void) {
+    const subscribers = this.subscribers.get('close') ?? new Set();
+    subscribers.add(fn);
+    this.subscribers.set('close', subscribers);
+    return () => this.subscribers.get('close')?.delete(fn);
+  }
+
+  onSignal(handler: (remoteId: string, signal: TSignal) => void) {
+    const subscribers = this.subscribers.get('signal') ?? new Set();
+    subscribers.add(handler);
+    this.subscribers.set('signal', subscribers);
+    return () => void this.subscribers.get('signal')?.delete(handler);
+  }
+
+  async connect(remoteId: string) {
+    const peer = new WebRTCEndpoint();
+    peer.onSignal((to, signal) => this.emitSignal(to, signal));
+    peer.onClose(() => this.emitClose(remoteId));
+    peer.onError((error) => this.emitError(remoteId, error));
+    this.peers.set(remoteId, peer);
+    const dc = await peer.connect(remoteId);
+    return new WebRTCTransport(dc);
+  }
+
+  async handleSignal(remoteId: string, signal: TSignal) {
+    const signalSchema = z.discriminatedUnion('type', [
+      z.object({
+        data: z.any(),
+        type: z.literal('offer')
+      }),
+      z.object({
+        data: z.any(),
+        type: z.literal('answer')
+      }),
+      z.object({
+        data: z.any(),
+        type: z.literal('ice')
+      })
+    ]);
+    const result = signalSchema.safeParse(signal);
+    if (!result.success) return;
+    const parsedSignal = result.data;
+    switch (parsedSignal.type) {
       case 'answer': {
-        const peer = PEERS.get(remoteId);
+        const peer = this.peers.get(remoteId);
         if (!peer) return;
-        const { pc, pendingCandidates } = peer;
-        await pc.setRemoteDescription(signal.answer);
-        while (pendingCandidates.length > 0) {
-          const candidate = pendingCandidates.shift();
-          // oxlint-disable-next-line no-await-in-loop
-          await pc.addIceCandidate(candidate);
-        }
+        await peer.acceptAnswer(parsedSignal.data);
         break;
       }
       case 'ice': {
-        const peer = PEERS.get(remoteId);
+        const peer = this.peers.get(remoteId);
         if (!peer) return;
-        const { pc, pendingCandidates } = peer;
-        if (pc.remoteDescription) {
-          await pc.addIceCandidate(signal.candidate);
-        } else {
-          pendingCandidates.push(signal.candidate);
-        }
+        peer.addIceCandidate(parsedSignal.data);
         break;
       }
       case 'offer': {
-        if (PEERS.has(remoteId)) return;
-        const answer = await createAnswer(remoteId, signal.offer);
-        sendSignal(remoteId, { answer, type: 'answer' });
-        console.debug(`[WebRTC] sent answer to "${remoteId}"`);
-        break;
-      }
-      default:
-        console.error('Unknown signal type:', signal);
-    }
-  }
-
-  async function handleNewPeer(remoteId: string) {
-    if (remoteId === clientId) return;
-    if (PEERS.has(remoteId)) return;
-
-    const offer = await createOffer(remoteId);
-    sendSignal(remoteId, { offer, type: 'offer' });
-    console.debug(`[WebRTC] sent offer to "${remoteId}"`);
-  }
-
-  async function createAnswer(remoteId: string, offer: RTCSessionDescriptionInit) {
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-    });
-    pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'failed') {
-        console.error(`[WebRTC] connection failed with "${remoteId}"`);
-        cleanup(remoteId);
-      }
-      if (pc.connectionState === 'disconnected') {
-        setTimeout(() => {
-          if (pc.connectionState === 'disconnected') {
-            console.error(`[WebRTC] connection disconnected with "${remoteId}"`);
-            cleanup(remoteId);
-          }
-        }, 3000);
-      }
-    };
-    pc.onicecandidate = ({ candidate }) => {
-      if (!candidate) return;
-      sendSignal(remoteId, { candidate, type: 'ice' });
-    };
-    const peer = {
-      connection: null,
-      dc: null,
-      pc,
-      pendingCandidates: []
-    } satisfies TPeerState;
-    PEERS.set(remoteId, peer);
-    pc.ondatachannel = (e) => {
-      const dc = e.channel;
-      console.debug(`[WebRTC] connected to "${remoteId}"`);
-      const transport = new WebRTCTransport(dc);
-      const connection = new ConnectionManager(accountId, clientId, transport, 'WebRTC');
-      Object.assign(peer, { connection, dc });
-      connection.init();
-      ws.send(connection.createAddPeer(remoteId));
-    };
-
-    await pc.setRemoteDescription(offer);
-    while (peer.pendingCandidates.length > 0) {
-      const candidate = peer.pendingCandidates.shift();
-      // oxlint-disable-next-line no-await-in-loop
-      await pc.addIceCandidate(candidate);
-    }
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    return answer;
-  }
-
-  function cleanup(peerId: string) {
-    const peer = PEERS.get(peerId);
-    if (!peer) return;
-    PEERS.delete(peerId);
-    try {
-      peer.dc?.close();
-    } catch {}
-    peer.pc.close();
-    sendRemovePeer(peerId);
-  }
-
-  async function createOffer(remoteId: string) {
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-    });
-    const dc = pc.createDataChannel('sync');
-
-    pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'failed') {
-        console.error(`[WebRTC] connection failed with "${remoteId}"`);
-        cleanup(remoteId);
-      }
-      if (pc.connectionState === 'disconnected') {
-        setTimeout(() => {
-          if (pc.connectionState === 'disconnected') {
-            console.error(`[WebRTC] connection disconnected with "${remoteId}"`);
-            cleanup(remoteId);
-          }
-        }, 3000);
-      }
-    };
-
-    pc.onicecandidate = ({ candidate }) => {
-      if (!candidate) return;
-      sendSignal(remoteId, { candidate, type: 'ice' });
-    };
-    const peer: TPeerState = {
-      connection: null,
-      dc,
-      pc,
-      pendingCandidates: []
-    };
-    PEERS.set(remoteId, peer);
-
-    dc.onopen = () => {
-      console.debug(`[WebRTC] connected to "${remoteId}"`);
-      const transport = new WebRTCTransport(dc);
-      const connection = new ConnectionManager(accountId, clientId, transport, 'WebRTC');
-      connection.init();
-      peer.connection = connection;
-      ws.send(connection.createAddPeer(remoteId));
-    };
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    return offer;
-  }
-
-  ws.addEventListener('message', async (e) => {
-    const SUPPORTED_EVENTS = ['peerConnected', 'webrtcSignal'];
-    const body = fromBinary(
-      PeerPB.SyncWireMessageSchema,
-      new Uint8Array(await e.data.arrayBuffer())
-    );
-    if (body.accountId !== $account.id) return;
-    if (!SUPPORTED_EVENTS.includes(body.payload.case ?? '')) return;
-    switch (body.payload.case) {
-      case 'peerConnected': {
-        const remoteId = body.payload.value.clientId;
-        console.debug(`[WebRTC] new peer connected "${remoteId}"`);
-        handleNewPeer(remoteId);
-        break;
-      }
-      case 'webrtcSignal': {
-        const remoteId = body.clientId;
-        const data = safeParseJson(body.payload.value.data, {
-          validate: signalSchema.parse
-        }).expect('Invalid data');
-        console.debug(`[WebRTC] got signal(${data.type}) from "${remoteId}"`);
-        handleSignal(remoteId, data);
+        if (this.peers.has(remoteId)) return;
+        const peer = new WebRTCEndpoint();
+        peer.onSignal((to, signal) => this.emitSignal(to, signal));
+        peer.onClose(() => this.emitClose(remoteId));
+        peer.onError((error) => this.emitError(remoteId, error));
+        this.peers.set(remoteId, peer);
+        const dc = await peer.acceptOffer(remoteId, parsedSignal.data);
+        const transport = new WebRTCTransport(dc);
+        this.emitNewTransport(remoteId, transport);
         break;
       }
     }
-  });
+  }
+
+  emitNewTransport(remoteId: string, transport: TTransport) {
+    const subscribers = this.subscribers.get('transport');
+    if (!subscribers) return;
+    for (const handler of subscribers) {
+      handler(remoteId, transport);
+    }
+  }
+
+  emitClose(remoteId: string) {
+    const subscribers = this.subscribers.get('close');
+    if (!subscribers) return;
+    for (const handler of subscribers) {
+      handler(remoteId);
+    }
+  }
+
+  emitSignal(to: string, signal: object) {
+    const subscribers = this.subscribers.get('signal');
+    if (!subscribers) return;
+    for (const handler of subscribers) {
+      handler(to, signal);
+    }
+  }
 }
+
+export const webRTCTransportFactory = new WebRTCTransportFactory();

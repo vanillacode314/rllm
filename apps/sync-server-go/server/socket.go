@@ -105,7 +105,6 @@ func (s SocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionManager *ConnectionManager, clientId string) {
 	accountID := connectionManager.accountID
-	log.Printf("[WS Received Message] accountId=%s case=%T", accountID, message.Payload)
 
 	switch payload := message.Payload.(type) {
 	case *peers.SyncWireMessage_Handshake:
@@ -200,13 +199,13 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 			log.Printf("[WS WebrtcSignal] Sent WebRTC signal to %s", peer.id)
 		}
 
-	case *peers.SyncWireMessage_AddPeer:
-		log.Printf("[WS AddPeer] accountId=%s", accountID)
-		s.Hub.AddPeer(accountID, message.ClientId, payload.AddPeer.PeerId)
+	case *peers.SyncWireMessage_ConnectedToPeer:
+		log.Printf("[WS ConnectedToPeer] accountId=%s", accountID)
+		s.Hub.AddPeer(accountID, message.ClientId, payload.ConnectedToPeer.PeerId)
 
-	case *peers.SyncWireMessage_RemovePeer:
-		log.Printf("[WS RemovePeer] accountId=%s", accountID)
-		s.Hub.RemovePeerForMe(accountID, message.ClientId, payload.RemovePeer.PeerId)
+	case *peers.SyncWireMessage_DisconnectedFromPeer:
+		log.Printf("[WS DisconnectedFromPeer] accountId=%s", accountID)
+		s.Hub.RemovePeerForMe(accountID, message.ClientId, payload.DisconnectedFromPeer.PeerId)
 
 	case *peers.SyncWireMessage_EventBatch:
 		events := payload.EventBatch.GetEvents()

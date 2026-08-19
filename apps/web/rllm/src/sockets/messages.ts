@@ -14,12 +14,7 @@ import { type TValidEvent, validEventSchema } from '~/queries/mutations';
 import { account } from '~/signals/account';
 import { decrypt, encrypt } from '~/workers/encryption';
 
-export interface TTransport {
-  close: () => void;
-  onmessage: (fn: (data: Uint8Array<ArrayBuffer>) => void) => () => void;
-  ready: boolean;
-  send: (data: Uint8Array<ArrayBuffer>) => void;
-}
+import type { TTransport } from './transports';
 
 type EventRow = { data: unknown; timestamp: string; type: string; version: string };
 
@@ -34,12 +29,7 @@ export class ConnectionManager {
 
   private unsubscribe: () => void;
 
-  constructor(
-    accountId: string,
-    clientId: string,
-    transport: TTransport,
-    public readonly type: string
-  ) {
+  constructor(accountId: string, clientId: string, transport: TTransport) {
     this.accountId = accountId;
     this.clientId = clientId;
     this.transport = transport;
@@ -70,20 +60,6 @@ export class ConnectionManager {
     this.sendEventsBatch.cancel();
     this.transport.close();
     this.unsubscribe();
-  }
-
-  createAddPeer(peerId: string) {
-    return toBinary(
-      PeerPB.SyncWireMessageSchema,
-      create(PeerPB.SyncWireMessageSchema, {
-        accountId: this.accountId,
-        clientId: this.clientId,
-        payload: {
-          case: 'addPeer',
-          value: { peerId }
-        }
-      })
-    );
   }
 
   createDigestQuery(merkleDepth: number, paths: number[][]) {
@@ -210,7 +186,7 @@ export class ConnectionManager {
     const body = fromBinary(PeerPB.SyncWireMessageSchema, data);
     const { payload } = body;
     if (!SUPPORTED_EVENTS.includes(payload.case ?? '')) return;
-    console.debug(`[Received Message][${this.type}]`, payload.case, payload.value);
+    console.debug(`[Received Message][${this.transport.id}]`, payload.case, payload.value);
     switch (payload.case) {
       case 'digestQueries': {
         const { merkleDepth, queries } = payload.value;
@@ -224,7 +200,7 @@ export class ConnectionManager {
           const [digest, timestamp] = resolveDigest(tree, merkleDepth, path);
           result.push({ digest, path, timestamp });
         }
-        console.debug(`[Sending Message][${this.type}] digestUpdates`, { result });
+        console.debug(`[Sending Message][${this.transport.id}] digestUpdates`, { result });
         this.write(
           toBinary(
             PeerPB.SyncWireMessageSchema,
@@ -325,7 +301,7 @@ export class ConnectionManager {
         const shouldQuery = this.clientId > payload.value.clientId;
         const ourRootDigest = tree.getRootHash();
         const mismatch = digestsDiffer(ourRootDigest, payload.value.rootDigest);
-        if (!mismatch) console.debug(`[Handshake][${this.type}] Roots match`);
+        if (!mismatch) console.debug(`[Handshake][${this.transport.id}] Roots match`);
         if (!shouldQuery) return;
 
         if (mismatch) {
@@ -396,28 +372,6 @@ export class ConnectionManager {
 
   private pendingDigestUpdatesDone() {
     return this.pendingDigestUpdates === 0;
-  }
-}
-
-export class WebRTCTransport implements TTransport {
-  get ready() {
-    return this.dc.readyState === 'open';
-  }
-
-  constructor(readonly dc: RTCDataChannel) {}
-
-  close() {
-    this.dc.close();
-  }
-
-  onmessage(fn: (data: Uint8Array<ArrayBuffer>) => void) {
-    const handler = (e: MessageEvent) => fn(new Uint8Array(e.data));
-    this.dc.addEventListener('message', handler);
-    return () => this.dc.removeEventListener('message', handler);
-  }
-
-  send(data: Uint8Array<ArrayBuffer>) {
-    this.dc.send(data);
   }
 }
 

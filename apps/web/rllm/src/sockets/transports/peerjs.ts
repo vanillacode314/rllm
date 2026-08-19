@@ -1,15 +1,9 @@
-import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
 import { type DataConnection, Peer } from 'peerjs';
-import * as PeerPB from 'proto/peers/v1/peer_pb';
-import { Option } from 'ts-result-option';
 
-import { logger } from '~/db/client';
-import { account } from '~/signals/account';
-
-import { ConnectionManager, type TTransport } from '../messages';
-import { createPeerSocket } from '../utils';
+import type { TTransportFactory, TTransport } from '.';
 
 export class PeerJSTransport implements TTransport {
+  id = 'PeerJS';
   get ready() {
     return this.conn.open;
   }
@@ -31,63 +25,83 @@ export class PeerJSTransport implements TTransport {
   }
 }
 
-export async function initPeerJSTransport() {
-  const clientId = Option.from(await logger.getMetadata('clientId'))
-    .okOrElse(() => new Error('Missing clientId in local database metadata'))
-    .unwrap();
-  const $account = account();
-  if ($account === null) return;
-  const accountId = $account.id;
+class PeerJSTransportFactory implements TTransportFactory {
+  handleSignal() {}
+  peer: Peer;
+  subscribers = new Map<'error' | 'close', Set<(...args: any[]) => void>>();
+  closed = false;
 
-  const peer = new Peer(clientId);
-  peer.on('open', () => {
-    const ws = createPeerSocket(clientId, accountId, true);
-    function handleConnection(conn: DataConnection) {
-      conn.on('open', async () => {
-        function cleanup() {
-          connection.close();
-          if (ws.readyState !== WebSocket.OPEN) return;
-          ws.send(
-            toBinary(
-              PeerPB.SyncWireMessageSchema,
-              create(PeerPB.SyncWireMessageSchema, {
-                accountId,
-                payload: {
-                  case: 'removePeer',
-                  value: { peerId: conn.peer }
-                }
-              })
-            )
-          );
-        }
-        conn.on('close', cleanup);
-        conn.on('error', (err) => {
-          console.error(`[PeerJS] error from "${conn.peer}"`, err);
-          cleanup();
-        });
-        console.debug(`[PeerJS] connected to "${conn.peer}"`);
-        const transport = new PeerJSTransport(conn);
-        const connection = new ConnectionManager(accountId, clientId, transport, 'PeerJS');
-        connection.init();
-      });
+  ready() {
+    const { promise, resolve } = Promise.withResolvers<void>();
+    this.peer.on('open', () => resolve());
+    return promise;
+  }
+
+  onError(fn: (remoteId: string, error: unknown) => void) {
+    const subscribers = this.subscribers.get('error') ?? new Set();
+    subscribers.add(fn);
+    this.subscribers.set('error', subscribers);
+    return () => this.subscribers.get('error')?.delete(fn);
+  }
+
+  emitError(remoteId: string, error?: Error) {
+    const subscribers = this.subscribers.get('error');
+    if (!subscribers) return;
+    for (const handler of subscribers) {
+      handler(remoteId, error);
     }
-    peer.on('connection', handleConnection);
-    ws.addEventListener('message', async (e) => {
-      const SUPPORTED_EVENTS = ['peerConnected'];
-      const body = fromBinary(
-        PeerPB.SyncWireMessageSchema,
-        new Uint8Array(await e.data.arrayBuffer())
-      );
-      if (body.accountId !== $account.id) return;
-      if (!SUPPORTED_EVENTS.includes(body.payload.case ?? '')) return;
-      switch (body.payload.case) {
-        case 'peerConnected': {
-          const remoteId = body.payload.value.clientId;
-          console.debug(`[PeerJS] new peer connected "${remoteId}`);
-          const conn = peer.connect(remoteId);
-          handleConnection(conn);
-        }
-      }
+  }
+  constructor(clientId: string) {
+    this.peer = new Peer(clientId);
+  }
+
+  onNewTransport(handler: (remoteId: string, transport: TTransport) => void) {
+    const _handler = (conn: DataConnection) => {
+      conn.on('open', () => {
+        const transport = new PeerJSTransport(conn);
+        handler(conn.peer, transport);
+      });
+      conn.on('error', (error) => this.emitError(conn.peer, error));
+    };
+    this.peer.on('connection', _handler);
+    return () => this.peer.off('connection', _handler);
+  }
+
+  onClose(fn: (remoteId: string) => void) {
+    const subscribers = this.subscribers.get('close') ?? new Set();
+    subscribers.add(fn);
+    this.subscribers.set('close', subscribers);
+    return () => this.subscribers.get('close')?.delete(fn);
+  }
+
+  onSignal() {
+    return () => {};
+  }
+
+  async connect(remoteId: string) {
+    const { promise, resolve, reject } = Promise.withResolvers<PeerJSTransport>();
+    const conn = this.peer.connect(remoteId);
+    conn.on('open', () => {
+      conn.on('error', (error) => this.emitError(remoteId, error));
+      conn.on('close', () => this.emitClose(remoteId));
+      resolve(new PeerJSTransport(conn));
     });
-  });
+    return promise;
+  }
+
+  emitClose(remoteId: string) {
+    if (this.closed) return;
+    this.closed = true;
+    const subscribers = this.subscribers.get('close');
+    if (!subscribers) return;
+    for (const handler of subscribers) {
+      handler(remoteId);
+    }
+  }
 }
+
+let memo: PeerJSTransportFactory | null = null;
+export const peerJSTransportFactory = (clientId: string) => {
+  if (memo) return memo;
+  return (memo = new PeerJSTransportFactory(clientId));
+};

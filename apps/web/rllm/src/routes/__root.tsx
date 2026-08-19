@@ -8,6 +8,7 @@ import { createSignal, For, type JSXElement, onMount, Suspense } from 'solid-js'
 import { Button } from 'ui/button';
 import { SidebarProvider } from 'ui/sidebar';
 import { Toaster } from 'ui/sonner';
+import { Option } from 'ts-result-option';
 
 import AppDrawer from '~/components/AppDrawer';
 import TheChatSettingsDrawer from '~/components/TheChatSettingsDrawer';
@@ -22,13 +23,16 @@ import { initChatSettings } from '~/lib/chat/settings';
 import { retryFailedTitleAndTags } from '~/lib/chat/tasks';
 import { MCPManager } from '~/lib/mcp/manager';
 import { ProxyManager } from '~/lib/proxy';
-import { initPeerJSTransport } from '~/sockets/transports/peerjs';
-import { initWebRTCTransport } from '~/sockets/transports/webrtc';
+import { PeerManager } from '~/sockets/transports';
+import { webRTCTransportFactory } from '~/sockets/transports/webrtc';
 import { initWebsocketTransport } from '~/sockets/transports/websocket';
 import { syncColorMode } from '~/utils/color-mode';
 import { once } from '~/utils/functions';
 import { queryClient } from '~/utils/query-client';
 import { clearData } from '~/utils/storage';
+import { account } from '~/signals/account';
+import { peerJSTransportFactory } from '~/sockets/transports/peerjs';
+import { irohTransportFactory } from '~/sockets/transports/iroh';
 
 export const Route = createRootRouteWithContext()({
   beforeLoad: once(async () => {
@@ -39,24 +43,7 @@ export const Route = createRootRouteWithContext()({
     await setupDb(logger).unwrap();
     console.debug('[Finished DB Setup]');
     await initChatSettings();
-    void initWebRTCTransport()
-      .catch((err) => {
-        console.error(new Error('Failed to init webrtc transport', { cause: err }));
-        return initPeerJSTransport().catch((err) => {
-          console.error(new Error('Failed to init peerjs transport', { cause: err }));
-        });
-      })
-      .finally(async () => {
-        // grace period of 10s for client to find all peers and get up to date before connecting to socket server
-        await new Promise((resolve) => setTimeout(resolve, 10000));
-        return initWebsocketTransport().catch((err) =>
-          console.error(new Error('Failed to init websocket transport', { cause: err }))
-        );
-      });
-    // NOTE: priortize when iroh supports p2p without relay in browsers
-    // void initIrohTransport().catch((err) =>
-    //   console.error(new Error('Failed to init iroh transport', { cause: err }))
-    // );
+
     void ProxyManager.initialize().finally(() => void MCPManager.initialize());
     void BackgroundTaskManager.init();
 
@@ -69,6 +56,22 @@ export const Route = createRootRouteWithContext()({
     ChatGenerationManager.registerStorage(scratchpadStorage);
 
     setTimeout(() => void retryFailedTitleAndTags(), 1000 * 30);
+
+    const accountId = Option.from(account()).map((account) => account.id);
+    if (accountId.isSome()) {
+      const clientId = Option.from(await logger.getMetadata('clientId'))
+        .okOrElse(() => new Error('Missing clientId in local database metadata'))
+        .unwrap();
+      PeerManager.registerTransport(webRTCTransportFactory);
+      PeerManager.registerTransport(peerJSTransportFactory(clientId));
+      PeerManager.registerTransport(irohTransportFactory);
+      await PeerManager.init(accountId.unwrap(), clientId);
+      new Promise((resolve) => setTimeout(resolve, 10000)).then(() => {
+        return initWebsocketTransport().catch((err) =>
+          console.error(new Error('Failed to init websocket transport', { cause: err }))
+        );
+      });
+    }
   }),
   component: RootComponent,
   errorComponent: ErrorComponent

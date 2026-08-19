@@ -1,19 +1,40 @@
-import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
 import { BiStream, Connection, Endpoint, EndpointAddr } from '@salvatoret/iroh';
-import * as PeerPB from 'proto/peers/v1/peer_pb';
-import { Option } from 'ts-result-option';
-import { safeParseJson } from 'ts-result-option/utils';
 import * as z from 'zod/mini';
 
-import { logger } from '~/db/client';
-import { account } from '~/signals/account';
+import type { TTransportFactory, TTransport, TSignal } from '.';
 
-import { ConnectionManager, type TTransport } from '../messages';
-import { createPeerSocket } from '../utils';
+const ALPN = new TextEncoder().encode('rllm/1');
 
 export class IrohTransport implements TTransport {
+  id = 'Iroh';
+  subscribers = new Map<'message' | 'error', Set<(...args: any[]) => void>>();
+  started = false;
+
   get ready() {
     return this.conn.closeReason() === undefined;
+  }
+
+  onError(fn: (error: unknown) => void) {
+    const subscribers = this.subscribers.get('error') ?? new Set();
+    subscribers.add(fn);
+    this.subscribers.set('error', subscribers);
+    return () => this.subscribers.get('error')?.delete(fn);
+  }
+
+  emitError(error?: unknown) {
+    const subscribers = this.subscribers.get('error');
+    if (!subscribers) return;
+    for (const handler of subscribers) {
+      handler(error);
+    }
+  }
+
+  emitMessage(data: Uint8Array<ArrayBuffer>) {
+    const subscribers = this.subscribers.get('message');
+    if (!subscribers) return;
+    for (const handler of subscribers) {
+      handler(data);
+    }
   }
 
   constructor(
@@ -26,125 +47,171 @@ export class IrohTransport implements TTransport {
     this.conn.close(0, new Uint8Array());
   }
 
-  onmessage(fn: (data: Uint8Array<ArrayBuffer>) => void) {
-    let stopped = false;
-    (async () => {
-      while (true) {
-        // oxlint-disable-next-line no-await-in-loop
-        const header = (await this.stream.recv.readChunk(4))!;
-        const view = new DataView(header.buffer, header.byteOffset, header.byteLength);
-        const messageLength = view.getUint32(0, true);
-        const message = new Uint8Array(messageLength);
-        let left = messageLength;
-        while (left > 0) {
-          if (left === 0) throw new Error('Unreachable');
-          // oxlint-disable-next-line no-await-in-loop
-          const data = (await this.stream.recv.readChunk(left))!;
-          message.set(data, messageLength - left);
-          left -= data.byteLength;
-        }
-        if (stopped) {
-          this.close();
-          return;
-        }
-        fn(message as Uint8Array<ArrayBuffer>);
+  async readExact(byteLength: number) {
+    const data = new Uint8Array(byteLength);
+    let read = 0;
+    while (read < byteLength) {
+      try {
+        const chunk = await this.stream.recv.readChunk(byteLength - read);
+        if (!chunk) throw new Error('No chunk, stream closed');
+        data.set(chunk, read);
+        read += chunk.byteLength;
+      } catch (error) {
+        this.emitError(error);
+        throw error;
       }
-    })();
-    return () => {
-      stopped = true;
-    };
+    }
+    return data;
+  }
+
+  async startReadLoop() {
+    this.started = true;
+    while (true) {
+      const header = (await this.readExact(4))!;
+      if (!this.ready) return;
+
+      const view = new DataView(header.buffer, header.byteOffset, header.byteLength);
+      const messageLength = view.getUint32(0, true);
+      const message = await this.readExact(messageLength);
+      if (!this.ready) return;
+
+      this.emitMessage(message as Uint8Array<ArrayBuffer>);
+    }
+  }
+
+  onmessage(fn: (data: Uint8Array<ArrayBuffer>) => void) {
+    const subscribers = this.subscribers.get('message') ?? new Set();
+    subscribers.add(fn);
+    this.subscribers.set('message', subscribers);
+    if (!this.started) this.startReadLoop();
+    return () => this.subscribers.get('message')?.delete(fn);
   }
 
   send(data: Uint8Array<ArrayBuffer>) {
     const header = new Uint8Array(4);
     const view = new DataView(header.buffer, header.byteOffset, header.byteLength);
     view.setUint32(0, data.byteLength, true);
-    this.stream.send.write(header).then(() => this.stream.send.write(data));
+    this.stream.send
+      .write(header)
+      .then(() => this.stream.send.write(data))
+      .catch(() => this.emitError(new Error('Failed to send message')));
   }
 }
 
-const peers = new Map<string, ConnectionManager>();
-export async function initIrohTransport() {
-  const ALPN = new TextEncoder().encode('rllm/1');
+class IrohTransportFactory implements TTransportFactory {
+  endpoints = new Map<string, Endpoint>();
+  subscribers = new Map<
+    'error' | 'signal' | 'transport' | 'close',
+    Set<(...args: any[]) => void>
+  >();
+  closed = false;
 
-  const clientId = Option.from(await logger.getMetadata('clientId'))
-    .okOrElse(() => new Error('Missing clientId in local database metadata'))
-    .unwrap();
-  const $account = account();
-  if ($account === null) return;
-  const accountId = $account.id;
+  ready = () => Promise.resolve();
 
-  const ws = createPeerSocket(clientId, accountId, true);
-  const signalSchema = z.object({
-    id: z.string(),
-    type: z.literal('offer')
-  });
-  function sendSignal(to: string, data: z.output<typeof signalSchema>) {
-    ws.send(
-      toBinary(
-        PeerPB.SyncWireMessageSchema,
-        create(PeerPB.SyncWireMessageSchema, {
-          accountId: $account!.id,
-          clientId,
-          payload: {
-            case: 'webrtcSignal',
-            value: {
-              data: JSON.stringify(data),
-              to
-            }
-          }
-        })
-      )
-    );
-  }
-  ws.addEventListener('message', async (e) => {
-    const SUPPORTED_EVENTS = ['peerConnected', 'webrtcSignal'];
-    const body = fromBinary(
-      PeerPB.SyncWireMessageSchema,
-      new Uint8Array(await e.data.arrayBuffer())
-    );
-    if (body.accountId !== $account.id) return;
-    if (!SUPPORTED_EVENTS.includes(body.payload.case ?? '')) return;
-    switch (body.payload.case) {
-      case 'webrtcSignal': {
-        const remoteId = body.clientId;
-        if (peers.has(remoteId)) return;
-        const data = safeParseJson(body.payload.value.data, {
-          validate: signalSchema.parse
-        }).expect('Invalid data');
-        console.debug(`[Iroh] got connection request from "${remoteId}"`);
-
-        const remoteAddr = EndpointAddr.fromEndpointId(data.id);
-
-        const node = await Endpoint.create();
-        await node.online();
-
-        const conn = await node.connect(remoteAddr, ALPN);
-        const stream = await conn.openBi();
-        const transport = new IrohTransport(conn, stream);
-        const connection = new ConnectionManager($account.id, clientId, transport, 'Iroh');
-        connection.init();
-        break;
-      }
-      case 'peerConnected': {
-        const remoteId = body.payload.value.clientId;
-        console.debug(`[Iroh] new peer connected "${remoteId}"`);
-
-        const node = await Endpoint.create();
-        await node.online();
-        node.setAlpns([ALPN]);
-
-        const addr = node.endpointAddr();
-        sendSignal(remoteId, { id: addr.endpointId(), type: 'offer' });
-
-        const conn = await node.accept();
-        if (!conn) throw new Error('No connection');
-
-        const stream = await conn.acceptBi();
-        const transport = new IrohTransport(conn, stream);
-        const connection = new ConnectionManager($account.id, clientId, transport, 'Iroh');
-        connection.init();
-      }
+  emitNewTransport(remoteId: string, transport: TTransport) {
+    const subscribers = this.subscribers.get('transport');
+    if (!subscribers) return;
+    for (const handler of subscribers) {
+      handler(remoteId, transport);
     }
-  });
+  }
+
+  onNewTransport(handler: (remoteId: string, transport: TTransport) => void) {
+    const subscribers = this.subscribers.get('transport') ?? new Set();
+    subscribers.add(handler);
+    this.subscribers.set('transport', subscribers);
+    return () => this.subscribers.get('transport')?.delete(handler);
+  }
+
+  onClose(fn: (remoteId: string) => void) {
+    const subscribers = this.subscribers.get('close') ?? new Set();
+    subscribers.add(fn);
+    this.subscribers.set('close', subscribers);
+    return () => this.subscribers.get('close')?.delete(fn);
+  }
+
+  async connect(remoteId: string) {
+    if (this.endpoints.has(remoteId)) throw new Error('Already connected');
+    const node = await Endpoint.create();
+    await node.online();
+    this.endpoints.set(remoteId, node);
+    node.setAlpns([ALPN]);
+
+    const addr = node.endpointAddr();
+    this.emitSignal(remoteId, { data: addr.endpointId(), type: 'iroh' });
+
+    const conn = await node.accept();
+    if (!conn) throw new Error('No connection');
+
+    const stream = await conn.acceptBi();
+    const transport = new IrohTransport(conn, stream);
+    transport.onError((error) => this.emitError(remoteId, error));
+    return transport;
+  }
+
+  async handleSignal(remoteId: string, signal: TSignal) {
+    if (this.endpoints.has(remoteId)) return;
+    const signalSchema = z.discriminatedUnion('type', [
+      z.object({
+        data: z.string(),
+        type: z.literal('iroh')
+      })
+    ]);
+    const result = signalSchema.safeParse(signal);
+    if (!result.success) return;
+    const { data } = result.data;
+    const remoteAddr = EndpointAddr.fromEndpointId(data);
+
+    const node = await Endpoint.create();
+    await node.online();
+    this.endpoints.set(remoteId, node);
+
+    const conn = await node.connect(remoteAddr, ALPN);
+    const stream = await conn.openBi();
+    const transport = new IrohTransport(conn, stream);
+    transport.onError((error) => this.emitError(remoteId, error));
+    this.emitNewTransport(remoteId, transport);
+  }
+
+  emitClose(remoteId: string) {
+    if (this.closed) return;
+    this.closed = true;
+    const subscribers = this.subscribers.get('close');
+    if (!subscribers) return;
+    for (const handler of subscribers) {
+      handler(remoteId);
+    }
+  }
+
+  onError(fn: (remoteId: string, error: unknown) => void) {
+    const subscribers = this.subscribers.get('error') ?? new Set();
+    subscribers.add(fn);
+    this.subscribers.set('error', subscribers);
+    return () => this.subscribers.get('error')?.delete(fn);
+  }
+
+  emitError(remoteId: string, error?: unknown) {
+    const subscribers = this.subscribers.get('error');
+    if (!subscribers) return;
+    for (const handler of subscribers) {
+      handler(remoteId, error);
+    }
+  }
+
+  onSignal(handler: (to: string, signal: TSignal) => void) {
+    const subscribers = this.subscribers.get('signal') ?? new Set();
+    subscribers.add(handler);
+    this.subscribers.set('signal', subscribers);
+    return () => void this.subscribers.get('signal')?.delete(handler);
+  }
+
+  emitSignal(to: string, signal: object) {
+    const subscribers = this.subscribers.get('signal');
+    if (!subscribers) return;
+    for (const handler of subscribers) {
+      handler(to, signal);
+    }
+  }
 }
+
+export const irohTransportFactory = new IrohTransportFactory();

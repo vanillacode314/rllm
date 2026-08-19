@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file peers/v1/peer.proto.
  */
 export const file_peers_v1_peer: GenFile = /*@__PURE__*/
-  fileDesc("ChNwZWVycy92MS9wZWVyLnByb3RvEghwZWVycy52MSJdCg1TeW5jSGFuZHNoYWtlEg8KB3ZlcnNpb24YASABKAkSGAoLcm9vdF9kaWdlc3QYAiABKAxIAIgBARIRCgljbGllbnRfaWQYAyABKAlCDgoMX3Jvb3RfZGlnZXN0IhsKC0RpZ2VzdFF1ZXJ5EgwKBHBhdGgYASADKA0iTQoNRGlnZXN0UXVlcmllcxIUCgxtZXJrbGVfZGVwdGgYASABKA0SJgoHcXVlcmllcxgCIAMoCzIVLnBlZXJzLnYxLkRpZ2VzdFF1ZXJ5Ij8KDERpZ2VzdFVwZGF0ZRIMCgRwYXRoGAEgAygNEg4KBmRpZ2VzdBgCIAEoDBIRCgl0aW1lc3RhbXAYAyABKAkiTgoNRGlnZXN0VXBkYXRlcxIUCgxtZXJrbGVfZGVwdGgYASABKA0SJwoHdXBkYXRlcxgCIAMoCzIWLnBlZXJzLnYxLkRpZ2VzdFVwZGF0ZSJHChFFdmVudEJhdGNoUGF5bG9hZBIRCgl0aW1lc3RhbXAYASABKAkSEQoJc2lnbmF0dXJlGAIgASgJEgwKBGRhdGEYAyABKAwiLQoYU2VuZEV2ZW50c0FmdGVyVGltZXN0YW1wEhEKCXRpbWVzdGFtcBgBIAEoCSI5CgpFdmVudEJhdGNoEisKBmV2ZW50cxgBIAMoCzIbLnBlZXJzLnYxLkV2ZW50QmF0Y2hQYXlsb2FkIigKDFdlYlJUQ1NpZ25hbBIKCgJ0bxgBIAEoCRIMCgRkYXRhGAIgASgJIiIKDVBlZXJDb25uZWN0ZWQSEQoJY2xpZW50X2lkGAEgASgJIhoKB0FkZFBlZXISDwoHcGVlcl9pZBgBIAEoCSIdCgpSZW1vdmVQZWVyEg8KB3BlZXJfaWQYASABKAkihwQKD1N5bmNXaXJlTWVzc2FnZRISCgphY2NvdW50X2lkGAEgASgJEhEKCWNsaWVudF9pZBgCIAEoCRIsCgloYW5kc2hha2UYAyABKAsyFy5wZWVycy52MS5TeW5jSGFuZHNoYWtlSAASMQoOZGlnZXN0X3F1ZXJpZXMYBCABKAsyFy5wZWVycy52MS5EaWdlc3RRdWVyaWVzSAASMQoOZGlnZXN0X3VwZGF0ZXMYBSABKAsyFy5wZWVycy52MS5EaWdlc3RVcGRhdGVzSAASKwoLZXZlbnRfYmF0Y2gYBiABKAsyFC5wZWVycy52MS5FdmVudEJhdGNoSAASSQobc2VuZF9ldmVudHNfYWZ0ZXJfdGltZXN0YW1wGAcgASgLMiIucGVlcnMudjEuU2VuZEV2ZW50c0FmdGVyVGltZXN0YW1wSAASLwoNd2VicnRjX3NpZ25hbBgIIAEoCzIWLnBlZXJzLnYxLldlYlJUQ1NpZ25hbEgAEiUKCGFkZF9wZWVyGAkgASgLMhEucGVlcnMudjEuQWRkUGVlckgAEjEKDnBlZXJfY29ubmVjdGVkGAogASgLMhcucGVlcnMudjEuUGVlckNvbm5lY3RlZEgAEisKC3JlbW92ZV9wZWVyGAsgASgLMhQucGVlcnMudjEuUmVtb3ZlUGVlckgAQgkKB3BheWxvYWRCDVoLcHJvdG8vcGVlcnNiBnByb3RvMw");
+  fileDesc("ChNwZWVycy92MS9wZWVyLnByb3RvEghwZWVycy52MSJdCg1TeW5jSGFuZHNoYWtlEg8KB3ZlcnNpb24YASABKAkSGAoLcm9vdF9kaWdlc3QYAiABKAxIAIgBARIRCgljbGllbnRfaWQYAyABKAlCDgoMX3Jvb3RfZGlnZXN0IhsKC0RpZ2VzdFF1ZXJ5EgwKBHBhdGgYASADKA0iTQoNRGlnZXN0UXVlcmllcxIUCgxtZXJrbGVfZGVwdGgYASABKA0SJgoHcXVlcmllcxgCIAMoCzIVLnBlZXJzLnYxLkRpZ2VzdFF1ZXJ5Ij8KDERpZ2VzdFVwZGF0ZRIMCgRwYXRoGAEgAygNEg4KBmRpZ2VzdBgCIAEoDBIRCgl0aW1lc3RhbXAYAyABKAkiTgoNRGlnZXN0VXBkYXRlcxIUCgxtZXJrbGVfZGVwdGgYASABKA0SJwoHdXBkYXRlcxgCIAMoCzIWLnBlZXJzLnYxLkRpZ2VzdFVwZGF0ZSJHChFFdmVudEJhdGNoUGF5bG9hZBIRCgl0aW1lc3RhbXAYASABKAkSEQoJc2lnbmF0dXJlGAIgASgJEgwKBGRhdGEYAyABKAwiLQoYU2VuZEV2ZW50c0FmdGVyVGltZXN0YW1wEhEKCXRpbWVzdGFtcBgBIAEoCSI5CgpFdmVudEJhdGNoEisKBmV2ZW50cxgBIAMoCzIbLnBlZXJzLnYxLkV2ZW50QmF0Y2hQYXlsb2FkIigKDFdlYlJUQ1NpZ25hbBIKCgJ0bxgBIAEoCRIMCgRkYXRhGAIgASgJIiIKDVBlZXJDb25uZWN0ZWQSEQoJY2xpZW50X2lkGAEgASgJIiIKD0Nvbm5lY3RlZFRvUGVlchIPCgdwZWVyX2lkGAEgASgJIicKFERpc2Nvbm5lY3RlZEZyb21QZWVyEg8KB3BlZXJfaWQYASABKAkirQQKD1N5bmNXaXJlTWVzc2FnZRISCgphY2NvdW50X2lkGAEgASgJEhEKCWNsaWVudF9pZBgCIAEoCRIsCgloYW5kc2hha2UYAyABKAsyFy5wZWVycy52MS5TeW5jSGFuZHNoYWtlSAASMQoOZGlnZXN0X3F1ZXJpZXMYBCABKAsyFy5wZWVycy52MS5EaWdlc3RRdWVyaWVzSAASMQoOZGlnZXN0X3VwZGF0ZXMYBSABKAsyFy5wZWVycy52MS5EaWdlc3RVcGRhdGVzSAASKwoLZXZlbnRfYmF0Y2gYBiABKAsyFC5wZWVycy52MS5FdmVudEJhdGNoSAASSQobc2VuZF9ldmVudHNfYWZ0ZXJfdGltZXN0YW1wGAcgASgLMiIucGVlcnMudjEuU2VuZEV2ZW50c0FmdGVyVGltZXN0YW1wSAASLwoNd2VicnRjX3NpZ25hbBgIIAEoCzIWLnBlZXJzLnYxLldlYlJUQ1NpZ25hbEgAEjYKEWNvbm5lY3RlZF90b19wZWVyGAkgASgLMhkucGVlcnMudjEuQ29ubmVjdGVkVG9QZWVySAASMQoOcGVlcl9jb25uZWN0ZWQYCiABKAsyFy5wZWVycy52MS5QZWVyQ29ubmVjdGVkSAASQAoWZGlzY29ubmVjdGVkX2Zyb21fcGVlchgLIAEoCzIeLnBlZXJzLnYxLkRpc2Nvbm5lY3RlZEZyb21QZWVySABCCQoHcGF5bG9hZEINWgtwcm90by9wZWVyc2IGcHJvdG8z");
 
 /**
  * @generated from message peers.v1.SyncHandshake
@@ -228,9 +228,9 @@ export const PeerConnectedSchema: GenMessage<PeerConnected> = /*@__PURE__*/
   messageDesc(file_peers_v1_peer, 9);
 
 /**
- * @generated from message peers.v1.AddPeer
+ * @generated from message peers.v1.ConnectedToPeer
  */
-export type AddPeer = Message<"peers.v1.AddPeer"> & {
+export type ConnectedToPeer = Message<"peers.v1.ConnectedToPeer"> & {
   /**
    * @generated from field: string peer_id = 1;
    */
@@ -238,16 +238,16 @@ export type AddPeer = Message<"peers.v1.AddPeer"> & {
 };
 
 /**
- * Describes the message peers.v1.AddPeer.
- * Use `create(AddPeerSchema)` to create a new message.
+ * Describes the message peers.v1.ConnectedToPeer.
+ * Use `create(ConnectedToPeerSchema)` to create a new message.
  */
-export const AddPeerSchema: GenMessage<AddPeer> = /*@__PURE__*/
+export const ConnectedToPeerSchema: GenMessage<ConnectedToPeer> = /*@__PURE__*/
   messageDesc(file_peers_v1_peer, 10);
 
 /**
- * @generated from message peers.v1.RemovePeer
+ * @generated from message peers.v1.DisconnectedFromPeer
  */
-export type RemovePeer = Message<"peers.v1.RemovePeer"> & {
+export type DisconnectedFromPeer = Message<"peers.v1.DisconnectedFromPeer"> & {
   /**
    * @generated from field: string peer_id = 1;
    */
@@ -255,10 +255,10 @@ export type RemovePeer = Message<"peers.v1.RemovePeer"> & {
 };
 
 /**
- * Describes the message peers.v1.RemovePeer.
- * Use `create(RemovePeerSchema)` to create a new message.
+ * Describes the message peers.v1.DisconnectedFromPeer.
+ * Use `create(DisconnectedFromPeerSchema)` to create a new message.
  */
-export const RemovePeerSchema: GenMessage<RemovePeer> = /*@__PURE__*/
+export const DisconnectedFromPeerSchema: GenMessage<DisconnectedFromPeer> = /*@__PURE__*/
   messageDesc(file_peers_v1_peer, 11);
 
 /**
@@ -316,10 +316,10 @@ export type SyncWireMessage = Message<"peers.v1.SyncWireMessage"> & {
     case: "webrtcSignal";
   } | {
     /**
-     * @generated from field: peers.v1.AddPeer add_peer = 9;
+     * @generated from field: peers.v1.ConnectedToPeer connected_to_peer = 9;
      */
-    value: AddPeer;
-    case: "addPeer";
+    value: ConnectedToPeer;
+    case: "connectedToPeer";
   } | {
     /**
      * @generated from field: peers.v1.PeerConnected peer_connected = 10;
@@ -328,10 +328,10 @@ export type SyncWireMessage = Message<"peers.v1.SyncWireMessage"> & {
     case: "peerConnected";
   } | {
     /**
-     * @generated from field: peers.v1.RemovePeer remove_peer = 11;
+     * @generated from field: peers.v1.DisconnectedFromPeer disconnected_from_peer = 11;
      */
-    value: RemovePeer;
-    case: "removePeer";
+    value: DisconnectedFromPeer;
+    case: "disconnectedFromPeer";
   } | { case: undefined; value?: undefined };
 };
 

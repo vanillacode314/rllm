@@ -53,11 +53,11 @@ message PeerConnected {
   string client_id = 1;
 }
 
-message AddPeer {
+message ConnectedToPeer {
   string peer_id = 1;
 }
 
-message RemovePeer {
+message DisconnectedFromPeer {
   string peer_id = 1;
 }
 
@@ -71,8 +71,8 @@ message SyncWireMessage {
     EventBatch event_batch = 6;
     SendEventsAfterTimestamp send_events_after_timestamp = 7;
     WebRTCSignal webrtc_signal = 8;
-    AddPeer add_peer = 9;
+    ConnectedToPeer connected_to_peer = 9;
     PeerConnected peer_connected = 10;
-    RemovePeer remove_peer = 11;
+    DisconnectedFromPeer disconnected_from_peer = 11;
   }
 }

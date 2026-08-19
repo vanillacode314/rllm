@@ -6,14 +6,12 @@ import { account } from '~/signals/account';
 import { env } from '~/utils/env';
 import { isOnline } from '~/utils/signals';
 
-import { ConnectionManager, type TTransport } from '../messages';
+import { ConnectionManager } from '../messages';
 import { createPeerSocket } from '../utils';
-
-const shouldPoll = createMemo(
-  () => isOnline() && account() !== null && env.VITE_SYNC_SERVER_BASE_URL !== undefined
-);
+import type { TTransport } from '.';
 
 export class WebsocketTransport implements TTransport {
+  id = 'WS';
   get ready() {
     return this.ws.readyState === WebSocket.OPEN;
   }
@@ -34,6 +32,7 @@ export class WebsocketTransport implements TTransport {
     this.ws.send(data);
   }
 }
+
 export async function initWebsocketTransport() {
   let connection: ConnectionManager | undefined;
   const clientId = Option.from(await logger.getMetadata('clientId'))
@@ -66,6 +65,9 @@ export async function initWebsocketTransport() {
   }
 
   createRoot(() => {
+    const shouldPoll = createMemo(
+      () => isOnline() && account() !== null && env.VITE_SYNC_SERVER_BASE_URL !== undefined
+    );
     createComputed(() => {
       const $shouldPoll = shouldPoll();
       untrack(() => {
