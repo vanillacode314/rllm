@@ -99,6 +99,7 @@ export class IrohTransport implements TTransport {
 }
 
 class IrohTransportFactory implements TTransportFactory {
+  id = 'Iroh';
   endpoints = new Map<string, Endpoint>();
   subscribers = new Map<
     'error' | 'signal' | 'transport' | 'close',

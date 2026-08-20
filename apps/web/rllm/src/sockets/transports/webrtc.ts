@@ -6,6 +6,9 @@ class WebRTCEndpoint {
   #pc = new RTCPeerConnection();
   #pendingIceCandidates = new Array<RTCIceCandidate>();
   #subscribers = new Map<'error' | 'signal' | 'close', Set<(...args: any[]) => void>>();
+  get maxMessageSize() {
+    return this.#pc.sctp?.maxMessageSize;
+  }
   async acceptAnswer(answer: RTCSessionDescriptionInit) {
     await this.#pc.setRemoteDescription(answer);
     while (this.#pendingIceCandidates.length > 0) {
@@ -136,27 +139,85 @@ class WebRTCEndpoint {
 
 class WebRTCTransport implements TTransport {
   id = 'WebRTC';
+  subscribers = new Map<'message', Set<(data: Uint8Array<ArrayBuffer>) => void>>();
+  started = false;
   get ready() {
     return this.dc.readyState === 'open';
   }
-  constructor(readonly dc: RTCDataChannel) {}
+  constructor(
+    readonly dc: RTCDataChannel,
+    readonly maxMessageSize: number = 16384
+  ) {}
 
   close() {
     this.dc.close();
   }
 
+  async readExact(bytes: number, reader: ReadableStreamDefaultReader<Uint8Array<ArrayBuffer>>) {
+    const data = new Uint8Array(bytes);
+    let offset = 0;
+    while (offset < bytes) {
+      const { done, value } = await reader.read();
+      if (done) throw new Error('Unexpected end of stream');
+      data.set(value, offset);
+      offset += value.length;
+    }
+    return data;
+  }
+
+  async startReadLoop() {
+    if (this.started) return;
+    this.started = true;
+
+    const stream = new ReadableStream({
+      start: (controller) => {
+        this.dc.onmessage = (e) => controller.enqueue(new Uint8Array(e.data));
+        this.dc.onclose = () => controller.close();
+      }
+    });
+    const reader = stream.getReader();
+    while (true) {
+      const header = await this.readExact(4, reader);
+      const view = new DataView(header.buffer, header.byteOffset, header.byteLength);
+      const messageLength = view.getUint32(0, true);
+      const message = await this.readExact(messageLength, reader);
+      this.emitMessage(message);
+    }
+  }
+
+  emitMessage(data: Uint8Array<ArrayBuffer>) {
+    const subscribers = this.subscribers.get('message');
+    if (!subscribers) return;
+    for (const handler of subscribers) {
+      handler(data);
+    }
+  }
+
   onmessage(fn: (data: Uint8Array<ArrayBuffer>) => void) {
-    const handler = (e: MessageEvent) => fn(new Uint8Array(e.data));
-    this.dc.addEventListener('message', handler);
-    return () => this.dc.removeEventListener('message', handler);
+    const subscribers = this.subscribers.get('message') ?? new Set();
+    subscribers.add(fn);
+    this.subscribers.set('message', subscribers);
+    this.startReadLoop();
+    return () => this.subscribers.get('message')?.delete(fn);
   }
 
   send(data: Uint8Array<ArrayBuffer>) {
-    this.dc.send(data);
+    const header = new Uint8Array(4);
+    const view = new DataView(header.buffer, header.byteOffset, header.byteLength);
+    view.setUint32(0, data.byteLength, true);
+    this.dc.send(header);
+    let left = data.byteLength;
+    while (left > 0) {
+      const chunk = data.slice(0, Math.min(left, this.maxMessageSize));
+      this.dc.send(chunk);
+      data = data.slice(chunk.byteLength);
+      left -= chunk.byteLength;
+    }
   }
 }
 
 class WebRTCTransportFactory implements TTransportFactory {
+  id = 'WebRTC';
   peers = new Map<string, WebRTCEndpoint>();
   subscribers = new Map<
     'error' | 'close' | 'signal' | 'transport',
@@ -207,7 +268,7 @@ class WebRTCTransportFactory implements TTransportFactory {
     peer.onError((error) => this.emitError(remoteId, error));
     this.peers.set(remoteId, peer);
     const dc = await peer.connect(remoteId);
-    return new WebRTCTransport(dc);
+    return new WebRTCTransport(dc, peer.maxMessageSize);
   }
 
   async handleSignal(remoteId: string, signal: TSignal) {
@@ -249,7 +310,7 @@ class WebRTCTransportFactory implements TTransportFactory {
         peer.onError((error) => this.emitError(remoteId, error));
         this.peers.set(remoteId, peer);
         const dc = await peer.acceptOffer(remoteId, parsedSignal.data);
-        const transport = new WebRTCTransport(dc);
+        const transport = new WebRTCTransport(dc, peer.maxMessageSize);
         this.emitNewTransport(remoteId, transport);
         break;
       }

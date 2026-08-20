@@ -26,6 +26,7 @@ export class PeerJSTransport implements TTransport {
 }
 
 class PeerJSTransportFactory implements TTransportFactory {
+  id = 'PeerJS';
   handleSignal() {}
   peer: Peer;
   subscribers = new Map<'error' | 'close', Set<(...args: any[]) => void>>();

@@ -15,6 +15,7 @@ const signalSchema = z.object({
 export type TSignal = z.infer<typeof signalSchema>;
 
 export interface TTransportFactory {
+  id: string;
   connect(remoteId: string): Promise<TTransport>;
   onSignal(fn: (remoteId: string, signal: TSignal) => void): () => void;
   onError(fn: (remoteId: string, error: unknown) => void): () => void;
@@ -77,7 +78,10 @@ export class PeerManager {
               this.registerPeer(remoteId, connection);
               break;
             } catch (error) {
-              console.error(error);
+              console.error(
+                `Failed to connect to peer ${remoteId} using transport ${transport.id}`,
+                error
+              );
             }
           }
         }
