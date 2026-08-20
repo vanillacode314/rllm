@@ -1,5 +1,5 @@
 import { Keyboard } from '@capacitor/keyboard';
-import { createRouter, RouterProvider } from '@tanstack/solid-router';
+import { createRouter, RouterProvider, type ErrorComponentProps } from '@tanstack/solid-router';
 import 'katex/dist/katex.css';
 
 import './styles.css';
@@ -11,6 +11,8 @@ import 'virtual:uno.css';
 import { toast } from 'solid-sonner';
 
 import { routeTree } from './routeTree.gen';
+import { Callout, CalloutContent, CalloutTitle } from 'ui/callout';
+import { Button } from 'ui/button';
 
 const router = createRouter({
   defaultGcTime: 0,
@@ -23,7 +25,8 @@ const router = createRouter({
       ),
   defaultViewTransition: true,
   routeTree,
-  scrollRestoration: true
+  scrollRestoration: true,
+  defaultErrorComponent: ErrorComponent
 });
 
 declare module '@tanstack/solid-router' {
@@ -32,6 +35,19 @@ declare module '@tanstack/solid-router' {
   }
 }
 
+function ErrorComponent(props: ErrorComponentProps) {
+  onMount(() => console.error(props.error));
+
+  return (
+    <div class="grid place-content-center h-full w-full gap-4">
+      <Callout variant="error" class="min-w-75">
+        <CalloutTitle>An Error Occurred</CalloutTitle>
+        <CalloutContent>{props.error.message.trim() || 'Unknown error'}</CalloutContent>
+      </Callout>
+      <Button onClick={() => location.reload()}>Refresh</Button>
+    </div>
+  );
+}
 function App() {
   if (import.meta.env.VITE_MODE === 'web') {
     onMount(() => {

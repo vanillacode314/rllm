@@ -1,11 +1,11 @@
 # What's New
 
-## v0.0.44 — August 20, 2026
+## v0.0.45 — August 20, 2026
 
-### 🎨 Improvements
+### ✨ What's New
 
-- **More reliable device connections** — Reworked how your devices connect to each other for syncing, making direct connections more dependable.
+- **A friendlier error page** — When something goes wrong, you'll now see a clear message with a Refresh button instead of a blank screen.
 
 ### 🐛 Bug Fixes
 
-- **Fixed a security issue with synced data** — Authentication is now stronger, and synced data is properly kept within your own account.
+- **Syncing no longer hangs** — Connecting your devices is now more reliable: a slow connection can no longer stall syncing with your other devices.
