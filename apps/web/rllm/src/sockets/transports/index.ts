@@ -5,6 +5,7 @@ import * as z from 'zod/mini';
 import { ConnectionManager } from '../messages';
 import { createPeerSocket } from '../utils';
 import { safeParseJson } from 'ts-result-option/utils';
+import { withTimeout } from '~/utils/promises';
 
 const signalSchema = z.object({
   data: z.unknown(),
@@ -42,7 +43,6 @@ export class PeerManager {
     this.#accountId = accountId;
     this.#clientId = clientId;
 
-    await Promise.all(this.#transports.keys().map((t) => t.ready()));
     this.#ws = createPeerSocket(clientId, accountId, true);
 
     this.#ws.addEventListener('message', async (e) => {
@@ -68,7 +68,10 @@ export class PeerManager {
           for (const [transport] of this.#transports) {
             try {
               // oxlint-disable-next-line no-await-in-loop
-              const t = await transport.connect(remoteId);
+              const t = await withTimeout(
+                transport.ready().then(() => transport.connect(remoteId)),
+                5 * 1000
+              );
               const connection = new ConnectionManager(accountId, clientId, t);
               connection.init();
               this.registerPeer(remoteId, connection);

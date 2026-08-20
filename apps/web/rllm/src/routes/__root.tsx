@@ -65,7 +65,7 @@ export const Route = createRootRouteWithContext()({
       PeerManager.registerTransport(webRTCTransportFactory);
       PeerManager.registerTransport(peerJSTransportFactory(clientId));
       PeerManager.registerTransport(irohTransportFactory);
-      await PeerManager.init(accountId.unwrap(), clientId);
+      void PeerManager.init(accountId.unwrap(), clientId);
       new Promise((resolve) => setTimeout(resolve, 10000)).then(() => {
         return initWebsocketTransport().catch((err) =>
           console.error(new Error('Failed to init websocket transport', { cause: err }))

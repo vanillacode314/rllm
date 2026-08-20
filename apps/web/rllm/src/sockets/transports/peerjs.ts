@@ -63,7 +63,7 @@ class PeerJSTransportFactory implements TTransportFactory {
       });
       conn.on('error', (error) => this.emitError(conn.peer, error));
     };
-    this.peer.on('connection', _handler);
+    this.peer.on('open', () => this.peer.on('connection', _handler));
     return () => this.peer.off('connection', _handler);
   }
 
