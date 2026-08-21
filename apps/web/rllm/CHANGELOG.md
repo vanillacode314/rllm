@@ -1,7 +1,6 @@
 # What's New
 
-## v0.0.46 — August 20, 2026
+## v0.0.47 — August 21, 2026
 
 ### 🐛 Bug Fixes
-
-- Large syncs no longer fail
+- **EPUB files import more reliably** — EPUBs now load correctly.

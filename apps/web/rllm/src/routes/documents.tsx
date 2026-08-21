@@ -69,7 +69,8 @@ function DocumentsComponent() {
       await promise;
       toast.success('Document indexed');
     } catch (error) {
-      toast.error(formatError(error as Error));
+      console.error(error);
+      toast.error('Failed to index document', { description: formatError(error as Error) });
     }
   }
 

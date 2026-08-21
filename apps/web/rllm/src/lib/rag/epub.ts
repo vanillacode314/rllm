@@ -2,16 +2,17 @@ import Epub from 'epubjs';
 import JSZip from 'jszip';
 import rehypeParse from 'rehype-parse';
 import rehypeRemark from 'rehype-remark';
-import rehypeSanitize from 'rehype-sanitize';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
 import remarkStringify from 'remark-stringify';
 import { AsyncResult, Option, Result } from 'ts-result-option';
 import { tryBlock } from 'ts-result-option/utils';
 import { unified } from 'unified';
+import { fromXml } from 'xast-util-from-xml';
+import { select, selectAll } from 'xast-util-select';
 
 import { makeRagAdapter } from './utils';
 
-const xmlParser = new DOMParser();
 const textTags = [
   'p',
   'h1',
@@ -27,20 +28,37 @@ const textTags = [
   'td',
   'th',
   'tbody',
-  'thead'
+  'thead',
+  'blockquote',
+  'div',
+  'span',
+  'strong',
+  'em',
+  'b',
+  'i'
 ];
-const sanitize = unified()
-  .use(rehypeParse, { fragment: true })
-  .use(rehypeSanitize, { tagNames: textTags })
+
+const bodyHtmlToMarkdownProcessor = unified()
+  .use(rehypeParse)
+  .use(rehypeSanitize, {
+    ...defaultSchema,
+    tagNames: textTags
+  })
   .use(rehypeRemark)
   .use(remarkGfm)
   .use(remarkStringify);
+
+function extractBodyContent(html: string): string {
+  const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  return bodyMatch ? bodyMatch[1] : html;
+}
 
 function epubToString(buffer: ArrayBuffer): AsyncResult<string, Error> {
   return tryBlock<string, Error>(
     async function* () {
       const zip = new JSZip();
       await zip.loadAsync(buffer);
+
       const readFile = AsyncResult.wrap(
         (path: string) =>
           Option.from(zip.file(path))
@@ -48,29 +66,41 @@ function epubToString(buffer: ArrayBuffer): AsyncResult<string, Error> {
             .unwrap(),
         (e, path) => new Error(`Failed to read file ${path}`, { cause: e })
       );
-      const data = yield* readFile('META-INF/container.xml');
-      const xml = xmlParser.parseFromString(data, 'text/xml');
-      const opfPath = xml.querySelector('rootfile')?.getAttribute('full-path');
-      if (!opfPath) return Result.Err(new Error('No rootfile found in container.xml'));
-      const opf = yield* readFile(opfPath);
-      const opfXml = xmlParser.parseFromString(opf, 'text/xml');
-      const manifest = opfXml.querySelector('manifest');
-      if (!manifest) return Result.Err(new Error('No manifest found in opf file'));
-      const items = manifest.querySelectorAll('item');
-      const htmlFiles = Array.from(items).filter(
-        (item) => item.getAttribute('media-type') === 'application/xhtml+xml'
-      );
+
+      const opfPath = yield* readFile('META-INF/container.xml')
+        .map((xml) => fromXml(xml))
+        .map((tree) => select('rootfile', tree)?.attributes?.['full-path']);
+
+      if (!opfPath) {
+        return Result.Err(new Error('No rootfile found in container.xml'));
+      }
+
+      // 2. Parse OPF file into XAST and select XHTML item hrefs
+      const hrefs = yield* readFile(opfPath)
+        .map((xml) => fromXml(xml))
+        .map((tree) => selectAll('item', tree))
+        .map((nodes) =>
+          nodes
+            .filter((node) => node.attributes?.['media-type'] === 'application/xhtml+xml')
+            .map((node) => node.attributes?.['href'])
+            .filter((href): href is string => Boolean(href))
+        );
+
+      if (hrefs.length === 0) {
+        return Result.Err(new Error('No XHTML files found in manifest'));
+      }
+
+      const opfDir = opfPath.split('/').slice(0, -1).join('/');
+
       const htmlContents = await Promise.all(
-        htmlFiles.map((item) =>
+        hrefs.map((href) =>
           tryBlock(
             async function* () {
-              const href = yield* Option.from(item.getAttribute('href')).okOrElse(
-                () => new Error('No href found in item')
-              );
-              let path = opfPath.split('/').slice(0, -1).join('/') + '/' + href;
+              let path = opfDir ? `${opfDir}/${href}` : href;
               path = path.startsWith('/') ? path.slice(1) : path;
-              const xml = yield* readFile(path);
-              const content = xmlParser.parseFromString(xml, 'text/html').body.innerHTML;
+              const html = yield* readFile(path).map((xml) => extractBodyContent(xml));
+              const content = String(await bodyHtmlToMarkdownProcessor.process(html));
+              console.log('🪚 content:', content);
               return Result.Ok(content);
             },
             (e) => e
@@ -79,11 +109,7 @@ function epubToString(buffer: ArrayBuffer): AsyncResult<string, Error> {
       );
 
       const text = (
-        await Promise.all(
-          htmlContents
-            .map((content) => content.expect('should have content'))
-            .map(async (html) => String(await sanitize.process(html)))
-        )
+        await Promise.all(htmlContents.map((content) => content.expect('should have content')))
       )
         .join('\n\n')
         .replace(/\s+/g, (match) => {
@@ -96,9 +122,10 @@ function epubToString(buffer: ArrayBuffer): AsyncResult<string, Error> {
             return ' ';
           }
         });
+
       return Result.Ok(text);
     },
-    (e) => new Error(`Failed to create zip`, { cause: e })
+    (e) => new Error(`Failed to parse epub file`, { cause: e })
   );
 }
 
@@ -110,7 +137,7 @@ function getEpubAuthor(buffer: ArrayBuffer): AsyncResult<string, Error> {
         () => book.loaded.metadata,
         (e) => new Error('Failed to load metadata', { cause: e })
       );
-      return Result.Ok(metadata.creator.trim() || 'Unknown Author');
+      return Result.Ok(metadata.creator?.trim() || 'Unknown Author');
     },
     (e) => new Error(`Failed to get EPUB author`, { cause: e })
   );

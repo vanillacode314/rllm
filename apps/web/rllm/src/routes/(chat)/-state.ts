@@ -1,5 +1,5 @@
 import { makePersisted } from '@solid-primitives/storage';
-import { produce } from 'immer';
+import { produce } from '~/utils/immer';
 import localforage from 'localforage';
 import { createStore } from 'solid-js/store';
 import { Option } from 'ts-result-option';

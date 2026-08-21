@@ -1,6 +1,6 @@
 {
   "name": "rllm",
-  "version": "0.0.46",
+  "version": "0.0.47",
   "private": true,
   "type": "module",
   "scripts": {
@@ -116,7 +116,9 @@
     "vector-db": "workspace:*",
     "vfile": "^6.0.3",
     "vite-plugin-comlink": "^5.3.0",
-    "wretch": "^3.0.8"
+    "wretch": "^3.0.8",
+    "xast-util-from-xml": "^4.0.0",
+    "xast-util-select": "^0.4.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.4.1",
