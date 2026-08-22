@@ -21,14 +21,14 @@ export function ExpandableTextField<T extends ValidComponent = 'textarea'>(
   createEffect(() => {
     if (!('value' in others)) return;
     void others.value;
-    untrack(adjustHeight);
+    untrack(() => adjustHeight(true));
   });
   createEventListenerMap(() => ref, {
-    input: adjustHeight,
-    paste: adjustHeight
+    input: () => adjustHeight(false),
+    paste: () => adjustHeight(true)
   });
 
-  function adjustHeight() {
+  function adjustHeight(useHack = false) {
     if (!ref) return;
     const lineHeight = Number(getComputedStyle(ref).lineHeight.replace('px', ''));
     const paddingTop = Number(getComputedStyle(ref).paddingTop.replace('px', ''));
@@ -52,6 +52,14 @@ export function ExpandableTextField<T extends ValidComponent = 'textarea'>(
     ref.style.height = `${newHeight}px`;
     ref.style.overflow = prevOverflow;
     ref.style.alignSelf = prevAlignment;
+
+    // NOTE: hack to scroll the textarea to the new cursor position reliably across browsers
+    if (useHack) {
+      queueMicrotask(() => {
+        ref.blur();
+        ref.focus();
+      });
+    }
   }
 
   return (
