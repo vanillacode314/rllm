@@ -65,7 +65,7 @@ export function ChatListSection(props: ChatListSectionProps) {
       ._ctx.filteredCount({ query: filterState.query, tags: Array.from(filterState.tags) })
   );
   const loadedCount = () => chats.length;
-  const totalCount = () => totalCountQuery.data ?? 0;
+  const totalCount = () => (totalCountQuery.isSuccess ? totalCountQuery.data : 0);
 
   const [localScrollRef, setLocalScrollRef] = createSignal<HTMLUListElement | null>(null);
   const scrollRef = createMemo(() => (props.scrollRef ? props.scrollRef : localScrollRef()));

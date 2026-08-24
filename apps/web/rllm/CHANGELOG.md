@@ -1,7 +1,7 @@
 # What's New
 
-## v0.0.48 — August 22, 2026
+## v0.0.49 — August 24, 2026
 
 ### 🐛 Bug Fixes
 
-- Cursor stays visible after pasting
+- Sidebar does not disappear while searching for chats anymore
