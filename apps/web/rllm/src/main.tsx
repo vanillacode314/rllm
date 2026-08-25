@@ -48,12 +48,9 @@ function ErrorComponent(props: ErrorComponentProps) {
     </div>
   );
 }
+
 function App() {
-  if (import.meta.env.VITE_MODE === 'web') {
-    onMount(() => {
-      void setupServiceWorker();
-    });
-  }
+  void setupServiceWorker();
   if (import.meta.env.VITE_MODE === 'android') {
     onMount(() => {
       Keyboard.addListener('keyboardWillShow', (info) => {
@@ -79,7 +76,12 @@ if (!rootElement.innerHTML) {
 }
 
 async function setupServiceWorker() {
-  if (!('serviceWorker' in navigator) || !import.meta.env.PROD) return;
+  if (
+    !('serviceWorker' in navigator) ||
+    !import.meta.env.PROD ||
+    import.meta.env.VITE_MODE !== 'web'
+  )
+    return;
 
   const { getSerwist } = await import('virtual:serwist');
   try {

@@ -38,9 +38,16 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
     hostname: 'llm.raqueeb.com'
-    // url: 'https://dev.homelab.lan'
   },
   webDir: 'dist'
 };
+
+if (process.env.ANDROID_DEBUG) {
+  config.server = {
+    androidScheme: 'https',
+    hostname: 'dev.h.raqueeb.com',
+    url: 'https://dev.h.raqueeb.com'
+  };
+}
 
 export default config;

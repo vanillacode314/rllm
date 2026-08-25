@@ -5,7 +5,7 @@ import path from 'node:path';
 import sqlocalPlugin from 'sqlocal/vite';
 import UnoCSS from 'unocss/vite';
 import AutoImport from 'unplugin-auto-import/vite';
-import { defineConfig, type PluginOption } from 'vite';
+import { defineConfig, type PluginOption, type UserConfig } from 'vite';
 import { comlink } from 'vite-plugin-comlink';
 import { compression } from 'vite-plugin-compression2';
 import solidPlugin from 'vite-plugin-solid';
@@ -14,8 +14,69 @@ import wasm from 'vite-plugin-wasm';
 
 import pkgJson from './package.json' with { type: 'json' };
 
+function stubSerwistPlugin(): PluginOption {
+  const virtualModuleId = 'virtual:serwist';
+  const resolvedVirtualModuleId = '\0' + virtualModuleId;
+
+  return {
+    name: 'stub-serwist',
+    resolveId(id) {
+      if (id === virtualModuleId) return resolvedVirtualModuleId;
+    },
+    load(id) {
+      if (id === resolvedVirtualModuleId) {
+        // Return dummy exports matching what your code imports
+        return 'export const serwist = null; export default {};';
+      }
+    }
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
+  const config: UserConfig = {
+    build: {
+      reportCompressedSize: false
+      // sourcemap: true
+    },
+    define: {
+      __VERSION__: JSON.stringify(pkgJson.version)
+    },
+    resolve: {
+      alias: {
+        // 'decode-named-character-reference': path.resolve(
+        //   import.meta.dirname,
+        //   '../../../node_modules/decode-named-character-reference/index.js'
+        // ),
+        // 'hast-util-from-html-isomorphic': path.resolve(
+        //   import.meta.dirname,
+        //   '../../../node_modules/hast-util-from-html-isomorphic/index.js'
+        // ),
+        '~/db/client':
+          mode === 'android'
+            ? path.resolve(import.meta.dirname, './src/db/client.platform.android.ts')
+            : path.resolve(import.meta.dirname, './src/db/client.platform.web.ts'),
+        '~/lib/vector-db/client':
+          mode === 'android'
+            ? path.resolve(import.meta.dirname, './src/lib/vector-db/client.platform.android.ts')
+            : path.resolve(import.meta.dirname, './src/lib/vector-db/client.platform.web.ts'),
+        '~/lib/vector-db/transient':
+          mode === 'android'
+            ? path.resolve(import.meta.dirname, './src/lib/vector-db/transient.platform.android.ts')
+            : path.resolve(import.meta.dirname, './src/lib/vector-db/transient.platform.web.ts'),
+        '~': path.resolve(import.meta.dirname, './src')
+      }
+    },
+    server: {
+      allowedHosts: ['dev.h.raqueeb.com'],
+      host: '0.0.0.0'
+    },
+    worker: {
+      format: 'es',
+      plugins: () => [comlink()]
+    }
+  };
+
   const plugins: PluginOption[] = [
     // analyzer(),
     wasm(),
@@ -50,47 +111,11 @@ export default defineConfig(({ mode }) => {
     );
   }
 
-  return {
-    build: {
-      reportCompressedSize: false
-      // sourcemap: true
-    },
-    define: {
-      __VERSION__: JSON.stringify(pkgJson.version)
-    },
-    plugins,
-    resolve: {
-      alias: {
-        // 'decode-named-character-reference': path.resolve(
-        //   import.meta.dirname,
-        //   '../../../node_modules/decode-named-character-reference/index.js'
-        // ),
-        // 'hast-util-from-html-isomorphic': path.resolve(
-        //   import.meta.dirname,
-        //   '../../../node_modules/hast-util-from-html-isomorphic/index.js'
-        // ),
-        '~/db/client':
-          mode === 'android'
-            ? path.resolve(import.meta.dirname, './src/db/client.platform.android.ts')
-            : path.resolve(import.meta.dirname, './src/db/client.platform.web.ts'),
-        '~/lib/vector-db/client':
-          mode === 'android'
-            ? path.resolve(import.meta.dirname, './src/lib/vector-db/client.platform.android.ts')
-            : path.resolve(import.meta.dirname, './src/lib/vector-db/client.platform.web.ts'),
-        '~/lib/vector-db/transient':
-          mode === 'android'
-            ? path.resolve(import.meta.dirname, './src/lib/vector-db/transient.platform.android.ts')
-            : path.resolve(import.meta.dirname, './src/lib/vector-db/transient.platform.web.ts'),
-        '~': path.resolve(import.meta.dirname, './src')
-      }
-    },
-    server: {
-      allowedHosts: ['dev.homelab.lan'],
-      host: '0.0.0.0'
-    },
-    worker: {
-      format: 'es',
-      plugins: () => [comlink()]
-    }
-  };
+  if (mode === 'android') {
+    plugins.push(stubSerwistPlugin());
+  }
+
+  Object.assign(config, { plugins });
+
+  return config;
 });
