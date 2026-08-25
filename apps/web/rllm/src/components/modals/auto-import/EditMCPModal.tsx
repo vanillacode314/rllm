@@ -95,7 +95,7 @@ export function EditMCPModal() {
       }}
       open={!!mcpIdToEdit()}
     >
-      <DialogContent class="sm:max-w-135">
+      <DialogContent>
         <form class="grid gap-4 py-4" onSubmit={handleSave}>
           <DialogHeader>
             <DialogTitle>Edit MCP</DialogTitle>

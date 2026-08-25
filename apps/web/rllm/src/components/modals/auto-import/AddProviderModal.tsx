@@ -89,7 +89,7 @@ export function AddProviderModal() {
       }}
       open={open()}
     >
-      <DialogContent class="sm:max-w-135">
+      <DialogContent>
         <form class="grid gap-4 py-4" onSubmit={handleSave}>
           <DialogHeader>
             <DialogTitle>Add provider</DialogTitle>

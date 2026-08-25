@@ -98,7 +98,7 @@ export function EditPresetModal() {
       }}
       open={!!editPresetModalOpen()}
     >
-      <DialogContent class="sm:max-w-106.25">
+      <DialogContent>
         <form
           class="grid gap-4 py-4"
           onSubmit={async (event) => {

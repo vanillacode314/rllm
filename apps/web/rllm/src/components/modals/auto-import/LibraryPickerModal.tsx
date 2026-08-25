@@ -57,7 +57,7 @@ export function LibraryPickerModal() {
       }}
       open={open()}
     >
-      <DialogContent class="max-w-lg">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Attach Documents</DialogTitle>
           <DialogDescription>

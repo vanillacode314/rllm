@@ -29,7 +29,7 @@ const DrawerOverlay = <T extends ValidComponent = 'div'>(
   return (
     <DrawerPrimitive.Overlay
       class={cn(
-        'fixed inset-0 z-50 data-[transitioning]:transition-colors data-[transitioning]:duration-300',
+        'absolute inset-0 z-50 data-[transitioning]:transition-colors data-[transitioning]:duration-300',
         props.class
       )}
       style={{
@@ -54,7 +54,7 @@ const DrawerContent = <T extends ValidComponent = 'div'>(
       <DrawerOverlay />
       <DrawerPrimitive.Content
         class={cn(
-          'fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background after:absolute after:inset-x-0 after:top-full after:h-1/2 after:bg-inherit data-[transitioning]:transition-transform data-[transitioning]:duration-300 md:select-none',
+          'absolute inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background after:absolute after:inset-x-0 after:top-full after:h-1/2 after:bg-inherit data-[transitioning]:transition-transform data-[transitioning]:duration-300 md:select-none',
           props.class
         )}
         {...rest}

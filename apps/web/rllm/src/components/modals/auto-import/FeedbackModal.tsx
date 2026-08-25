@@ -224,7 +224,7 @@ export function FeedbackModal() {
       }}
       open={state.open}
     >
-      <DialogContent class="sm:max-w-125 p-0">
+      <DialogContent>
         <div class="max-h-[90vh] overflow-hidden grid grid-rows-[auto_1fr_auto] py-6">
           <DialogHeader class="px-6">
             <DialogTitle>Answer These</DialogTitle>

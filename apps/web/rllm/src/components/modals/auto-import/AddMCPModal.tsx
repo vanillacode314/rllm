@@ -79,7 +79,7 @@ export function AddMCPModal() {
       }}
       open={open()}
     >
-      <DialogContent class="sm:max-w-135">
+      <DialogContent>
         <form class="grid gap-4 py-4" onSubmit={handleSave}>
           <DialogHeader>
             <DialogTitle>Add MCP</DialogTitle>

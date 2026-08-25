@@ -53,7 +53,7 @@ export function SaveMnemonicModal() {
       }}
       open={open()}
     >
-      <DialogContent class="sm:max-w-[425px]">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Passphrase</DialogTitle>
           <DialogDescription>

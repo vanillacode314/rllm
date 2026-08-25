@@ -105,7 +105,7 @@ export function EditProviderModal() {
       }}
       open={!!providerIdToEdit()}
     >
-      <DialogContent class="sm:max-w-135">
+      <DialogContent>
         <form class="grid gap-4 py-4" onSubmit={handleSave}>
           <DialogHeader>
             <DialogTitle>Edit provider</DialogTitle>

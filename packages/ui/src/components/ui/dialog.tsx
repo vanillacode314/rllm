@@ -12,7 +12,7 @@ const DialogPortal: Component<DialogPrimitive.DialogPortalProps> = (props) => {
   const [, rest] = splitProps(props, ['children']);
   return (
     <DialogPrimitive.Portal {...rest}>
-      <div class="fixed inset-0 z-50 flex items-start justify-center sm:items-center">
+      <div class="absolute inset-0 z-50 flex items-start justify-center sm:items-center">
         {props.children}
       </div>
     </DialogPrimitive.Portal>
@@ -29,7 +29,7 @@ const DialogOverlay = <T extends ValidComponent = 'div'>(
   return (
     <DialogPrimitive.Overlay
       class={cn(
-        'fixed inset-0 z-50 bg-background/80 data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0',
+        'absolute inset-0 z-50 bg-background/80 data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0',
         props.class
       )}
       {...rest}
@@ -52,7 +52,7 @@ const DialogContent = <T extends ValidComponent = 'div'>(
       <DialogOverlay />
       <DialogPrimitive.Content
         class={cn(
-          'fixed left-1/2 top-1/2 z-50 grid max-h-screen w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto border bg-background p-6 shadow-lg duration-200 data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0 data-[closed]:zoom-out-95 data-[expanded]:zoom-in-95 sm:rounded-lg',
+          'absolute left-1/2 max-md:bottom-0 md:top-1/2 z-50 grid max-h-screen w-full md:max-w-lg -translate-x-1/2 md:-translate-y-1/2 gap-4 overflow-y-auto border bg-background p-6 shadow-lg duration-200 data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0 data-[closed]:zoom-out-95 data-[expanded]:zoom-in-95 sm:rounded-lg',
           props.class
         )}
         {...rest}
