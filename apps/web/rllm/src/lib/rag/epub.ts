@@ -100,7 +100,6 @@ function epubToString(buffer: ArrayBuffer): AsyncResult<string, Error> {
               path = path.startsWith('/') ? path.slice(1) : path;
               const html = yield* readFile(path).map((xml) => extractBodyContent(xml));
               const content = String(await bodyHtmlToMarkdownProcessor.process(html));
-              console.log('🪚 content:', content);
               return Result.Ok(content);
             },
             (e) => e
