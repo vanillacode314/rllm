@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/solid-router';
 import { toast } from 'solid-sonner';
+import { AsyncResult } from 'ts-result-option';
 import { Button } from 'ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'ui/card';
 
@@ -48,10 +49,19 @@ function formatBytes(value: number): string {
 async function getDatabaseSize(name: string): Promise<number> {
   if (import.meta.env.VITE_MODE === 'android') {
     const { Filesystem } = await import('@capacitor/filesystem');
-    const info = await Filesystem.stat({
-      path: `/data/data/com.raqueeb.rllm/databases/${name}SQLite.db`
-    });
-    return info.size;
+    const { App } = await import('@capacitor/app');
+    const info = await App.getInfo();
+    const result = AsyncResult.from(
+      () =>
+        Filesystem.stat({
+          path: `/data/data/${info.id}/databases/${name}SQLite.db`
+        }),
+      (e) => new Error('Failed to get database size', { cause: e })
+    );
+    return result
+      .map((info) => info.size)
+      .inspectErr((e) => console.error(e))
+      .unwrapOr(0);
   }
   const root = await navigator.storage.getDirectory();
   const fileHandle = await root.getFileHandle(`${name}.db`);
@@ -168,7 +178,7 @@ function SettingsStorageComponent() {
         </CardHeader>
         <CardContent>
           <p class="text-sm font-bold">
-            {data().size ? formatBytes(data().size!) : 'Unknown'} currently in use
+            {data().size !== null ? formatBytes(data().size!) : 'Unknown'} currently in use
           </p>
         </CardContent>
       </Card>

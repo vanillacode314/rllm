@@ -80,9 +80,16 @@ export async function clearData(): Promise<void> {
 export async function deleteDatabaseFile(name: string) {
   if (import.meta.env.VITE_MODE === 'android') {
     const { Filesystem } = await import('@capacitor/filesystem');
-    await Filesystem.deleteFile({
-      path: `/data/data/com.raqueeb.rllm/databases/${name}SQLite.db`
-    });
+    const { App } = await import('@capacitor/app');
+    const info = await App.getInfo();
+    try {
+      await Filesystem.deleteFile({
+        path: `/data/data/${info.id}/databases/${name}SQLite.db`
+      });
+    } catch (error) {
+      console.error(new Error(`Failed to delete database file`, { cause: error }));
+    }
+    return;
   }
   const root = await navigator.storage.getDirectory();
   await root.removeEntry(`${name}.db`);

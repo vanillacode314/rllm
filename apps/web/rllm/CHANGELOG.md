@@ -1,7 +1,8 @@
 # What's New
 
-## v0.0.49 — August 24, 2026
+## v0.0.50 — August 25, 2026
 
-### 🐛 Bug Fixes
+### 🎨 Improvements
 
-- Sidebar does not disappear while searching for chats anymore
+- **Presets redirects when nothing is set up** — If you haven't configured any AI providers yet, opening Presets now takes you straight to the right setup page instead of an empty list.
+- **Better dialogs on small screens** — On phones and narrow windows, dialogs now anchor to the bottom of the page, making them easier to reach and use.
