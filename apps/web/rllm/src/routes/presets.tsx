@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/solid-query';
-import { createFileRoute } from '@tanstack/solid-router';
-import { For, Show } from 'solid-js';
+import { createFileRoute, redirect } from '@tanstack/solid-router';
+import { For, Show, untrack } from 'solid-js';
 import { Button } from 'ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from 'ui/card';
 import {
@@ -23,10 +23,19 @@ import {
   setDefaultPresetId,
   type TChatPreset
 } from '~/lib/chat/presets';
-import { queries } from '~/queries';
+import { fetchers, queries } from '~/queries';
+import { account } from '~/signals/account';
+import { env } from '~/utils/env';
 import { queryClient } from '~/utils/query-client';
 
 export const Route = createFileRoute('/presets')({
+  beforeLoad: async () => {
+    const numberOfProviders = await fetchers.providers.countProviders();
+    if (numberOfProviders > 0) return;
+    if (env.VITE_SYNC_SERVER_BASE_URL && untrack(account) === null)
+      throw redirect({ to: '/settings/account' });
+    throw redirect({ to: '/settings/providers' });
+  },
   component: PresetComponent,
   loader: async () => {
     await Promise.all([
