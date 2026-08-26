@@ -2,7 +2,7 @@ import { createActiveElement } from '@solid-primitives/active-element';
 import { createEventListenerMap } from '@solid-primitives/event-listener';
 import { createElementSize } from '@solid-primitives/resize-observer';
 import { createHotkey } from '@tanstack/solid-hotkeys';
-import { useMutation } from '@tanstack/solid-query';
+import { useMutation, useQuery } from '@tanstack/solid-query';
 import { type NavigateFn, redirect, useBlocker, useRouter } from '@tanstack/solid-router';
 import { HLC } from 'hlc';
 import { animate } from 'motion';
@@ -13,6 +13,7 @@ import {
   createMemo,
   createRenderEffect,
   createSignal,
+  For,
   onCleanup,
   onMount,
   Show,
@@ -64,6 +65,8 @@ import {
   updatePrompt
 } from './-state';
 import { getLatestPath } from './-utils';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'ui/card';
+import { Button } from 'ui/button';
 
 export function useChatPage(
   opts: Accessor<{
@@ -281,7 +284,6 @@ export function useChatPage(
                 if (opts().isNewChat) {
                   const hlc = HLC.generate(clientId);
                   draft.createdAt = hlc.toString();
-                  draft.updatedAt = {};
                   draft.accessCount = 0;
                   draft.lastAccessedAt = null;
                 }
@@ -548,17 +550,22 @@ export function useChatPage(
     let promptBoxRef!: HTMLDivElement;
     const promptBoxSize = createElementSize(() => promptBoxRef);
     const [promptBoxOffset, setPromptBoxOffset] = createSignal(0);
+    const recentChatsQuery = useQuery(() => queries.chats.all()._ctx.recent());
+
     return (
       <div class="content-grid mx-auto w-full" style={{ '--padding-inline': '0rem' }}>
         <Show when={!sidebar.open()}>
           <SidebarTrigger class="absolute z-10 bg-muted/50 backdrop-blur-xl m-4 top-0 left-0 max-md:hidden" />
         </Show>
         <main
-          class="h-full grid mx-auto grid-rows-[auto_1fr] w-full overflow-hidden relative isolate"
-          style={
+          class="h-full mx-auto w-full overflow-hidden relative isolate"
+          style={Object.assign(
+            {
+              '--bottom-arrow': `calc(${promptBoxSize.height ?? 0}px + var(--spacing) * 8)`,
+              '--prompt-box-size': `${promptBoxSize.height}px`
+            },
             isMobile()
               ? {
-                  '--bottom-arrow': `calc(${promptBoxSize.height ?? 0}px + var(--spacing) * 8)`,
                   '--translate-x-prompt-box': `${promptBoxOffset()}px`,
                   '--translate-y-arrow': `${
                     promptBoxOffset() > (promptBoxSize?.width ?? 0) * 0.6
@@ -567,68 +574,99 @@ export function useChatPage(
                       : 0
                   }px`
                 }
-              : {
-                  '--bottom-arrow': `calc(${promptBoxSize.height ?? 0}px + var(--spacing) * 8)`
-                }
-          }
+              : {}
+          )}
         >
-          <Chat
-            chat={{
-              ...chat(),
-              messages: chatState.messages.toJSON(),
-              settings: chatState.settings.unwrapOr({})
-            }}
-            class="p-4 [view-transition-name:main-content]"
-            onDelete={onDelete}
-            onEdit={onEdit}
-            onRegenerate={onRegenerate}
-            onTraversal={onTraversal}
-            path={chatState.path}
-            ref={(el) => {
-              let touchId = 0;
-              let start = 0;
-              let my = 0;
-              const update = () => {
-                if (Math.abs(my) < 30) return;
-                const target = my < 0 ? promptBoxRef.offsetWidth : 0;
-                animate(promptBoxOffset(), target, {
-                  damping: 25,
-                  onUpdate: (offset) => setPromptBoxOffset(offset),
-                  stiffness: 300,
-                  type: 'spring'
-                });
-              };
-              createEventListenerMap(
-                () => el,
-                {
-                  touchend: (event) => {
-                    if (el.scrollHeight - el.clientHeight <= 30) return;
-                    for (const touch of event.changedTouches) {
-                      if (touch.identifier === touchId) {
-                        my = touch.clientY - start;
-                        break;
+          <Show
+            when={!opts().isNewChat || (recentChatsQuery.data?.length ?? 0) === 0}
+            fallback={
+              <div class="gap-4 grid place-content-center h-[calc(100%-var(--prompt-box-size))]">
+                <h3 class="uppercase text-xs font-medium tracking-wider text-white/75">
+                  Jump Back In
+                </h3>
+                <ul class="flex flex-col gap-2">
+                  <For each={recentChatsQuery.data}>
+                    {(chat) => (
+                      <li class="contents">
+                        <Button
+                          onClick={() =>
+                            navigate({
+                              params: { _splat: slugify(chat.title) },
+                              search: { id: chat.id },
+                              to: '/chat/$'
+                            })
+                          }
+                          class="justify-start"
+                          variant="outline"
+                          aria-label={`Go to ${chat.title}`}
+                        >
+                          {chat.title}
+                        </Button>
+                      </li>
+                    )}
+                  </For>
+                </ul>
+              </div>
+            }
+          >
+            <Chat
+              chat={{
+                ...chat(),
+                messages: chatState.messages.toJSON(),
+                settings: chatState.settings.unwrapOr({})
+              }}
+              class="p-4 [view-transition-name:main-content]"
+              onDelete={onDelete}
+              onEdit={onEdit}
+              onRegenerate={onRegenerate}
+              onTraversal={onTraversal}
+              path={chatState.path}
+              ref={(el) => {
+                let touchId = 0;
+                let start = 0;
+                let my = 0;
+                const update = () => {
+                  if (Math.abs(my) < 30) return;
+                  const target = my < 0 ? promptBoxRef.offsetWidth : 0;
+                  animate(promptBoxOffset(), target, {
+                    damping: 25,
+                    onUpdate: (offset) => setPromptBoxOffset(offset),
+                    stiffness: 300,
+                    type: 'spring'
+                  });
+                };
+                createEventListenerMap(
+                  () => el,
+                  {
+                    touchend: (event) => {
+                      if (el.scrollHeight - el.clientHeight <= 30) return;
+                      for (const touch of event.changedTouches) {
+                        if (touch.identifier === touchId) {
+                          my = touch.clientY - start;
+                          break;
+                        }
                       }
+                      if (
+                        el.scrollTop <= 30 ||
+                        el.scrollHeight - (el.scrollTop + el.clientHeight) <= 30
+                      )
+                        return;
+                      update();
+                    },
+                    touchstart: (event) => {
+                      if (el.scrollHeight - el.clientHeight <= 30) return;
+                      touchId = event.touches[0].identifier;
+                      start = event.touches[0].clientY;
                     }
-                    if (
-                      el.scrollTop <= 30 ||
-                      el.scrollHeight - (el.scrollTop + el.clientHeight) <= 30
-                    )
-                      return;
-                    update();
                   },
-                  touchstart: (event) => {
-                    if (el.scrollHeight - el.clientHeight <= 30) return;
-                    touchId = event.touches[0].identifier;
-                    start = event.touches[0].clientY;
-                  }
-                },
-                { passive: true }
-              );
-            }}
-            style={{
-              'padding-bottom': `calc(${promptBoxSize.height ?? 0}px + var(--spacing) * 6)`
-            }}
-          />
+                  { passive: true }
+                );
+              }}
+              style={{
+                'padding-bottom': `calc(${promptBoxSize.height ?? 0}px + var(--spacing) * 6)`
+              }}
+            />
+          </Show>
           <button
             class="absolute bottom-0 right-0 bg-transparent h-45 w-10 z-10"
             inert={promptBoxOffset() < (promptBoxSize.width ?? 0) * 0.9 || !isMobile()}
@@ -726,7 +764,8 @@ export function useChatPageLoader(opts: { scratchpad?: boolean }) {
       queryClient.ensureQueryData(queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME)),
       queryClient.ensureQueryData(
         queries.userMetadata.byId(USER_METADATA_KEYS.HIDE_REASONING_DURING_GENERATION)
-      )
+      ),
+      queryClient.ensureQueryData(queries.chats.all()._ctx.recent())
     ] as Promise<unknown>[];
     let scratchpadPromise;
     if (opts.scratchpad) {

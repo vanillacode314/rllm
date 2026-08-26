@@ -106,7 +106,7 @@ export function Chat(props: Props): JSXElement {
   );
 
   return (
-    <div class="relative overflow-hidden grid">
+    <div class="h-full relative overflow-hidden grid">
       <div
         class={cn('flex flex-col gap-10 overflow-auto', props.class)}
         ref={(el) => {

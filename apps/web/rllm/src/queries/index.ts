@@ -8,6 +8,8 @@ import { tables } from '~/db/schema';
 import { MCPClient } from '~/lib/mcp/client';
 import { runCustomQuery } from '~/utils/db';
 
+const FIVE_MINUTES_IN_MILLISECONDS = 5 * 60 * 1000;
+
 const userMetadata = {
   fetchers: {
     byId: (id: string): Promise<null | string> =>
@@ -88,6 +90,8 @@ const models = {
 
 const chats = {
   fetchers: {
+    recent: (limit: number = 5) =>
+      db.select().from(tables.chats).orderBy(desc(tables.chats.lastAccessedAt)).limit(limit),
     byId: (id: string) =>
       db
         .select()
@@ -189,17 +193,23 @@ const chats = {
         }),
         {
           _ctx: {
+            recent: (limit?: number) =>
+              queryOptions({
+                queryFn: () => chats.fetchers.recent(limit),
+                queryKey: [...chats.queries.base(), 'all', 'recent', { limit }],
+                staleTime: FIVE_MINUTES_IN_MILLISECONDS
+              }),
             count: () =>
               queryOptions({
                 queryFn: chats.fetchers.countChats,
                 queryKey: [...chats.queries.base(), 'all', 'count'],
-                staleTime: 5 * 60 * 1000
+                staleTime: FIVE_MINUTES_IN_MILLISECONDS
               }),
             filteredCount: ({ query, tags }: { query?: string; tags?: string[] }) =>
               queryOptions({
                 queryFn: () => chats.fetchers.countFilteredChats(query, tags),
-                queryKey: [...chats.queries.base(), { query, tags }, 'count'],
-                staleTime: 5 * 60 * 1000
+                queryKey: [...chats.queries.base(), 'all', { query, tags }, 'count'],
+                staleTime: FIVE_MINUTES_IN_MILLISECONDS
               }),
             minimal: queryOptions({
               queryFn: () => chats.fetchers.getMinimalChats(),

@@ -1,8 +1,7 @@
 # What's New
 
-## v0.0.50 — August 25, 2026
+## v0.0.51 — August 26, 2026
 
-### 🎨 Improvements
+### ✨ What's New
 
-- **Presets redirects when nothing is set up** — If you haven't configured any AI providers yet, opening Presets now takes you straight to the right setup page instead of an empty list.
-- **Better dialogs on small screens** — On phones and narrow windows, dialogs now anchor to the bottom of the page, making them easier to reach and use.
+- **Jump back into recent chats** — When you open a new chat, you'll now see up to 5 of your most recent conversations. Tap one to pick up right where you left off.
