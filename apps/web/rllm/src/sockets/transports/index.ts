@@ -71,7 +71,7 @@ export class PeerManager {
               // oxlint-disable-next-line no-await-in-loop
               const t = await withTimeout(
                 transport.ready().then(() => transport.connect(remoteId)),
-                5 * 1000
+                10 * 1000
               );
               const connection = new ConnectionManager(accountId, clientId, t);
               connection.init();
