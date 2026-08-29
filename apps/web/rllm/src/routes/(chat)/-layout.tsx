@@ -217,9 +217,6 @@ export function useChatPage(
     async onSettled(_, __, ___, context) {
       if (!context) return;
       removeNotification(context.notificationId);
-      if (opts().scratchpad) {
-        await router.invalidate();
-      }
     }
   }));
 
@@ -294,6 +291,7 @@ export function useChatPage(
         dontLog: true,
         type: 'setUserMetadata'
       });
+      await router.invalidate();
     } else {
       if (opts().isNewChat) {
         await logger.dispatch(
