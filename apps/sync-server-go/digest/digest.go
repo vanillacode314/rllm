@@ -112,12 +112,11 @@ type Action struct {
 // tree, producing one action per digest. Leaf mismatches with a zero peer digest request the event; other
 // leaf mismatches ask whether the peer has the event; internal mismatches
 // descend into the node's children.
-func HandleDigestUpdate(tree *merkletree.MerkleTree[string, string], merkleDepth uint32, updates []*peers.DigestUpdate) []Action {
+func HandleDigestUpdate(tree *merkletree.MerkleTree[string, string], merkleDepth uint32, updates []*peers.DigestUpdate) *Action {
 	maxDepth := int(merkleDepth)
 	if t := tree.MaxDepth(); t > maxDepth {
 		maxDepth = t
 	}
-	actions := make([]Action, 0, len(updates))
 	lastTimestamp := ""
 	for _, update := range updates {
 		path := update.Path
@@ -136,13 +135,12 @@ func HandleDigestUpdate(tree *merkletree.MerkleTree[string, string], merkleDepth
 				child = append(child, uint32(i))
 				children = append(children, child)
 			}
-			actions = append(actions, Action{Kind: KindQueryChildren, Children: children})
-			return actions
+			return &Action{Kind: KindQueryChildren, Children: children}
 		}
 
-		actions = append(actions, Action{Kind: KindAskTimestamp, Timestamp: lastTimestamp})
+		return &Action{Kind: KindAskTimestamp, Timestamp: lastTimestamp}
 	}
-	return actions
+	return nil
 }
 
 // SegmentsToInts converts a proto path (uint32) to the int path used by the

@@ -171,15 +171,17 @@ func (s SocketHandler) handleMessage(message *peers.SyncWireMessage, connectionM
 			return
 		}
 		connectionManager.subPendingDigestUpdates(len(u.GetUpdates()))
-		for _, action := range digest.HandleDigestUpdate(tree, u.GetMerkleDepth(), u.GetUpdates()) {
-			switch action.Kind {
-			case digest.KindQueryChildren:
-				connectionManager.addPendingDigestUpdates(len(action.Children))
-				connectionManager.write(connectionManager.createDigestQuery(uint32(tree.MaxDepth()), action.Children))
-			case digest.KindAskTimestamp:
-				connectionManager.write(connectionManager.createSendEventsWithTimestamp(action.Timestamp))
-				connectionManager.sendAfterTimestamp(action.Timestamp)
-			}
+		action := digest.HandleDigestUpdate(tree, u.GetMerkleDepth(), u.GetUpdates())
+		if action == nil {
+			return
+		}
+		switch action.Kind {
+		case digest.KindQueryChildren:
+			connectionManager.addPendingDigestUpdates(len(action.Children))
+			connectionManager.write(connectionManager.createDigestQuery(uint32(tree.MaxDepth()), action.Children))
+		case digest.KindAskTimestamp:
+			connectionManager.write(connectionManager.createSendEventsWithTimestamp(action.Timestamp))
+			connectionManager.sendAfterTimestamp(action.Timestamp)
 		}
 
 	case *peers.SyncWireMessage_SendEventsAfterTimestamp:
