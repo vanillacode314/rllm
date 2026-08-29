@@ -1,7 +1,8 @@
 # What's New
 
-## v0.0.51 — August 26, 2026
+## v0.0.52 — August 29, 2026
 
-### ✨ What's New
+### 🐛 Bug Fixes
 
-- **Jump back into recent chats** — When you open a new chat, you'll now see up to 5 of your most recent conversations. Tap one to pick up right where you left off.
+- **Smoother sync updates** — Fixed an issue where devices could receive the same updates more than once while syncing.
+- **New chats show up reliably in scratchpad** — Starting a new chat from the scratchpad now refreshes your chat list correctly.
