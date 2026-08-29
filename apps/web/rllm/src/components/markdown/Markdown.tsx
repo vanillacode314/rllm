@@ -6,7 +6,6 @@ import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import {
   createMemo,
-  createResource,
   createSignal,
   Index,
   type JSX,
@@ -30,6 +29,7 @@ import { transientDb } from '~/lib/vector-db/transient';
 import { chatState } from '~/routes/(chat)/-state';
 import { rehypePlugins, remarkPlugins } from '~/utils/markdown';
 import { randomFloat } from '~/utils/math';
+import { createLatestAsync } from '~/utils/signals';
 import { createDerivedStore } from '~/utils/stores';
 
 import CopyButton from './CopyButton';
@@ -131,7 +131,7 @@ function Markdown(props: TProps) {
   ]);
   const processor = createProcessor();
 
-  const [parsedTree] = createResource(
+  const [parsedTree] = createLatestAsync(
     () => local.content,
     async (content) => {
       const file = new VFile();

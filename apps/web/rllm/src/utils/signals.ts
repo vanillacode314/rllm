@@ -47,6 +47,74 @@ function createDebouncedMemo<T>(
   return createMemo((value) => (scheduled() ? fn(value) : value), value, options);
 }
 
+function createLatestAsync<T, S>(
+  source: () => S,
+  fetcher: (source: S) => Promise<T>,
+  initial: T
+): [InitializedResource<T | undefined>, Accessor<boolean>];
+function createLatestAsync<T, S>(
+  source: () => S,
+  fetcher: (source: S) => Promise<T>
+): [Resource<T>, Accessor<boolean>];
+function createLatestAsync<T, S>(
+  source: () => S,
+  fetcher: (source: S) => Promise<T>,
+  initial?: T
+): [InitializedResource<T | undefined>, Accessor<boolean>] | [Resource<T>, Accessor<boolean>] {
+  const [state, setState] = createStore<{
+    error: unknown;
+    finished: number;
+    pending: number;
+  }>({
+    error: undefined,
+    finished: 0,
+    pending: 0
+  });
+  const [data, { mutate }] = createResource(
+    () => ({ error: state.error, source: untrack(source) }),
+    ({ error, source }) => {
+      if (error !== undefined) throw error;
+      return fetcher(source);
+    },
+    { initialValue: initial }
+  );
+
+  createComputed(
+    on(
+      source,
+      async (source) => {
+        setState((state) =>
+          produce(state, (draft) => {
+            draft.pending++;
+          })
+        );
+        const pending = state.pending;
+        try {
+          const value = await fetcher(source);
+          if (state.finished > pending) return;
+          mutate(value as never);
+          setState((state) =>
+            produce(state, (draft) => {
+              draft.error = undefined;
+              draft.finished = pending;
+            })
+          );
+        } catch (error) {
+          if (state.finished > pending) return;
+          setState((state) =>
+            produce(state, (draft) => {
+              draft.error = error;
+              draft.pending--;
+            })
+          );
+        }
+      },
+      { defer: true }
+    )
+  );
+  return [data, () => data.state === 'refreshing' || state.pending > state.finished] as const;
+}
+
 function syncToURLHash(signal: Signal<boolean>, key: string): Signal<boolean> {
   key = '#' + key;
   const s = createMemo(signal[0]);
@@ -78,4 +146,4 @@ function syncToURLHash(signal: Signal<boolean>, key: string): Signal<boolean> {
   return [s, set];
 }
 
-export { createDebouncedMemo, isOnline, pageVisible, syncToURLHash };
+export { createDebouncedMemo, createLatestAsync, isOnline, pageVisible, syncToURLHash };
