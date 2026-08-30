@@ -14,6 +14,7 @@ import {
   type JSX,
   type JSXElement,
   Match,
+  type ParentProps,
   Show,
   splitProps,
   Suspense,
@@ -49,6 +50,7 @@ import { lowlightWorkerPool } from '~/workers/lowlight';
 import Markdown from './markdown/Markdown';
 import { useAlertDialog } from './modals/auto-import/AlertDialog';
 import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
+import { Dynamic } from 'solid-js/web';
 
 type Props = JSX.HTMLAttributes<HTMLDivElement> & {
   chat: Omit<TChat, 'createdAt' | 'updatedAt'>;
@@ -213,6 +215,30 @@ function LLMChat(props: {
   const confirmDialog = useConfirmDialog();
   const alertDialog = useAlertDialog();
 
+  const workingChunks = createMemo(() =>
+    !props.isPending && props.message.chunks.at(-1)?.type === 'text'
+      ? props.message.chunks.slice(0, -1)
+      : props.message.chunks
+  );
+  const finalTextChunk = createMemo(() =>
+    !props.isPending && props.message.chunks.at(-1)?.type === 'text'
+      ? props.message.chunks.at(-1)!
+      : null
+  );
+
+  function WorkingChunksCollapsible(props: ParentProps<{ class?: string }>) {
+    const [open, setOpen] = createSignal(false);
+    return (
+      <Collapsible open={open()} onOpenChange={setOpen} class="space-y-1.5 border rounded-lg p-4">
+        <CollapsibleTrigger as={Button} class="p-0 w-full" variant="link">
+          <span class="icon-[heroicons--chevron-down]" classList={{ 'rotate-180': open() }} />
+          <span>Show Working</span>
+        </CollapsibleTrigger>
+        <CollapsibleContent class={props.class}>{props.children}</CollapsibleContent>
+      </Collapsible>
+    );
+  }
+
   return (
     <Card class="bg-transparent border-none shadow-none">
       <Collapsible onOpenChange={setOpen} open={open()}>
@@ -351,31 +377,46 @@ function LLMChat(props: {
           </div>
         </CardHeader>
         <CollapsibleContent>
-          <CardContent class="space-y-4 p-2 overflow-x-auto">
-            <For each={props.message.chunks}>
-              {(chunk, index) => (
-                <Switch>
-                  <Match when={chunk.type === 'reasoning'}>
-                    <LLMReasoningChunk
-                      chunk={chunk as TLLMMessageChunk & { type: 'reasoning' }}
-                      inProgress={props.isPending && index() === props.message.chunks.length - 1}
-                    />
-                  </Match>
-                  <Match when={chunk.type === 'tool_call'}>
-                    <LLMToolCallChunk
-                      chunk={chunk as TLLMMessageChunk & { type: 'tool_call' }}
-                      isPending={props.isPending && index() === props.message.chunks.length - 1}
-                    />
-                  </Match>
-                  <Match when={true}>
-                    <LLMTextChunk
-                      chunk={chunk as TLLMMessageChunk & { type: 'text' }}
-                      inProgress={props.isPending && index() === props.message.chunks.length - 1}
-                    />
-                  </Match>
-                </Switch>
+          <CardContent class="flex flex-col gap-4 p-2 overflow-x-auto">
+            <Dynamic
+              component={
+                props.isPending || workingChunks().length === 0 ? 'div' : WorkingChunksCollapsible
+              }
+              class={cn(
+                props.isPending || workingChunks().length === 0 ? 'contents' : 'flex flex-col gap-4'
               )}
-            </For>
+            >
+              <For each={workingChunks()}>
+                {(chunk, index) => (
+                  <Switch>
+                    <Match when={chunk.type === 'reasoning'}>
+                      <LLMReasoningChunk
+                        chunk={chunk as TLLMMessageChunk & { type: 'reasoning' }}
+                        inProgress={props.isPending && index() === props.message.chunks.length - 1}
+                      />
+                    </Match>
+                    <Match when={chunk.type === 'tool_call'}>
+                      <LLMToolCallChunk
+                        chunk={chunk as TLLMMessageChunk & { type: 'tool_call' }}
+                        isPending={props.isPending && index() === props.message.chunks.length - 1}
+                      />
+                    </Match>
+                    <Match when={true}>
+                      <LLMTextChunk
+                        chunk={chunk as TLLMMessageChunk & { type: 'text' }}
+                        inProgress={props.isPending && index() === props.message.chunks.length - 1}
+                      />
+                    </Match>
+                  </Switch>
+                )}
+              </For>
+            </Dynamic>
+            <Show when={finalTextChunk()}>
+              <LLMTextChunk
+                chunk={finalTextChunk()! as TLLMMessageChunk & { type: 'text' }}
+                inProgress={false}
+              />
+            </Show>
             <Show when={props.message.error}>
               <Callout variant="error">
                 <CalloutTitle>Error</CalloutTitle>
