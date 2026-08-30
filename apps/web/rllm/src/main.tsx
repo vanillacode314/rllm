@@ -39,7 +39,7 @@ function ErrorComponent(props: ErrorComponentProps) {
   onMount(() => console.error(props.error));
 
   return (
-    <div class="grid place-content-center h-full w-full gap-4">
+    <div class="grid place-content-center h-full w-full gap-4 p-4">
       <Callout variant="error" class="min-w-75">
         <CalloutTitle>An Error Occurred</CalloutTitle>
         <CalloutContent>{props.error.message.trim() || 'Unknown error'}</CalloutContent>
