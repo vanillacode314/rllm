@@ -116,14 +116,16 @@ export async function saveChatSettings(
   );
 
   if (scratchpad) {
-    const chat = Option.from(await fetchers.userMetadata.byId(USER_METADATA_KEYS.SCRATCHPAD_CHAT))
-      .okOrElse(() => new Error('No chat found'))
-      .andThen((value) => safeParseJson(value, { validate: chatsSchema.parse }));
+    const jsonChat = Option.from(
+      await fetchers.userMetadata.byId(USER_METADATA_KEYS.SCRATCHPAD_CHAT)
+    );
+    if (jsonChat.isNone()) return;
+    const chat = safeParseJson(jsonChat.unwrap(), { validate: chatsSchema.parse }).unwrap();
     await logger.dispatch({
       data: {
         id: USER_METADATA_KEYS.SCRATCHPAD_CHAT,
         value: JSON.stringify({
-          ...chat.unwrap(),
+          ...chat,
           settings: updatedSettings
         })
       },

@@ -36,7 +36,7 @@ import { logger } from '~/db/client';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { createTask } from '~/lib/background-task-manager/tasks';
 import { ChatGenerationManager } from '~/lib/chat/generation';
-import { type TChatSettings } from '~/lib/chat/settings';
+import { saveChatSettings, type TChatSettings } from '~/lib/chat/settings';
 import { epubRAGAdapter } from '~/lib/rag/epub';
 import { pdfRAGAdapter } from '~/lib/rag/pdf';
 import { splitter } from '~/lib/rag/utils';
@@ -67,6 +67,8 @@ import {
 import { getLatestPath } from './-utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'ui/card';
 import { Button } from 'ui/button';
+import { PresetSelector } from '~/components/PresetSelector';
+import { useChatState } from '~/context/chat';
 
 export function useChatPage(
   opts: Accessor<{
@@ -549,6 +551,8 @@ export function useChatPage(
     const promptBoxSize = createElementSize(() => promptBoxRef);
     const [promptBoxOffset, setPromptBoxOffset] = createSignal(0);
     const recentChatsQuery = useQuery(() => queries.chats.all()._ctx.recent());
+    const presetsQuery = useQuery(() => queries.chatPresets.all());
+    const chatRouteState = useChatState();
 
     return (
       <div class="content-grid mx-auto w-full" style={{ '--padding-inline': '0rem' }}>
@@ -604,6 +608,24 @@ export function useChatPage(
                     )}
                   </For>
                 </ul>
+                <h3 class="uppercase text-xs font-medium tracking-wider text-white/75">
+                  Or Load A Preset
+                </h3>
+                <PresetSelector
+                  onChange={async (preset) => {
+                    try {
+                      await saveChatSettings(preset.settings, {
+                        chatId: chatRouteState.currentChatId,
+                        scratchpad: chatRouteState.isScratchpadRoute
+                      });
+                      toast.success(`Preset "${preset.name}" loaded`);
+                    } catch (error) {
+                      console.error(error);
+                      toast.error('Failed to load preset');
+                    }
+                  }}
+                  presets={presetsQuery.data ?? []}
+                />
               </div>
             }
           >
