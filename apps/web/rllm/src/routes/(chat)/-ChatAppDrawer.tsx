@@ -1,5 +1,4 @@
 import { createWritableMemo } from '~/utils/signals';
-import { useLocation } from '@tanstack/solid-router';
 import { Separator } from 'ui/separator';
 
 import type { AppDrawerComponentProps } from '~/components/AppDrawer';
@@ -10,13 +9,14 @@ import { type TChatSettings, saveChatSettings } from '~/lib/chat/settings';
 import { produce } from '~/utils/immer';
 
 import { chatState } from './-state';
+import { useChatState } from '~/context/chat';
 
 export function ChatAppDrawer(props: AppDrawerComponentProps) {
   // oxlint-disable-next-line solid/reactivity
   const { onClose } = props;
-  const location = useLocation();
 
   const [localSettings, setLocalSettings] = createWritableMemo(() => chatState.settings);
+  const chatRouteState = useChatState();
 
   onClose(() => {
     const settings = chatState.settings
@@ -27,7 +27,11 @@ export function ChatAppDrawer(props: AppDrawerComponentProps) {
       return;
     }
     const hasUnsavedChanges = JSON.stringify(settings.local) !== JSON.stringify(settings.chat);
-    if (hasUnsavedChanges) saveChatSettings(settings.local, location());
+    if (hasUnsavedChanges)
+      saveChatSettings(settings.local, {
+        chatId: chatRouteState.currentChatId,
+        scratchpad: chatRouteState.isScratchpadRoute
+      });
   });
 
   function updateLocalSettings(fn: (settings: TChatSettings) => void) {

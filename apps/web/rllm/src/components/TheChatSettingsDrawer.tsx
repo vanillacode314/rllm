@@ -1,5 +1,4 @@
 import { createWritableMemo } from '~/utils/signals';
-import { useLocation } from '@tanstack/solid-router';
 import { createSignal, Show } from 'solid-js';
 import { Button } from 'ui/button';
 import {
@@ -19,12 +18,12 @@ import { isMobile } from '~/signals';
 import { produce } from '~/utils/immer';
 
 import ChatSettingsControls from './ChatSettingsControls';
+import { useChatState } from '~/context/chat';
 
 const [chatSettingsDrawerOpen, setChatSettingsDrawerOpen] = createSignal(false);
 
 function TheChatSettingsDrawer() {
-  const location = useLocation();
-
+  const chatRouteState = useChatState();
   const [localSettings, setLocalSettings] = createWritableMemo(() => chatState.settings);
 
   function updateLocalSettings(fn: (draft: TChatSettings) => void) {
@@ -46,7 +45,10 @@ function TheChatSettingsDrawer() {
           const local = localSettings();
           if (current.isSome() && local.isSome()) {
             if (JSON.stringify(local.unwrap()) !== JSON.stringify(current.unwrap())) {
-              saveChatSettings(local.unwrap(), location());
+              saveChatSettings(local.unwrap(), {
+                chatId: chatRouteState.currentChatId,
+                scratchpad: chatRouteState.isScratchpadRoute
+              });
             }
           }
         }

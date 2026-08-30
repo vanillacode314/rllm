@@ -1,12 +1,6 @@
 import { createHotkeys } from '@tanstack/solid-hotkeys';
 import { useQuery } from '@tanstack/solid-query';
-import {
-  type ParsedLocation,
-  useLocation,
-  useMatchRoute,
-  useNavigate,
-  useRouter
-} from '@tanstack/solid-router';
+import { useLocation, useNavigate, useRouter } from '@tanstack/solid-router';
 import { batch, createMemo, createSignal, For, Show } from 'solid-js';
 import { toast } from 'solid-sonner';
 import {
@@ -28,6 +22,7 @@ import { slugify } from '~/utils/string';
 
 import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
 import { usePromptDialog } from './modals/auto-import/PromptDialog';
+import { useChatState } from '~/context/chat';
 
 interface TItem {
   condition?: () => boolean;
@@ -38,14 +33,6 @@ interface TItem {
   noClose?: boolean;
   value?: string;
 }
-
-const isChatOpen = (location: ParsedLocation, chatId: string) => {
-  return (
-    location.pathname.startsWith('/chat/') &&
-    'id' in location.search &&
-    location.search.id === chatId
-  );
-};
 
 const [commandPromptOpen, setCommandPromptOpen] = createSignal<boolean>(false);
 
@@ -72,18 +59,7 @@ function TheCommandPrompt() {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const matchRoute = useMatchRoute();
-  const isNewChatRoute = () => location().pathname.startsWith('/chat/new');
-  const isChatRoute = matchRoute({
-    to: '/chat/$'
-  });
-  const currentChat = useQuery(() => {
-    const id = location().search.id as string;
-    return {
-      ...queries.chats.byId(id || ''),
-      enabled: Boolean(isChatRoute()) && id !== undefined
-    };
-  });
+  const chatState = useChatState();
   const router = useRouter();
 
   const providers = useQuery(() => queries.providers.all());
@@ -141,42 +117,32 @@ function TheCommandPrompt() {
         return {
           Actions: [
             {
-              condition: () => !isNewChatRoute(),
+              condition: () => !chatState.isNewChatRoute,
               handler: () => navigate({ params: { _splat: 'new' }, to: '/chat/$' }),
               icon: 'icon-[heroicons--plus-circle]',
               label: 'New Chat'
             },
             {
-              condition: () => {
-                if (!isChatRoute()) return false;
-                const id = location().search.id;
-                if (!id) return false;
-                return isChatOpen(location(), id);
-              },
-              handler: () => deleteChat(location().search.id as string),
+              condition: () => chatState.currentChatId !== undefined,
+              handler: () => deleteChat(chatState.currentChatId!),
               icon: 'icon-[heroicons--trash]',
               label:
-                currentChat.isSuccess && currentChat.data
-                  ? `Delete Chat (${currentChat.data.title})`
+                chatState.currentChat.isSuccess && chatState.currentChat.data
+                  ? `Delete Chat (${chatState.currentChat.data.title})`
                   : 'Delete Chat'
             },
             {
-              condition: () => {
-                if (!isChatRoute()) return false;
-                const id = location().search.id;
-                if (!id) return false;
-                return isChatOpen(location(), id);
-              },
+              condition: () => chatState.currentChatId !== undefined,
               handler: async () => {
-                if (currentChat.isSuccess) {
-                  await renameChat(currentChat.data.id);
+                if (chatState.currentChat.isSuccess) {
+                  await renameChat(chatState.currentChat.data.id);
                   await router.invalidate();
                 } else toast.error('An Error Occured');
               },
               icon: 'icon-[heroicons--pencil-square]',
               label:
-                currentChat.isSuccess && currentChat.data
-                  ? `Rename Chat (${currentChat.data.title})`
+                chatState.currentChat.isSuccess && chatState.currentChat.data
+                  ? `Rename Chat (${chatState.currentChat.data.title})`
                   : 'Rename Chat'
             }
           ],
@@ -200,7 +166,7 @@ function TheCommandPrompt() {
                         modelId: model.id,
                         providerId: provider.id
                       },
-                      location()
+                      { chatId: chatState.currentChatId, scratchpad: chatState.isScratchpadRoute }
                     );
                   },
                   keywords: [`@${model.id} ${provider.name}`],
@@ -213,7 +179,18 @@ function TheCommandPrompt() {
       case 'presets':
         return {
           'Switch Preset': presets().map((preset) => ({
-            handler: () => saveChatSettings(preset.settings, location()),
+            handler: async () => {
+              try {
+                await saveChatSettings(preset.settings, {
+                  chatId: chatState.currentChatId,
+                  scratchpad: chatState.isScratchpadRoute
+                });
+                toast.success(`Preset "${preset.name}" loaded`);
+              } catch (error) {
+                console.error(error);
+                toast.error('Failed to load preset');
+              }
+            },
             keywords: [`:${preset.name}`],
             label: preset.name,
             value: preset.id
@@ -234,7 +211,7 @@ function TheCommandPrompt() {
       data: { id, title },
       type: 'updateChat'
     });
-    if (isChatOpen(location(), id)) {
+    if (chatState.currentChatId === id) {
       await navigate({
         params: { _splat: slugify(title) },
         search: { id },
@@ -251,7 +228,7 @@ function TheCommandPrompt() {
       }))
     )
       return;
-    if (isChatOpen(location(), id)) {
+    if (chatState.currentChatId === id) {
       await navigate({ params: { _splat: 'new' }, to: '/chat/$' });
     }
     await logger.dispatch({

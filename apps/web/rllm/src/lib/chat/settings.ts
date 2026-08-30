@@ -104,10 +104,9 @@ export async function initChatSettings() {
 
 export async function saveChatSettings(
   settings: Partial<TChatSettings>,
-  location: ParsedLocation<{ id?: string }>
+  opts: Partial<{ scratchpad: boolean; chatId: string }>
 ) {
-  const scratchpad = location.pathname.startsWith('/scratchpad');
-  const chatId = location.pathname.startsWith('/chat') ? location.search.id : undefined;
+  const { chatId, scratchpad } = opts;
   if (chatState.settings.isNone()) return;
   const updatedSettings = { ...chatState.settings.unwrap(), ...settings };
   setChatState((state) =>
