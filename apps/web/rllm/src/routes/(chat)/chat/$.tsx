@@ -17,6 +17,7 @@ import { updateMessages } from '../-state';
 import { getLatestPath } from '../-utils';
 import { Tree } from '~/utils/tree';
 import type { TMessage } from '~/types/chat';
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 
 console.error('FIX OPTIMIZE STORAGE');
 
@@ -37,7 +38,16 @@ export const Route = createFileRoute('/(chat)/chat/$')({
       const chatSettings = FALLBACK_CHAT_SETTINGS(providers[0].defaultModelIds[0], providers[0].id);
       if (defaultChatSettingsPreset) {
         const preset = await fetchers.chatPresets.byId(defaultChatSettingsPreset);
-        Object.assign(chatSettings, preset.settings);
+        if (!preset) {
+          await logger.dispatch({
+            type: 'deleteUserMetadata',
+            data: {
+              id: USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET
+            }
+          });
+        } else {
+          Object.assign(chatSettings, preset.settings);
+        }
       }
       return { chat: null, chatSettings, id, isNewChat };
     }

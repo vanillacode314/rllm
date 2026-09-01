@@ -341,7 +341,7 @@ const chatPresets = {
         .select()
         .from(tables.chatPresets)
         .where(eq(tables.chatPresets.id, id))
-        .then((rows) => rows[0] ?? null),
+        .then((rows) => (rows.length > 0 ? rows[0] : null)),
     getAllPresets: () =>
       db.select().from(tables.chatPresets).orderBy(desc(tables.chatPresets.createdAt))
   },
