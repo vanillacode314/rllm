@@ -7,7 +7,10 @@ import * as rag from '~/workers/rag';
 import { TRANSIENT_VECTOR_DATABASE_PATH } from './transient.constants';
 
 export const transientDbSql = fromSQLocal(
-  new SQLocal({ databasePath: TRANSIENT_VECTOR_DATABASE_PATH })
+  new SQLocal({
+    databasePath: TRANSIENT_VECTOR_DATABASE_PATH,
+    onInit: (sql) => [sql`PRAGMA journal_mode=MEMORY;`]
+  })
 );
 
 export const transientDb = await createVectorDB({
