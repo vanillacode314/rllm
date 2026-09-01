@@ -283,7 +283,7 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
     },
     async getMerkleTree(tx: TSqlRunner = db): Promise<MerkleTree<string, string>> {
       const jsonTree = await logger.getMetadata('merkle-tree', tx);
-      if (!jsonTree) return logger.recomputeMerkleTree();
+      if (!jsonTree) return logger.recomputeMerkleTree(tx);
 
       try {
         return MerkleTree.fromString(jsonTree, stringHasher);
