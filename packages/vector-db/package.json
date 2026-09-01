@@ -34,7 +34,6 @@
     "format": "oxfmt"
   },
   "dependencies": {
-    "mutex": "workspace:*",
     "nanoid": "^6.0.1"
   },
   "devDependencies": {

@@ -2,7 +2,7 @@ import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 import { hashKey } from '@tanstack/solid-query';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import { createEventLogger } from 'event-logger';
-import { fromCapacitorSqlite } from 'event-logger/copacitorjs';
+import { fromCapacitorSqlite } from 'event-logger/capacitorjs';
 
 import { processMessage, type TValidEvent, validEventSchema } from '~/queries/mutations';
 import { queryClient } from '~/utils/query-client';

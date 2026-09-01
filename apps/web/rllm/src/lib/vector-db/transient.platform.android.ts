@@ -1,6 +1,6 @@
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 import { createVectorDB } from 'vector-db';
-import { fromCapacitorSqlite } from 'vector-db/copacitorjs';
+import { fromCapacitorSqlite } from 'vector-db/capacitorjs';
 
 import * as rag from '~/workers/rag';
 

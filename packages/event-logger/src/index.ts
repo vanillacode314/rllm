@@ -173,6 +173,8 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
       }
     },
     clearMetadata: async (key: string, tx: TSqlRunner = db) => {
+      if (['merkle-tree', 'clientId', 'clock', 'version'].includes(key))
+        throw new Error(`not allowed to clear metadata key: ${key}`);
       await tx.query(sql`DELETE FROM metadata WHERE key = ${key}`);
     },
     dispatch: async (...events: Array<TEvent & { dontLog?: boolean }>) => {
@@ -188,15 +190,16 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
           }
         }
       }
-      const clock = await logger.getClock();
-      const version = await logger.getVersion();
-      if (!version) throw new Error('Version not set');
 
       let updates: Array<{
         event: TEvent & { timestamp: string; version: string };
         updates: TUpdate[];
       }> = [];
       const loggedEvents = await db.transaction(async (tx) => {
+        const clock = await logger.getClock(tx);
+        const version = await logger.getVersion(tx);
+        if (!version) throw new Error('Version not set');
+
         const enhancedEvents = [];
         for (const event of events)
           enhancedEvents.push({ ...event, timestamp: clock.increment().toString(), version });
@@ -280,12 +283,12 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
     },
     async getMerkleTree(tx: TSqlRunner = db): Promise<MerkleTree<string, string>> {
       const jsonTree = await logger.getMetadata('merkle-tree', tx);
-      if (!jsonTree) return new MerkleTree(16, stringHasher);
+      if (!jsonTree) return logger.recomputeMerkleTree();
 
       try {
         return MerkleTree.fromString(jsonTree, stringHasher);
       } catch {
-        return this.recomputeMerkleTree(tx);
+        return logger.recomputeMerkleTree(tx);
       }
     },
     getMetadata: async (key: string, tx: TSqlRunner = db) => {
@@ -325,7 +328,9 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
       };
     },
     async persistMerkleTree(tree: MerkleTree<string, string>, tx: TSqlRunner) {
-      await logger.setMetadata('merkle-tree', tree.toString(), tx);
+      await tx.query(
+        sql`INSERT OR REPLACE INTO metadata (key, value) VALUES ('merkle-tree', ${tree.toString()})`
+      );
     },
     receive: async (
       events: Array<TEvent & { timestamp: string; version: string }>,
@@ -429,13 +434,13 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
       return tree;
     },
     async resetMerkleTree(tx: TSqlRunner = db) {
-      logger.clearMetadata('merkle-tree', tx);
+      await logger.clearMetadata('merkle-tree', tx);
     },
     setClock: async (clock: HLC, tx: TSqlRunner) => {
       await tx.query(sql`UPDATE metadata SET value = ${clock.toString()} WHERE key = 'clock'`);
     },
     setMetadata: async (key: string, value: string, tx: TSqlRunner = db) => {
-      if (['clientId', 'clock', 'version'].includes(key))
+      if (['merkle-tree', 'clientId', 'clock', 'version'].includes(key))
         throw new Error(`not allowed to manually set metadata key: ${key}`);
       await tx.query(
         sql`INSERT INTO metadata (key, value) VALUES (${key}, ${value}) ON CONFLICT(key) DO UPDATE SET value = ${value}`

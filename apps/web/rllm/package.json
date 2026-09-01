@@ -84,7 +84,6 @@
     "localforage": "^1.10.0",
     "lowlight": "^3.3.0",
     "motion": "^12.40.0",
-    "mutex": "workspace:*",
     "nanoid": "^5.1.11",
     "object-pool": "workspace:*",
     "pdf-parse": "^2.4.5",
