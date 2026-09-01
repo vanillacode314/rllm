@@ -182,7 +182,7 @@ export const summarizeChat = (config: {
 
 export function makeTool<TSchema extends z.core.$ZodType>(
   tool: Omit<TTool, 'handler' | 'jsonSchema'> & {
-    handler: (args: z.infer<NoInfer<TSchema>>) => Promise<string> | string;
+    handler: (args: z.infer<NoInfer<TSchema>>, signal?: AbortSignal) => Promise<string> | string;
     inputSchema: TSchema;
   }
 ): TTool {

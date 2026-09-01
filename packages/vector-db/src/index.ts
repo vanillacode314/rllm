@@ -52,6 +52,7 @@ export interface TVectorDB {
       documentIds: string[];
       limit: number;
       offset: number;
+      signal?: AbortSignal;
     }>
   ): Promise<
     | Array<{ document_id: string; id: string; index: number; similarity: number; text: string }>
@@ -143,10 +144,11 @@ export async function createVectorDB({ db, embedder }: TConfig): Promise<TVector
       } while (lastChunkSize === INDEX_CHUNK_SIZE);
       return documentId;
     },
-    async query(text, { afterIndex, beforeIndex, documentIds, limit = 10, offset = 0 }) {
+    async query(text, { afterIndex, beforeIndex, documentIds, limit = 10, offset = 0, signal }) {
       if (limit < 1) throw new Error(`Invalid limit: ${limit}`);
       if (documentIds && documentIds.length === 0) return undefined;
       const queryVector = Float16Array.from(await embedder.generateEmbeddings(text));
+      signal?.throwIfAborted();
       const normalizedQueryVector = normalizeVector(queryVector);
 
       const baseParams: unknown[] = [];
@@ -193,16 +195,17 @@ export async function createVectorDB({ db, embedder }: TConfig): Promise<TVector
             params: [...baseParams, QUERY_CHUNK_SIZE, cursor],
             sql: `SELECT \`id\`, \`document_id\`, \`index\`, \`text\`, \`vector\` FROM \`documents\`${filterClause} ORDER BY \`id\` LIMIT ? OFFSET ?`
           })
-        ).map((row) =>
-          Object.assign(row, {
+        ).map((row) => {
+          signal?.throwIfAborted();
+          return Object.assign(row, {
             vector:
               typeof row.vector === 'string'
                 ? base64ToBuf(row.vector)
                 : Array.isArray(row.vector)
                   ? Uint8Array.from(row.vector)
                   : row.vector
-          })
-        );
+          });
+        });
         for (const row of rows) {
           const rowVector = toFloat16(row.vector);
           if (rowVector.length !== queryVector.length) {

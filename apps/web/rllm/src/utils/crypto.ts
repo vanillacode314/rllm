@@ -16,9 +16,7 @@ function encryptDataWithKey(
   aesKey: CryptoKey,
   signal?: AbortSignal
 ): AsyncResult<Uint8Array<ArrayBufferLike>, Error> {
-  if (signal?.aborted) {
-    throw new Error('Operation aborted');
-  }
+  signal?.throwIfAborted();
   return data.byteLength <= MAX_CHUNK_SIZE
     ? encryptSingleChunk(data, aesKey, signal)
     : encryptMultiChunk(data, aesKey, signal);
@@ -40,9 +38,7 @@ const encryptSingleChunk = (
         aesKey,
         data
       );
-      if (signal?.aborted) {
-        return Result.Err(new Error('Operation aborted'));
-      }
+      signal?.throwIfAborted();
 
       const encryptedContentArr = new Uint8Array(encryptedContent);
       const buff = new Uint8Array(
@@ -82,9 +78,7 @@ const encryptMultiChunk = (
           aesKey,
           chunk
         );
-        if (signal?.aborted) {
-          return Result.Err(new Error('Operation aborted'));
-        }
+        signal?.throwIfAborted();
         encryptedChunkPromises.push(encryptedChunkPromise);
       }
       const encryptedChunks = await Promise.all(encryptedChunkPromises);
@@ -165,10 +159,7 @@ const decryptSingleChunk = (
         aesKey,
         encryptedContent
       );
-
-      if (signal?.aborted) {
-        return Result.Err(new Error('Operation aborted'));
-      }
+      signal?.throwIfAborted();
       return Result.Ok(new Uint8Array(decryptedContent));
     },
     (e) => new Error(`Error decrypting single chunk`, { cause: e })
@@ -206,9 +197,7 @@ const decryptMultiChunk = (
           aesKey,
           chunk
         );
-        if (signal?.aborted) {
-          return Result.Err(new Error('Operation aborted'));
-        }
+        signal?.throwIfAborted();
         decryptedChunkPromises.push(decryptedChunkPromise);
       }
       const decryptedChunks = await Promise.all(decryptedChunkPromises);

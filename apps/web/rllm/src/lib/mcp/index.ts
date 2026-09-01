@@ -91,8 +91,9 @@ function makeMCPCall<
   params?: Record<string, unknown>;
   sessionId: null | string;
   url: string;
+  signal?: AbortSignal;
 }): AsyncResult<TResponse, Error | Error> {
-  const { id, method, params, sessionId, url } = config;
+  const { signal, id, method, params, sessionId, url } = config;
 
   const extraHeaders: Record<string, string> = {};
   if (sessionId) {
@@ -102,7 +103,8 @@ function makeMCPCall<
   return makeJSONRPCCall(url, method, {
     extraHeaders,
     id,
-    params
+    params,
+    signal
   })
     .andThen((value) => {
       if ('error' in value.result) {

@@ -174,7 +174,7 @@ function executeToolCalls(
   return AsyncResult.from(
     async () => {
       for (const tool_call of tool_calls) {
-        if (signal?.aborted) throw new Error('Aborted');
+        signal?.throwIfAborted();
         // oxlint-disable-next-line no-await-in-loop
         await Option.fromUndefined(tools.find((tool) => tool.name === tool_call.tool.name))
           .okOrElse(
@@ -184,7 +184,7 @@ function executeToolCalls(
               )
           )
           .andThen((tool) => {
-            if (signal?.aborted) throw new Error('Aborted');
+            signal?.throwIfAborted();
             return safeParseJson(tool_call.tool.arguments, {
               validate: (args) => {
                 const valid = ajv.validate(tool.jsonSchema, args);
@@ -202,9 +202,8 @@ function executeToolCalls(
           })
           .toAsync()
           .andThen(({ args, tool }) => {
-            if (signal?.aborted) throw new Error('Aborted');
             return AsyncResult.from(
-              () => Promise.try(tool.handler, args),
+              () => Promise.try(tool.handler, args, signal),
               (e) => new Error(`Failed to execute tool`, { cause: e })
             ).inspectErr(console.log);
           })

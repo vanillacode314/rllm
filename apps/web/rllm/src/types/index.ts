@@ -13,7 +13,7 @@ type TProvider = z.infer<typeof providerSchema>;
 const toolSchema = z.object({
   description: z.string(),
   handler: z.function({
-    input: z.tuple([z.any()]),
+    input: z.tuple([z.any(), z.instanceof(AbortSignal)]),
     output: z.union([z.promise(z.string()), z.string()])
   }),
   // TODO: figure out z.any()

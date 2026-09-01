@@ -11,7 +11,7 @@ import type { TToolContent, TToolsCallResult, TToolsListResult } from './types';
 import { initializeMCPSession, makeMCPCall } from '.';
 
 interface TMCPClient {
-  callTool(name: string, args: Record<string, unknown>): Promise<string>;
+  callTool(name: string, args: Record<string, unknown>, signal: AbortSignal): Promise<string>;
   disconnect(): void;
   initSession(): Promise<void>;
   listTools(): Promise<TTool[]>;
@@ -54,13 +54,18 @@ class MCPClient implements TMCPClient {
     this.#url = url;
   }
 
-  async callTool(name: string, args: Record<string, unknown>): Promise<string> {
+  async callTool(
+    name: string,
+    args: Record<string, unknown>,
+    signal: AbortSignal
+  ): Promise<string> {
     if (this.#sessionId.isNone()) {
       throw new Error('Unitialized session');
     }
 
     const sessionId = this.#sessionId.unwrap();
     const result = await makeMCPCall({
+      signal,
       id: this.id,
       method: 'tools/call',
       params: {

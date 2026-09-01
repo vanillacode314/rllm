@@ -150,7 +150,8 @@ export class ChatGenerationManager {
         description: ATTACHMENT_TOOL_INSTRUCTIONS_PROMPT(
           attachments.map((attachement) => `${attachement.id}: ${attachement.description}`)
         ),
-        handler: async (args) => {
+        handler: async (args, signal) => {
+          signal?.throwIfAborted();
           const { query } = args;
           const { limit, offset } = args.postSearchFilters;
           const { afterIndex, beforeIndex } = args.preSearchFilters ?? {};
@@ -165,6 +166,7 @@ export class ChatGenerationManager {
           const results = (
             await Promise.all([
               await transientDb.query(query, {
+                signal,
                 afterIndex,
                 beforeIndex,
                 documentIds: args.ids.filter((id) =>
@@ -173,6 +175,7 @@ export class ChatGenerationManager {
                 limit: offset + limit
               }),
               await vectorDb.query(query, {
+                signal,
                 afterIndex,
                 beforeIndex,
                 documentIds: args.ids.filter((id) => attachmentsByTransientStatus.library.has(id)),
@@ -229,7 +232,8 @@ export class ChatGenerationManager {
       const feedbackModal = useFeedbackModal();
       const feedbackTool = makeTool({
         description: ASK_QUESTIONS_TOOL_PROMPT,
-        handler: async (args) => {
+        handler: async (args, signal) => {
+          signal?.throwIfAborted();
           const { questions } = args;
           for (const question of questions) {
             if (question.options === undefined) continue;
