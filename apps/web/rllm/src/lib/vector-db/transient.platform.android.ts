@@ -22,6 +22,6 @@ async function getDb() {
 }
 
 export const transientDb = await createVectorDB({
-  db: fromCapacitorSqlite(getDb),
+  db: fromCapacitorSqlite('transient', getDb),
   embedder: { generateEmbeddings: (text) => rag.getEmbedding(text) }
 });

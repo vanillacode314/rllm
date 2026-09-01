@@ -19,6 +19,6 @@ async function getDb() {
 }
 
 export const vectorDb = await createVectorDB({
-  db: fromCapacitorSqlite(getDb),
+  db: fromCapacitorSqlite('permanent', getDb),
   embedder: { generateEmbeddings: (text) => rag.getEmbedding(text) }
 });

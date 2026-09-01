@@ -4,10 +4,11 @@ import type { TSqlDB } from '..';
 
 export function fromCapacitorSqlite(id: string, getDb: () => Promise<SQLiteDBConnection>): TSqlDB {
   const loggerDb = {
+    blobType: 'string',
     async batch(statements, tx = true) {
       const db = await getDb();
       if (tx) {
-        await navigator.locks.request(`event-logger-transaction:${id}`, () =>
+        await navigator.locks.request(`vector-db-transaction:${id}`, () =>
           db.executeSet(
             statements.map(({ params, sql }) => ({ statement: sql, values: params })),
             tx
@@ -27,7 +28,7 @@ export function fromCapacitorSqlite(id: string, getDb: () => Promise<SQLiteDBCon
     },
     async transaction(callback) {
       const db = await getDb();
-      return await navigator.locks.request(`event-logger-transaction:${id}`, async () => {
+      return await navigator.locks.request(`vector-db-transaction:${id}`, async () => {
         await db.beginTransaction();
         try {
           const result = await callback({

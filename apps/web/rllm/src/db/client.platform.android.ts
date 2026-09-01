@@ -24,7 +24,7 @@ async function loadCapacitorSqliteDb() {
     return db;
   }
 
-  const loggerDb = fromCapacitorSqlite(getDb);
+  const loggerDb = fromCapacitorSqlite('main', getDb);
   const drizzleDb = drizzle(
     async function (sql, params, method) {
       const db = await getDb();
