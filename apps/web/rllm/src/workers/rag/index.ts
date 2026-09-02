@@ -7,7 +7,7 @@ export function makeNewRagWorker() {
   });
 }
 
-export const ragWorkerPool = new ObjectPool(makeNewRagWorker, navigator.hardwareConcurrency);
+export const ragWorkerPool = new ObjectPool(makeNewRagWorker, navigator.hardwareConcurrency / 2);
 
 export async function cosineSimilarity(a: number[], b: number[]) {
   const worker = await ragWorkerPool.get();
