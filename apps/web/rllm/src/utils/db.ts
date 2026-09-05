@@ -30,12 +30,6 @@ interface WithTransactionFn {
   <T>(fn: (tx: Transaction) => Promise<T>): AsyncResult<T, Error>;
 }
 
-async function runCustomQuery<T extends object>(query: SQL): Promise<T[]> {
-  const { columns } = (await db.run(query)) as { columns: any[] };
-  const rows = await db.all(query);
-  return tableToObject<T>(rows, columns);
-}
-
 function tableToObject<T extends object>(rows: never[][], columns: (keyof T)[]): T[] {
   return rows.map((row) => {
     const obj = {} as T;
@@ -62,4 +56,4 @@ const withTransaction: WithTransactionFn = (fn) =>
     (e) => new Error('Failed to run transaction', { cause: e })
   );
 
-export { buildConflictUpdateColumns, runCustomQuery, tableToObject, withTransaction };
+export { buildConflictUpdateColumns, tableToObject, withTransaction };

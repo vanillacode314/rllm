@@ -3,10 +3,9 @@ import { and, count, desc, eq, exists, inArray, like, sql } from 'drizzle-orm';
 
 import type { TProvider } from '~/db/app-schema';
 
-import { db } from '~/db/client';
+import { db, logger } from '~/db/client';
 import { tables } from '~/db/schema';
 import { MCPClient } from '~/lib/mcp/client';
-import { runCustomQuery } from '~/utils/db';
 
 const FIVE_MINUTES_IN_MILLISECONDS = 5 * 60 * 1000;
 
@@ -129,9 +128,11 @@ const chats = {
         .then((rows) => rows[0]?.count ?? 0),
     getAllChats: () => db.select().from(tables.chats).orderBy(desc(tables.chats.createdAt)),
     getChatTags: () =>
-      runCustomQuery<{ value: string }>(
-        sql`SELECT DISTINCT e.value FROM ${tables.chats} CROSS JOIN json_each(${tables.chats.tags}) AS e`
-      ).then((rows) => rows.map((row) => row.value)),
+      logger.db
+        .query<{ value: string }>(
+          logger.sql`SELECT DISTINCT e.value FROM "chats" CROSS JOIN json_each("chats"."tags") AS e`
+        )
+        .then((rows) => rows.map((row) => row.value)),
     getMinimalChats: () =>
       db
         .select({
