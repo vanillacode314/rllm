@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/solid-query';
-import { createMemo, createRenderEffect, createSignal, untrack } from 'solid-js';
+import { createMemo, createSignal } from 'solid-js';
 import { Button } from 'ui/button';
 import {
   Dialog,
@@ -82,11 +82,6 @@ export function EditPresetModal() {
     return new OpenAIAdapter(url, token);
   });
 
-  createRenderEffect(() => {
-    void presetQuery.data;
-    untrack(resetForm);
-  });
-
   return (
     <Dialog
       modal
@@ -133,7 +128,11 @@ export function EditPresetModal() {
             <TextFieldInput
               class="col-span-3"
               name="name"
-              onInput={(e) => setForm('name', e.currentTarget.value)}
+              onInput={(event) =>
+                setForm((draft) => {
+                  draft.name = event.currentTarget.value;
+                })
+              }
               type="text"
               value={form.name}
             />
@@ -144,8 +143,10 @@ export function EditPresetModal() {
             <div class="col-span-3">
               <ProviderSelector
                 onChange={(provider) => {
-                  setForm('providerId', provider.id);
-                  setForm('modelId', provider.defaultModelIds[0]);
+                  setForm((draft) => {
+                    draft.providerId = provider.id;
+                    draft.modelId = provider.defaultModelIds[0];
+                  });
                 }}
                 providers={providers.isSuccess ? providers.data : []}
                 selectedProvider={
@@ -159,7 +160,11 @@ export function EditPresetModal() {
             <div class="col-span-3">
               <ModelSelector
                 adapter={adapter()}
-                onChange={(model) => setForm('modelId', model.id)}
+                onChange={(model) =>
+                  setForm((draft) => {
+                    draft.modelId = model.id;
+                  })
+                }
                 selectedModelId={form.modelId}
                 selectedProvider={
                   selectedProviderQuery.isSuccess ? (selectedProviderQuery.data ?? null) : null
@@ -175,7 +180,12 @@ export function EditPresetModal() {
                   {REASONING_VALUE_TO_LABEL_MAP[props.item.rawValue]}
                 </SelectItem>
               )}
-              onChange={(value) => value && setForm('reasoning', value)}
+              onChange={(value) =>
+                value &&
+                setForm((draft) => {
+                  draft.reasoning = value;
+                })
+              }
               options={['none', 'minimal', 'low', 'medium', 'high', 'xhigh']}
               value={form.reasoning}
             >
@@ -192,7 +202,11 @@ export function EditPresetModal() {
             <TextFieldTextArea
               class="col-span-3"
               name="systemPrompt"
-              onInput={(e) => setForm('systemPrompt', e.currentTarget.value)}
+              onInput={(event) =>
+                setForm((draft) => {
+                  draft.systemPrompt = event.currentTarget.value;
+                })
+              }
               rows={4}
               value={form.systemPrompt}
             />
@@ -205,7 +219,11 @@ export function EditPresetModal() {
                 checked={form.includeDateTimeInSystemPrompt}
                 class="flex items-center space-x-2"
                 id="includeDateTimeInSystemPrompt"
-                onChange={(checked) => setForm('includeDateTimeInSystemPrompt', checked)}
+                onChange={(checked) =>
+                  setForm((draft) => {
+                    draft.includeDateTimeInSystemPrompt = checked;
+                  })
+                }
               >
                 <SwitchControl>
                   <SwitchThumb />

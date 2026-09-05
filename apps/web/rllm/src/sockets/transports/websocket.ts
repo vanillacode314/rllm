@@ -1,4 +1,4 @@
-import { createComputed, createMemo, createRoot, untrack } from 'solid-js';
+import { createComputed, createMemo, createRoot, on, untrack } from 'solid-js';
 import { AsyncResult, Option } from 'ts-result-option';
 
 import { logger } from '~/db/client';
@@ -39,46 +39,36 @@ export async function initWebsocketTransport() {
     .okOrElse(() => new Error('Missing clientId in local database metadata'))
     .unwrap();
 
-  const load = () =>
-    AsyncResult.from(
-      async function () {
-        if (connection) return;
-        const $account = account();
-        if ($account === null) return;
-        const accountId = $account.id;
+  onShouldTrySocketConnectionChange((value) => {
+    if (value && !connection) {
+      console.debug('[WS] online');
+      const accountId = Option.from(account())
+        .map((account) => account.id)
+        .expect("accountId exists otherwise we wouldn't be trying a new socket connection");
 
-        const ws = createPeerSocket(clientId, accountId);
+      const ws = createPeerSocket(clientId, accountId);
 
-        ws.addEventListener('open', async () => {
-          const transport = new WebsocketTransport(ws);
-          connection = new ConnectionManager($account.id, clientId, transport, 'WebSocket');
-          connection.init();
-          console.debug('[WS] connected');
-        });
-      },
-      (e) => new Error(`Error while setting up websocket`, { cause: e })
-    );
+      ws.addEventListener('open', async () => {
+        const transport = new WebsocketTransport(ws);
+        connection = new ConnectionManager(accountId, clientId, transport);
+        await connection.init();
+        console.debug('[WS] connected');
+      });
+      return;
+    }
+    if (!value && connection) {
+      console.debug('[WS] offline');
+      connection?.close();
+      connection = undefined;
+    }
+  });
+}
 
-  function unload() {
-    console.debug('[WS] offline');
-    connection?.close();
-  }
-
+function onShouldTrySocketConnectionChange(onChange: (value: boolean) => void) {
   createRoot(() => {
     const shouldPoll = createMemo(
       () => isOnline() && account() !== null && env.VITE_SYNC_SERVER_BASE_URL !== undefined
     );
-    createComputed(() => {
-      const $shouldPoll = shouldPoll();
-      untrack(() => {
-        if (!$shouldPoll) {
-          unload();
-          return;
-        }
-
-        console.debug('[WS] online');
-        load().unwrap();
-      });
-    });
+    createComputed(on(shouldPoll, (value) => onChange(value)));
   });
 }

@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { createComputed, createSignal, For, untrack } from 'solid-js';
+import { createSignal, For } from 'solid-js';
 import { Button } from 'ui/button';
 import {
   Dialog,
@@ -23,27 +23,22 @@ const setOpen = (mnemonic: false | null | string) => {
     throw new Error('Invalid mnemonic');
   }
   setMnemonic(mnemonic);
+  if (import.meta.env.VITE_MODE === 'android') {
+    void promptForSavePassword();
+  }
 };
+
+async function promptForSavePassword() {
+  const { PasswordAutofill } = await import('@capawesome/capacitor-password-autofill');
+  await PasswordAutofill.savePassword({
+    domain: 'llm.raqueeb.com',
+    password: mnemonic()!,
+    username: 'passphrase'
+  });
+}
 
 export function SaveMnemonicModal() {
   const alertDialog = useAlertDialog();
-
-  if (import.meta.env.VITE_MODE === 'android') {
-    createComputed(() => {
-      const $open = open();
-      if (!$open) return;
-      // oxlint-disable-next-line solid/reactivity
-      untrack(async () => {
-        if (!mnemonic()) return;
-        const { PasswordAutofill } = await import('@capawesome/capacitor-password-autofill');
-        await PasswordAutofill.savePassword({
-          domain: 'llm.raqueeb.com',
-          password: mnemonic()!,
-          username: 'passphrase'
-        });
-      });
-    });
-  }
 
   return (
     <Dialog

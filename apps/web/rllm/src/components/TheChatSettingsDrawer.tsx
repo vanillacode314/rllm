@@ -1,4 +1,4 @@
-import { createWritableMemo } from '~/utils/signals';
+import { createWritableMemo } from '@solid-primitives/memo';
 import { createSignal, Show } from 'solid-js';
 import { Button } from 'ui/button';
 import {

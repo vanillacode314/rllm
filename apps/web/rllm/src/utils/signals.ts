@@ -8,13 +8,11 @@ import {
   createEffect,
   createMemo,
   createResource,
-  createSignal,
   type InitializedResource,
   on,
   onCleanup,
   onMount,
   type Resource,
-  type Setter,
   type Signal,
   untrack
 } from 'solid-js';
@@ -24,15 +22,6 @@ import { produce } from './immer';
 
 const isOnline = createConnectivitySignal();
 const pageVisible = createPageVisibility();
-
-export function createWritableMemo<T>(
-  fn: (prev: NoInfer<T> | undefined) => T,
-  value?: NoInfer<T>,
-  options?: { equals: (a: T, b: T) => boolean; name?: string }
-): [Accessor<T>, Setter<T>] {
-  const m = createMemo((prev) => createSignal(fn(prev?.[0]())), value, options);
-  return [() => m()[0](), (...args) => m()[1](...(args as never))];
-}
 
 function createDebouncedMemo<T>(
   fn: (p: T | undefined) => T,

@@ -1,6 +1,5 @@
 import { nanoid } from 'nanoid';
 import { createSignal, For, Show } from 'solid-js';
-import { produce } from 'solid-js/store';
 import { Badge } from 'ui/badge';
 import { Button } from 'ui/button';
 import {
@@ -101,8 +100,10 @@ export function AddProviderModal() {
             <TextFieldLabel class="text-right">Name</TextFieldLabel>
             <TextFieldInput
               name="name"
-              onInput={(e) => {
-                setForm('name', e.currentTarget.value);
+              onInput={(event) => {
+                setForm((draft) => {
+                  draft.name = event.currentTarget.value;
+                });
                 setTestResult(null);
               }}
               type="text"
@@ -114,8 +115,10 @@ export function AddProviderModal() {
             <TextFieldLabel class="text-right">Base URL</TextFieldLabel>
             <TextFieldInput
               name="baseUrl"
-              onInput={(e) => {
-                setForm('baseUrl', e.currentTarget.value);
+              onInput={(event) => {
+                setForm((draft) => {
+                  draft.baseUrl = event.currentTarget.value;
+                });
                 setTestResult(null);
               }}
               type="text"
@@ -127,8 +130,10 @@ export function AddProviderModal() {
             <TextFieldLabel class="text-right">Token</TextFieldLabel>
             <TextFieldInput
               name="token"
-              onInput={(e) => {
-                setForm('token', e.currentTarget.value);
+              onInput={(event) => {
+                setForm((draft) => {
+                  draft.token = event.currentTarget.value;
+                });
                 setTestResult(null);
               }}
               type="password"
@@ -142,18 +147,14 @@ export function AddProviderModal() {
               name="defaultModelIds"
               onBlur={(event) => {
                 if (event.currentTarget.value.trim().length > 0) {
-                  setForm(produce((form) => form.defaultModelIds.push(event.currentTarget.value)));
+                  setForm((draft) => draft.defaultModelIds.push(event.currentTarget.value.trim()));
                   event.currentTarget.value = '';
                 }
               }}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
                   event.preventDefault();
-                  setForm(
-                    'defaultModelIds',
-                    form.defaultModelIds.length,
-                    event.currentTarget.value
-                  );
+                  setForm((draft) => draft.defaultModelIds.push(event.currentTarget.value));
                   event.currentTarget.value = '';
                 }
               }}
@@ -167,8 +168,9 @@ export function AddProviderModal() {
                     <button
                       class="ml-1 text-xs text-muted-foreground hover:text-foreground"
                       onClick={() => {
-                        const newModels = form.defaultModelIds.filter((_, i) => i !== index());
-                        setForm('defaultModelIds', newModels);
+                        setForm((draft) => {
+                          draft.defaultModelIds.splice(index(), 1);
+                        });
                       }}
                       type="button"
                     >

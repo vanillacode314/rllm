@@ -1,4 +1,4 @@
-import { createWritableMemo } from '~/utils/signals';
+import { createWritableMemo } from '@solid-primitives/memo';
 import Fuse from 'fuse.js';
 import { createMemo } from 'solid-js';
 import {

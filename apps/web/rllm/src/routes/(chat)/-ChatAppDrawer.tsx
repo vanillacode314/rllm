@@ -1,4 +1,4 @@
-import { createWritableMemo } from '~/utils/signals';
+import { createWritableMemo } from '@solid-primitives/memo';
 import { Separator } from 'ui/separator';
 
 import type { AppDrawerComponentProps } from '~/components/AppDrawer';

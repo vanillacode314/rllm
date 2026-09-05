@@ -1,31 +1,41 @@
 import type { $ZodFlattenedError } from 'zod/v4/core';
 
-import { createStore, produce } from 'solid-js/store';
 import * as z from 'zod/mini';
+import { createDerivedStore } from './stores';
+import { createWritableMemo } from '@solid-primitives/memo';
+import { on } from 'solid-js';
+import { produce } from './immer';
 
-function createForm<TSchema extends z.core.$ZodObject, T extends object = z.output<TSchema>>(
+function createForm<TSchema extends z.core.$ZodObject, T extends object = z.infer<TSchema>>(
   _: TSchema,
-  initial: () => NoInfer<T>
+  memo: () => NoInfer<T>
 ) {
-  const [form, setForm] = createStore<T>(initial());
-  const [formErrors, setFormErrors] = createStore<Partial<Record<'form' | keyof T, string[]>>>({});
+  const [form, setForm] = createWritableMemo(() => memo());
+  const formStore = createDerivedStore(form);
+  const [formErrors, setFormErrors] = createWritableMemo<
+    Partial<Record<'form' | keyof T, string[]>>
+  >(on(memo, () => ({})));
+  const formErrorsStore = createDerivedStore(formErrors);
 
   function resetForm() {
-    setForm(initial());
+    setForm(() => memo());
     resetFormErrors();
   }
 
   function resetFormErrors() {
-    setFormErrors(
-      produce((draft) => {
-        for (const key in draft) draft[key as keyof typeof draft] = undefined;
-      })
-    );
+    setFormErrors({});
   }
 
   return [
-    { form, formErrors },
-    { resetForm, resetFormErrors, setForm, setFormErrors }
+    { form: formStore, formErrors: formErrorsStore },
+    {
+      resetForm,
+      resetFormErrors,
+      setForm: (fn: (value: T) => void) => {
+        setForm((value) => produce(value, fn));
+      },
+      setFormErrors
+    }
   ] as const;
 }
 function parseFormErrors<T extends z.core.$ZodError<object>>(

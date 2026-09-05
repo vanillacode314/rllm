@@ -73,7 +73,11 @@ function SettingsProxyComponent() {
             <TextFieldInput
               id="url"
               name="url"
-              onInput={(e) => setForm('url', e.currentTarget.value)}
+              onInput={(event) =>
+                setForm((draft) => {
+                  draft.url = event.currentTarget.value;
+                })
+              }
               placeholder="https://example.com/?url=%s"
               type="text"
               value={form.url}

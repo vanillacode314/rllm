@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/solid-query';
-import { createRenderEffect, createSignal, For, Show } from 'solid-js';
+import { createSignal, For, Show } from 'solid-js';
 import { Badge } from 'ui/badge';
 import { Button } from 'ui/button';
 import {
@@ -43,22 +43,16 @@ export function EditProviderModal() {
 
   const [{ form, formErrors }, { resetForm, resetFormErrors, setForm, setFormErrors }] = createForm(
     formSchema,
-    () => ({
-      baseUrl: '',
-      defaultModelIds: [],
-      id: '',
-      name: '',
-      token: '',
-      type: 'openai' as const
-    })
+    () =>
+      providerQuery.data ?? {
+        baseUrl: '',
+        defaultModelIds: [],
+        id: '',
+        name: '',
+        token: '',
+        type: 'openai' as const
+      }
   );
-
-  createRenderEffect(() => {
-    if (!providerQuery.data) return;
-
-    setForm(providerQuery.data);
-    resetFormErrors();
-  });
 
   async function handleTest() {
     resetFormErrors();
@@ -115,8 +109,10 @@ export function EditProviderModal() {
             <TextFieldLabel class="text-right">Name</TextFieldLabel>
             <TextFieldInput
               name="name"
-              onInput={(e) => {
-                setForm('name', e.currentTarget.value);
+              onInput={(event) => {
+                setForm((draft) => {
+                  draft.name = event.currentTarget.value;
+                });
                 setTestResult(null);
               }}
               type="text"
@@ -128,8 +124,10 @@ export function EditProviderModal() {
             <TextFieldLabel class="text-right">Base URL</TextFieldLabel>
             <TextFieldInput
               name="baseUrl"
-              onInput={(e) => {
-                setForm('baseUrl', e.currentTarget.value);
+              onInput={(event) => {
+                setForm((draft) => {
+                  draft.baseUrl = event.currentTarget.value;
+                });
                 setTestResult(null);
               }}
               type="text"
@@ -141,8 +139,10 @@ export function EditProviderModal() {
             <TextFieldLabel class="text-right">Token</TextFieldLabel>
             <TextFieldInput
               name="token"
-              onInput={(e) => {
-                setForm('token', e.currentTarget.value);
+              onInput={(event) => {
+                setForm((draft) => {
+                  draft.token = event.currentTarget.value;
+                });
                 setTestResult(null);
               }}
               type="password"
@@ -156,11 +156,9 @@ export function EditProviderModal() {
               name="defaultModelIds"
               onBlur={(event) => {
                 if (event.currentTarget.value.trim().length > 0) {
-                  setForm(
-                    'defaultModelIds',
-                    form.defaultModelIds.length,
-                    event.currentTarget.value.trim()
-                  );
+                  setForm((draft) => {
+                    draft.defaultModelIds.push(event.currentTarget.value.trim());
+                  });
                   event.currentTarget.value = '';
                 }
               }}
@@ -169,7 +167,9 @@ export function EditProviderModal() {
                   event.preventDefault();
                   const newValue = event.currentTarget.value.trim();
                   if (newValue && !form.defaultModelIds.includes(newValue)) {
-                    setForm('defaultModelIds', form.defaultModelIds.length, newValue);
+                    setForm((draft) => {
+                      draft.defaultModelIds.push(newValue);
+                    });
                   }
                   event.currentTarget.value = '';
                 }
@@ -184,8 +184,9 @@ export function EditProviderModal() {
                     <button
                       class="ml-1 text-xs text-muted-foreground hover:text-foreground"
                       onClick={() => {
-                        const newModels = form.defaultModelIds.filter((_, i) => i !== index());
-                        setForm('defaultModelIds', newModels);
+                        setForm((draft) => {
+                          draft.defaultModelIds.splice(index(), 1);
+                        });
                       }}
                       type="button"
                     >

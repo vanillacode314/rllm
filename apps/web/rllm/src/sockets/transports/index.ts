@@ -74,7 +74,7 @@ export class PeerManager {
                 10 * 1000
               );
               const connection = new ConnectionManager(accountId, clientId, t);
-              connection.init();
+              await connection.init();
               this.registerPeer(remoteId, connection);
               break;
             } catch (error) {

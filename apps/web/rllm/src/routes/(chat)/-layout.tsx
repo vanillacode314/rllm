@@ -49,9 +49,9 @@ import { formatError } from '~/utils/errors';
 import { compressImageFile, fileToBase64 } from '~/utils/files';
 import { produce } from '~/utils/immer';
 import { queryClient } from '~/utils/query-client';
-import { createWritableMemo } from '~/utils/signals';
+import { createWritableMemo } from '@solid-primitives/memo';
 import { slugify } from '~/utils/string';
-import { Tree, TreeNode, type TTree } from '~/utils/tree';
+import { Tree, TreeNode, type JsonTree, type TTree } from '~/utils/tree';
 
 import {
   addAttachment,
@@ -65,7 +65,6 @@ import {
   updatePrompt
 } from './-state';
 import { getLatestPath } from './-utils';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'ui/card';
 import { Button } from 'ui/button';
 import { PresetSelector } from '~/components/PresetSelector';
 import { useChatState } from '~/context/chat';
@@ -140,52 +139,6 @@ export function useChatPage(
       })
     )
   );
-
-  function purgeOnlyErrorResponses(tree: TTree<TMessage>) {
-    const pathsToRemove = [] as number[][];
-    const latestPath = getLatestPath(tree);
-    for (const { node, path } of tree.walk()) {
-      if (node.value.isNone()) continue;
-      const message = node.value.unwrap();
-      if (message.type !== 'llm') continue;
-      if (typeof message.error === 'undefined') continue;
-      if (message.chunks.length > 0) continue;
-      const isLeafNode = tree.traverse(path).unwrap().children.length === 0;
-      if (!isLeafNode) continue;
-      const isLatestMessage =
-        path.length === latestPath.length &&
-        path.every((value, index) => value === latestPath[index]);
-      if (isLatestMessage) continue;
-      pathsToRemove.push(path);
-    }
-    for (let i = pathsToRemove.length - 1; i >= 0; i--) {
-      tree.removeNodeAndDescendants(pathsToRemove[i]);
-    }
-  }
-
-  function flushOldToolCalls(tree: TTree<TMessage>) {
-    for (const { node } of tree.walk()) {
-      if (node.value.isNone()) continue;
-      const message = node.value.unwrap();
-      if (message.type !== 'llm') continue;
-      for (const chunk of message.chunks) {
-        if (chunk.type !== 'tool_call') continue;
-        if (chunk.success !== null) continue;
-        chunk.success = false;
-        chunk.content = formatError(new Error('Failed to execute tool'));
-      }
-    }
-  }
-
-  createRenderEffect(() => {
-    const messages = opts().loaderChat?.messages ?? { children: [], value: null };
-    untrack(() => {
-      const tree = Tree.fromJSON(messages);
-      purgeOnlyErrorResponses(tree);
-      flushOldToolCalls(tree);
-      updateMessages({ messages: tree, path: getLatestPath(tree) });
-    });
-  });
 
   const sendPrompt = useMutation(() => ({
     mutationFn: async ({ id, path }: { id: string; path: number[] }) => {
@@ -752,7 +705,7 @@ export async function useChatPageBeforeLoad() {
     throw redirect({ to: '/settings/account' });
   throw redirect({ to: '/settings/providers' });
 }
-export function useChatPageLoader(opts: { scratchpad?: boolean }) {
+export function useChatPageLoader(opts: { scratchpad?: boolean; preload?: boolean }) {
   async function ensureValidChatProvider(chat: TDBChat) {
     const provider = await queryClient.ensureQueryData(
       queries.providers.byId(chat.settings.providerId)
@@ -803,8 +756,53 @@ export function useChatPageLoader(opts: { scratchpad?: boolean }) {
     };
   }
 
+  function loadMessages(messages: JsonTree<TMessage>) {
+    if (opts.preload) return;
+    const tree = Tree.fromJSON(messages);
+    purgeOnlyErrorResponses(tree);
+    flushOldToolCalls(tree);
+    updateMessages({ messages: tree, path: getLatestPath(tree) });
+
+    function purgeOnlyErrorResponses(tree: TTree<TMessage>) {
+      const pathsToRemove = [] as number[][];
+      const latestPath = getLatestPath(tree);
+      for (const { node, path } of tree.walk()) {
+        if (node.value.isNone()) continue;
+        const message = node.value.unwrap();
+        if (message.type !== 'llm') continue;
+        if (typeof message.error === 'undefined') continue;
+        if (message.chunks.length > 0) continue;
+        const isLeafNode = tree.traverse(path).unwrap().children.length === 0;
+        if (!isLeafNode) continue;
+        const isLatestMessage =
+          path.length === latestPath.length &&
+          path.every((value, index) => value === latestPath[index]);
+        if (isLatestMessage) continue;
+        pathsToRemove.push(path);
+      }
+      for (let i = pathsToRemove.length - 1; i >= 0; i--) {
+        tree.removeNodeAndDescendants(pathsToRemove[i]);
+      }
+    }
+
+    function flushOldToolCalls(tree: TTree<TMessage>) {
+      for (const { node } of tree.walk()) {
+        if (node.value.isNone()) continue;
+        const message = node.value.unwrap();
+        if (message.type !== 'llm') continue;
+        for (const chunk of message.chunks) {
+          if (chunk.type !== 'tool_call') continue;
+          if (chunk.success !== null) continue;
+          chunk.success = false;
+          chunk.content = formatError(new Error('Failed to execute tool'));
+        }
+      }
+    }
+  }
+
   return {
     ensureQueryData,
-    ensureValidChatProvider
+    ensureValidChatProvider,
+    loadMessages
   };
 }

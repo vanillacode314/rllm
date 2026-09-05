@@ -1,4 +1,4 @@
-import { createWritableMemo } from '~/utils/signals';
+import { createWritableMemo } from '@solid-primitives/memo';
 import { useQuery } from '@tanstack/solid-query';
 import { createVirtualizer } from '@tanstack/solid-virtual';
 import Fuse from 'fuse.js';

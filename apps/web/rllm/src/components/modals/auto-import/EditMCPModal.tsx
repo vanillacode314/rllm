@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/solid-query';
-import { createRenderEffect, createSignal, Show } from 'solid-js';
+import { createSignal, Show } from 'solid-js';
 import { Button } from 'ui/button';
 import {
   Dialog,
@@ -37,18 +37,13 @@ export function EditMCPModal() {
 
   const [{ form, formErrors }, { resetForm, resetFormErrors, setForm, setFormErrors }] = createForm(
     formSchema,
-    () => ({
-      id: '',
-      name: '',
-      url: ''
-    })
+    () =>
+      mcpQuery.data ?? {
+        id: '',
+        name: '',
+        url: ''
+      }
   );
-
-  createRenderEffect(() => {
-    if (!mcpQuery.data) return;
-    setForm(mcpQuery.data);
-    resetFormErrors();
-  });
 
   async function handleTest() {
     resetFormErrors();
@@ -106,7 +101,9 @@ export function EditMCPModal() {
             <TextFieldInput
               name="name"
               onInput={(e) => {
-                setForm('name', e.currentTarget.value);
+                setForm((draft) => {
+                  draft.name = e.currentTarget.value;
+                });
                 setTestResult(null);
               }}
               type="text"
@@ -118,8 +115,10 @@ export function EditMCPModal() {
             <TextFieldLabel class="text-right">URL</TextFieldLabel>
             <TextFieldInput
               name="url"
-              onInput={(e) => {
-                setForm('url', e.currentTarget.value);
+              onInput={(event) => {
+                setForm((draft) => {
+                  draft.url = event.currentTarget.value;
+                });
                 setTestResult(null);
               }}
               type="text"

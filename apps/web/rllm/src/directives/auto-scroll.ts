@@ -1,7 +1,7 @@
 import { createEventListenerMap } from '@solid-primitives/event-listener';
 import { createTimeoutLoop } from '@solid-primitives/timer';
 import { debounce } from '@tanstack/solid-pacer';
-import { type Accessor, createRenderEffect, createSignal, on, onMount } from 'solid-js';
+import { type Accessor, createMemo, createSignal, onMount } from 'solid-js';
 
 export function useAutoScroll(
   options: {
@@ -9,88 +9,53 @@ export function useAutoScroll(
     threshold?: number;
   } = {}
 ) {
-  const { enabled = () => true, threshold = 50 } = options;
-  const [shouldAutoScroll, setShouldAutoScroll] = createSignal<boolean>(true);
-  const [canScroll, setCanScroll] = createSignal<boolean>(false);
-  let autoScrolling = false;
+  let ref: HTMLElement;
 
-  let _ref: HTMLElement;
+  const { enabled = () => true, threshold = 50 } = options;
+  const [scrollBottom, setScrollBottom] = createSignal(0);
+  const [isDown, setIsDown] = createSignal(false);
+  const shouldAutoScroll = createMemo(() => !isDown() && scrollBottom() < threshold);
+  const canScroll = createMemo(() => scrollBottom() > threshold);
+
+  function updateScrollBottom() {
+    setScrollBottom(ref.scrollHeight - (ref.clientHeight + ref.scrollTop));
+  }
+  function updateHeight() {
+    updateScrollBottom();
+    scrollToBottom();
+  }
+
   const scrollToBottom = debounce(
     (force: boolean = false) => {
-      if (!_ref) {
-        console.warn('useAutoScroll: ref is not defined');
-        return;
-      }
+      if (!ref) throw new Error('attach ref to autoScroll');
+
       if (!force) {
         if (!enabled()) return;
         if (!shouldAutoScroll()) return;
-      } else setShouldAutoScroll(true);
-      _ref.addEventListener('scrollend', () => (autoScrolling = false));
-      autoScrolling = true;
-      _ref.scrollTo({ behavior: 'smooth', top: _ref.scrollHeight });
+      }
+      ref.scrollTo({ behavior: 'smooth', top: ref.scrollHeight });
     },
     {
       wait: 16
     }
   );
-  const autoScroll = (ref: HTMLElement) => {
-    _ref = ref;
-    const [height, setHeight] = createSignal(0);
 
-    createTimeoutLoop(() => {
-      setHeight(ref.scrollHeight);
-    }, 100);
-
-    createRenderEffect(
-      on(height, () => {
-        if (!shouldAutoScroll()) return;
-        scrollToBottom();
-      })
+  const autoScroll = (_ref: HTMLElement) => {
+    ref = _ref;
+    createTimeoutLoop(updateHeight, 100);
+    createEventListenerMap(
+      _ref,
+      {
+        mousedown: () => setIsDown(true),
+        mouseup: () => setIsDown(false),
+        scroll: () => updateScrollBottom(),
+        touchcancel: () => setIsDown(false),
+        touchend: () => setIsDown(false),
+        touchstart: () => setIsDown(true)
+      },
+      { passive: true }
     );
-    const scrollBottom = () => ref.scrollHeight - (ref.clientHeight + ref.scrollTop);
-
-    createRenderEffect(
-      on(height, () => {
-        if (!shouldAutoScroll()) return;
-        setShouldAutoScroll(scrollBottom() < threshold);
-      })
-    );
-
-    createRenderEffect(
-      on(height, () => setCanScroll(ref.scrollHeight > ref.clientHeight + threshold))
-    );
-
-    onMount(() => {
-      createEventListenerMap(
-        ref,
-        {
-          mousedown: () => {
-            setShouldAutoScroll(scrollBottom() < threshold);
-          },
-          mouseup: () => {
-            setShouldAutoScroll(scrollBottom() < threshold);
-          },
-          scroll: () => {
-            if (autoScrolling) return;
-            setShouldAutoScroll(scrollBottom() < threshold);
-          },
-          touchcancel: () => {
-            setShouldAutoScroll(scrollBottom() < threshold);
-          },
-          touchend: () => {
-            setShouldAutoScroll(scrollBottom() < threshold);
-          },
-          touchstart: () => {
-            setShouldAutoScroll(scrollBottom() < threshold);
-          }
-        },
-        { passive: true }
-      );
-    });
   };
 
-  return [
-    { autoScroll, canScroll, shouldAutoScroll },
-    { scrollToBottom, setShouldAutoScroll }
-  ] as const;
+  return [{ autoScroll, canScroll, shouldAutoScroll }, { scrollToBottom }] as const;
 }

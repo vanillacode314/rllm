@@ -15,8 +15,6 @@ import { INCREMENT_ACCESS_COUNT_THRESHOLD_MILLISECONDS } from '../-constants';
 import { useChatPage, useChatPageBeforeLoad, useChatPageLoader } from '../-layout';
 import { updateMessages } from '../-state';
 import { getLatestPath } from '../-utils';
-import { Tree } from '~/utils/tree';
-import type { TMessage } from '~/types/chat';
 import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 
 console.error('FIX OPTIMIZE STORAGE');
@@ -26,8 +24,10 @@ export const Route = createFileRoute('/(chat)/chat/$')({
   component: ChatPageComponent,
   loaderDeps: ({ search: { id } }) => ({ id: id ?? nanoid(), isNewChat: id === undefined }),
   // oxlint-disable-next-line perfectionist/sort-objects
-  loader: async ({ deps, params }) => {
-    const { ensureQueryData, ensureValidChatProvider } = useChatPageLoader({});
+  loader: async ({ deps, params, preload }) => {
+    const { loadMessages, ensureQueryData, ensureValidChatProvider } = useChatPageLoader({
+      preload
+    });
     const { id, isNewChat } = deps;
     if (isNewChat && params._splat !== 'new')
       throw redirect({ params: { _splat: 'new' }, to: '/chat/$' });
@@ -55,6 +55,7 @@ export const Route = createFileRoute('/(chat)/chat/$')({
     let chat = await queryClient.fetchQuery(queries.chats.byId(id));
     if (chat === null) throw redirect({ params: { _splat: 'new' }, to: '/chat/$' });
     chat = await ensureValidChatProvider(chat);
+    loadMessages(chat.messages);
 
     return {
       chat,

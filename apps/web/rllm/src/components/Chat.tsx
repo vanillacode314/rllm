@@ -43,7 +43,7 @@ import { ChatGenerationManager } from '~/lib/chat/generation';
 import { queries } from '~/queries';
 import { formatToPercentage, formatToTokens } from '~/utils/number';
 import { formatAsKeyValuePair } from '~/utils/object';
-import { createWritableMemo } from '~/utils/signals';
+import { createWritableMemo } from '@solid-primitives/memo';
 import { createDerivedStore } from '~/utils/stores';
 import { lowlightWorkerPool } from '~/workers/lowlight';
 

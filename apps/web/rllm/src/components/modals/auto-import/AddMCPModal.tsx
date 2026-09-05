@@ -89,8 +89,10 @@ export function AddMCPModal() {
             <TextFieldLabel class="text-right">Name</TextFieldLabel>
             <TextFieldInput
               name="name"
-              onInput={(e) => {
-                setForm('name', e.currentTarget.value);
+              onInput={(event) => {
+                setForm((draft) => {
+                  draft.name = event.currentTarget.value;
+                });
                 setTestResult(null);
               }}
               type="text"
@@ -102,8 +104,10 @@ export function AddMCPModal() {
             <TextFieldLabel class="text-right">URL</TextFieldLabel>
             <TextFieldInput
               name="url"
-              onInput={(e) => {
-                setForm('url', e.currentTarget.value);
+              onInput={(event) => {
+                setForm((draft) => {
+                  draft.url = event.currentTarget.value;
+                });
                 setTestResult(null);
               }}
               type="text"
