@@ -183,11 +183,7 @@ export function useChatPage(
       const tree = Tree.fromJSON(messages);
       purgeOnlyErrorResponses(tree);
       flushOldToolCalls(tree);
-      if (opts().scratchpad) {
-        updateMessages({ messages: tree });
-      } else {
-        updateMessages({ messages: tree, path: getLatestPath(tree) });
-      }
+      updateMessages({ messages: tree, path: getLatestPath(tree) });
     });
   });
 

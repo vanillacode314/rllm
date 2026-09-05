@@ -1,7 +1,6 @@
 import { createFileRoute, useRouter } from '@tanstack/solid-router';
 import { HLC } from 'hlc';
 import { nanoid } from 'nanoid';
-import { createRenderEffect, onMount, untrack } from 'solid-js';
 import { Option } from 'ts-result-option';
 import { safeParseJson } from 'ts-result-option/utils';
 import { z } from 'zod/mini';
@@ -83,12 +82,7 @@ function ScratchpadPageComponent() {
   const router = useRouter();
   const loaderData = Route.useLoaderData();
   const navigate = Route.useNavigate();
-  function initChat() {
-    const messages = loaderData().chat.messages ?? { children: [], value: null };
-    const tree = Tree.fromJSON<TMessage>(messages);
-    updateMessages({ messages: tree, path: getLatestPath(tree) });
-  }
-  createRenderEffect(() => untrack(initChat));
+
   const { chat, ChatPage } = useChatPage(() => ({
     chatSettings: loaderData().chatSettings,
     id: loaderData().id,
