@@ -239,7 +239,13 @@ export class OpenAIAdapter implements TAdapter {
     return delta.tool_calls.map((tool_calls) =>
       tool_calls.map((tool_call) => ({
         arguments: tool_call.function.andThen((f) => f.arguments),
-        id: tool_call.id.unwrapOrElse(() => lastToolCallId.unwrap()),
+        id: tool_call.id
+          .filter((id) => id !== '')
+          .unwrapOrElse(() =>
+            lastToolCallId.expect(
+              "if we don't get an id then we expect we must have gotten 1 in previous turns"
+            )
+          ),
         name: tool_call.function.andThen((f) => f.name)
       }))
     );
@@ -247,7 +253,7 @@ export class OpenAIAdapter implements TAdapter {
 
   transformMessageChunksToRequestMessages(
     messages: TMessage[],
-    opts?: Partial<{ includeReasoningContent: boolean }>
+    opts: Partial<{ includeReasoningContent: boolean }> = {}
   ) {
     const { includeReasoningContent = true } = opts;
     const retval = [] as TOpenAIChatCompletionRequest['messages'][];
