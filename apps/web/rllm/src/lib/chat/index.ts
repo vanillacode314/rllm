@@ -100,8 +100,8 @@ export function handleCompletion(opts: {
                   id,
                   success: null,
                   tool: {
-                    arguments: args.unwrap(),
-                    name: name.unwrap()
+                    arguments: args.unwrapOr(''),
+                    name: name.unwrapOr('')
                   },
                   type: 'tool_call'
                 };
