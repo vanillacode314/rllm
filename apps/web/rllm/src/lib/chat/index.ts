@@ -11,6 +11,7 @@ import { formatError } from '~/utils/errors';
 import { produce } from '~/utils/immer';
 
 export function handleCompletion(opts: {
+  sessionId: string;
   adapter: TAdapter;
   messages: TMessage[];
   model: string;
@@ -25,7 +26,16 @@ export function handleCompletion(opts: {
 }): AsyncResult<void, Error> {
   return tryBlock(
     async function* () {
-      const { adapter, model, onUpdate, reasoningEffort = 'medium', signal, system, tools } = opts;
+      const {
+        sessionId,
+        adapter,
+        model,
+        onUpdate,
+        reasoningEffort = 'medium',
+        signal,
+        system,
+        tools
+      } = opts;
       let messages = structuredClone(opts.messages);
 
       const producedChunks = [] as TLLMMessageChunk[];
@@ -46,6 +56,7 @@ export function handleCompletion(opts: {
       if (signal) signal.addEventListener('abort', () => controller.abort());
       while (!controller.signal.aborted) {
         const generator = adapter.generateCompletion({
+          sessionId,
           messages,
           model,
           reasoningEffort,

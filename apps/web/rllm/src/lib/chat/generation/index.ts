@@ -342,6 +342,7 @@ export class ChatGenerationManager {
       { wait: 16 }
     );
     const promise = handleCompletion({
+      sessionId: chat.id,
       adapter,
       messages,
       model: chat.settings.modelId,

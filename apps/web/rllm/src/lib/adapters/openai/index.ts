@@ -59,6 +59,7 @@ export class OpenAIAdapter implements TAdapter {
   }
 
   async *generateCompletion(opts: {
+    sessionId: string;
     messages: TMessage[];
     model: string;
     reasoningEffort: 'high' | 'low' | 'medium' | 'minimal' | 'none' | 'xhigh';
@@ -66,7 +67,7 @@ export class OpenAIAdapter implements TAdapter {
     system?: string;
     tools?: TTool[];
   }): AsyncGenerator<TChatCompletionChunk, TChatCompletionLastChunk, void> {
-    const { messages, model, reasoningEffort, signal, system, tools } = opts;
+    const { sessionId, messages, model, reasoningEffort, signal, system, tools } = opts;
 
     const requestBody = this.buildRequestBody({
       messages,
@@ -92,7 +93,10 @@ export class OpenAIAdapter implements TAdapter {
       ])
       .addon(abortAddon());
     if (signal) stream = stream.signal({ abort: () => {}, signal });
-    const response = await stream.post(requestBody, '/chat/completions').res();
+    const response = await stream
+      .headers({ 'x-opencode-session': sessionId })
+      .post(requestBody, '/chat/completions')
+      .res();
 
     if (!response.ok) {
       const text = await response.text();
