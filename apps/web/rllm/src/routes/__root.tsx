@@ -33,6 +33,8 @@ import { clearData } from '~/utils/storage';
 import { account } from '~/signals/account';
 import { peerJSTransportFactory } from '~/sockets/transports/peerjs';
 import { irohTransportFactory } from '~/sockets/transports/iroh';
+import { fetchers } from '~/queries';
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 
 export const Route = createRootRouteWithContext()({
   beforeLoad: once(async () => {
@@ -44,7 +46,11 @@ export const Route = createRootRouteWithContext()({
     console.debug('[Finished DB Setup]');
     await initChatSettings();
 
-    void ProxyManager.initialize().finally(() => void MCPManager.initialize());
+    async function initProxyManager() {
+      const proxyUrl = await fetchers.userMetadata.byId(USER_METADATA_KEYS.CORS_PROXY_URL);
+      await ProxyManager.initialize(proxyUrl);
+    }
+    void initProxyManager().finally(() => void MCPManager.initialize());
     void BackgroundTaskManager.init();
 
     const debouncedMcpInitialized = debounce(() => MCPManager.initialize(), { wait: 1000 });

@@ -1,48 +1,34 @@
 import type { ConfiguredMiddleware } from 'wretch';
 
-import { createSignal } from 'solid-js';
-
 import { PROXY_HEALTH_CHECK_INTERVAL_MS, PROXY_HEALTH_CHECK_TIMEOUT_MS } from '~/constants/proxy';
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
-import { fetchers } from '~/queries';
+import { Event } from 'event-bus';
 
-export type TProxyHealthStatus = 'failed' | 'passing' | 'untested';
+export type TProxyHealthStatus = 'failed' | 'passing' | 'untested' | 'unset';
 
 export class ProxyManager {
-  static get proxyHealthStatus() {
-    return this.#status[0];
-  }
-  static get proxyUrl() {
-    return this.#proxyUrl[0];
-  }
   static #healthCheckInterval: null | ReturnType<typeof setTimeout> = null;
-  static #proxyUrl = createSignal<null | string>(null);
-  static #status = createSignal<TProxyHealthStatus>('untested');
-  static #subscribers = new Set<(status: TProxyHealthStatus) => void>();
+  static #proxyUrl: null | string = null;
+  static #status: TProxyHealthStatus = 'untested';
+  static #statusEvent = new Event<TProxyHealthStatus>();
 
   static async checkHealth(): Promise<void> {
-    const proxy = this.#proxyUrl[0]();
-    if (!proxy) {
+    if (!this.#proxyUrl) {
       console.debug('[Proxy] No proxy configured');
-      this.#status[1]('passing');
+      this.#status = 'unset';
       return;
     }
-    const isHealthy = await this.#testProxyHealth(proxy);
+    const isHealthy = await this.#testProxyHealth(this.#proxyUrl);
     console.debug('[Proxy] Health check result:', isHealthy ? 'passing' : 'failed');
-    this.#status[1](isHealthy ? 'passing' : 'failed');
-    for (const subscriber of this.#subscribers) {
-      subscriber(this.#status[0]());
+    const oldStatus = this.#status;
+    this.#status = isHealthy ? 'passing' : 'failed';
+    if (oldStatus !== this.#status) {
+      this.#statusEvent.emit(this.#status);
     }
     this.#scheduleHealthRecheck();
   }
-  static getEffectiveProxyUrl(): null | string {
-    if (this.#status[0]() === 'failed') return null;
-    return this.#proxyUrl[0]();
-  }
 
-  static async initialize(): Promise<void> {
-    const url = await fetchers.userMetadata.byId(USER_METADATA_KEYS.CORS_PROXY_URL);
-    this.#proxyUrl[1](url);
+  static async initialize(proxyUrl: string | null): Promise<void> {
+    this.#proxyUrl = proxyUrl;
     await this.checkHealth();
   }
 
@@ -51,19 +37,18 @@ export class ProxyManager {
   }
 
   static proxifyUrl(url: string): string {
-    const proxy = this.getEffectiveProxyUrl();
-    return proxy ? proxy.replace('%s', url) : url;
+    if (this.#status !== 'passing') return url;
+    return this.#proxyUrl ? this.#proxyUrl.replace('%s', url) : url;
   }
 
   static subscribe(callback: (status: TProxyHealthStatus) => void) {
-    this.#subscribers.add(callback);
-    callback(this.#status[0]());
-    return () => this.#subscribers.delete(callback);
+    callback(this.#status);
+    return this.#statusEvent.subscribe(callback);
   }
 
   static async updateProxyUrl(url: null | string): Promise<void> {
-    this.#proxyUrl[1](url);
-    this.#status[1]('untested');
+    this.#proxyUrl = url;
+    this.#status = 'untested';
     await this.checkHealth();
   }
 
