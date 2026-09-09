@@ -1,14 +1,22 @@
+import { Event } from 'event-bus';
 import * as z from 'zod/mini';
 
-import type { TTransportFactory, TTransport, TSignal } from '.';
+import type { TSignal, TTransport, TTransportFactory } from '.';
 
 class WebRTCEndpoint {
-  #pc = new RTCPeerConnection();
-  #pendingIceCandidates = new Array<RTCIceCandidate>();
-  #subscribers = new Map<'error' | 'signal' | 'close', Set<(...args: any[]) => void>>();
+  #closeEvent = new Event<void>();
+  onClose = this.#closeEvent.subscribe.bind(this.#closeEvent);
+  #errorEvent = new Event<void>();
+  onError = this.#errorEvent.subscribe.bind(this.#errorEvent);
+  #signalEvent = new Event<{ remoteId: string; signal: TSignal }>();
+
+  onSignal = this.#signalEvent.subscribe.bind(this.#signalEvent);
   get maxMessageSize() {
     return this.#pc.sctp?.maxMessageSize;
   }
+  #pc = new RTCPeerConnection();
+
+  #pendingIceCandidates = new Array<RTCIceCandidate>();
   async acceptAnswer(answer: RTCSessionDescriptionInit) {
     await this.#pc.setRemoteDescription(answer);
     while (this.#pendingIceCandidates.length > 0) {
@@ -26,21 +34,21 @@ class WebRTCEndpoint {
     };
     this.#pc.onicecandidate = ({ candidate }) => {
       if (!candidate) return;
-      this.emitSignal(id, { data: candidate, type: 'ice' });
+      this.#signalEvent.emit({ remoteId: id, signal: { data: candidate, type: 'ice' } });
     };
     this.#pc.onconnectionstatechange = () => {
       if (this.#pc.connectionState === 'closed') {
-        this.emitClose();
+        this.#closeEvent.emit();
         return;
       }
       if (this.#pc.connectionState === 'failed') {
-        this.emitError();
+        this.#errorEvent.emit();
         return;
       }
       if (this.#pc.connectionState === 'disconnected') {
         setTimeout(() => {
           if (this.#pc.connectionState === 'disconnected') {
-            this.emitClose();
+            this.#closeEvent.emit();
           }
         }, 2000);
         return;
@@ -54,14 +62,8 @@ class WebRTCEndpoint {
     }
     const answer = await this.#pc.createAnswer();
     await this.#pc.setLocalDescription(answer);
-    this.emitSignal(id, { data: answer, type: 'answer' });
+    this.#signalEvent.emit({ remoteId: id, signal: { data: answer, type: 'answer' } });
     return promise;
-  }
-  onSignal(handler: (to: string, signal: object) => void) {
-    const subscribers = this.#subscribers.get('signal') ?? new Set();
-    subscribers.add(handler);
-    this.#subscribers.set('signal', subscribers);
-    return () => this.#subscribers.get('signal')?.delete(handler);
   }
   async addIceCandidate(candidate: RTCIceCandidate) {
     if (this.#pc.remoteDescription) {
@@ -70,33 +72,26 @@ class WebRTCEndpoint {
       this.#pendingIceCandidates.push(candidate);
     }
   }
-  emitClose() {
-    const subscribers = this.#subscribers.get('close');
-    if (!subscribers) return;
-    for (const handler of subscribers) {
-      handler();
-    }
-  }
   async connect(id: string) {
     const { promise, reject, resolve } = Promise.withResolvers<RTCDataChannel>();
     const dc = this.#pc.createDataChannel('sync');
     this.#pc.onicecandidate = ({ candidate }) => {
       if (!candidate) return;
-      this.emitSignal(id, { data: candidate, type: 'ice' });
+      this.#signalEvent.emit({ remoteId: id, signal: { data: candidate, type: 'ice' } });
     };
     this.#pc.onconnectionstatechange = () => {
       if (this.#pc.connectionState === 'closed') {
-        this.emitClose();
+        this.#closeEvent.emit();
         return;
       }
       if (this.#pc.connectionState === 'failed') {
-        this.emitError();
+        this.#errorEvent.emit();
         return;
       }
       if (this.#pc.connectionState === 'disconnected') {
         setTimeout(() => {
           if (this.#pc.connectionState === 'disconnected') {
-            this.emitClose();
+            this.#closeEvent.emit();
           }
         }, 2000);
         return;
@@ -106,51 +101,36 @@ class WebRTCEndpoint {
     dc.onerror = reject;
     const offer = await this.#pc.createOffer();
     this.#pc.setLocalDescription(offer);
-    this.emitSignal(id, { data: offer, type: 'offer' });
+    this.#signalEvent.emit({ remoteId: id, signal: { data: offer, type: 'offer' } });
     return promise;
-  }
-  onClose(fn: () => void): () => void {
-    const subscribers = this.#subscribers.get('close') ?? new Set();
-    subscribers.add(fn);
-    this.#subscribers.set('close', subscribers);
-    return () => this.#subscribers.get('close')?.delete(fn);
-  }
-  emitSignal(to: string, signal: object) {
-    const subscribers = this.#subscribers.get('signal');
-    if (!subscribers) return;
-    for (const handler of subscribers) {
-      handler(to, signal);
-    }
-  }
-  onError(fn: (error: Error) => void) {
-    const subscribers = this.#subscribers.get('error') ?? new Set();
-    subscribers.add(fn);
-    this.#subscribers.set('error', subscribers);
-    return () => this.#subscribers.get('error')?.delete(fn);
-  }
-  emitError(error?: Error) {
-    const subscribers = this.#subscribers.get('error');
-    if (!subscribers) return;
-    for (const handler of subscribers) {
-      handler(error);
-    }
   }
 }
 
 class WebRTCTransport implements TTransport {
-  id = 'WebRTC';
-  subscribers = new Map<'message', Set<(data: Uint8Array<ArrayBuffer>) => void>>();
-  started = false;
+  get id() {
+    return 'WebRTC';
+  }
   get ready() {
     return this.dc.readyState === 'open';
   }
+
+  #messageEvent = new Event<Uint8Array<ArrayBuffer>>();
+
+  #started = false;
+
   constructor(
-    readonly dc: RTCDataChannel,
-    readonly maxMessageSize: number = 16384
+    private readonly dc: RTCDataChannel,
+    private readonly maxMessageSize: number = 16384
   ) {}
 
   close() {
     this.dc.close();
+  }
+
+  onMessage(fn: (data: Uint8Array<ArrayBuffer>) => void) {
+    const unsubscribe = this.#messageEvent.subscribe(fn);
+    this.startReadLoop();
+    return unsubscribe;
   }
 
   async readExact(bytes: number, reader: ReadableStreamDefaultReader<Uint8Array<ArrayBuffer>>) {
@@ -163,42 +143,6 @@ class WebRTCTransport implements TTransport {
       offset += value.length;
     }
     return data;
-  }
-
-  async startReadLoop() {
-    if (this.started) return;
-    this.started = true;
-
-    const stream = new ReadableStream({
-      start: (controller) => {
-        this.dc.onmessage = (e) => controller.enqueue(new Uint8Array(e.data));
-        this.dc.onclose = () => controller.close();
-      }
-    });
-    const reader = stream.getReader();
-    while (true) {
-      const header = await this.readExact(4, reader);
-      const view = new DataView(header.buffer, header.byteOffset, header.byteLength);
-      const messageLength = view.getUint32(0, true);
-      const message = await this.readExact(messageLength, reader);
-      this.emitMessage(message);
-    }
-  }
-
-  emitMessage(data: Uint8Array<ArrayBuffer>) {
-    const subscribers = this.subscribers.get('message');
-    if (!subscribers) return;
-    for (const handler of subscribers) {
-      handler(data);
-    }
-  }
-
-  onmessage(fn: (data: Uint8Array<ArrayBuffer>) => void) {
-    const subscribers = this.subscribers.get('message') ?? new Set();
-    subscribers.add(fn);
-    this.subscribers.set('message', subscribers);
-    this.startReadLoop();
-    return () => this.subscribers.get('message')?.delete(fn);
   }
 
   send(data: Uint8Array<ArrayBuffer>) {
@@ -214,59 +158,50 @@ class WebRTCTransport implements TTransport {
       left -= chunk.byteLength;
     }
   }
+
+  async startReadLoop() {
+    if (this.#started) return;
+    this.#started = true;
+
+    const stream = new ReadableStream({
+      start: (controller) => {
+        this.dc.onmessage = (e) => controller.enqueue(new Uint8Array(e.data));
+        this.dc.onclose = () => controller.close();
+      }
+    });
+    const reader = stream.getReader();
+    while (true) {
+      const header = await this.readExact(4, reader);
+      const view = new DataView(header.buffer, header.byteOffset, header.byteLength);
+      const messageLength = view.getUint32(0, true);
+      const message = await this.readExact(messageLength, reader);
+      this.#messageEvent.emit(message);
+    }
+  }
 }
 
 class WebRTCTransportFactory implements TTransportFactory {
-  id = 'WebRTC';
-  peers = new Map<string, WebRTCEndpoint>();
-  subscribers = new Map<
-    'error' | 'close' | 'signal' | 'transport',
-    Set<(...args: any[]) => void>
-  >();
-  ready = () => Promise.resolve();
+  #closeEvent = new Event<string>();
+  onClose = this.#closeEvent.subscribe.bind(this.#closeEvent);
+  #errorEvent = new Event<{ error: unknown; remoteId: string; }>();
+  onError = this.#errorEvent.subscribe.bind(this.#errorEvent);
+  #newTransportEvent = new Event<{ remoteId: string; transport: TTransport }>();
 
-  onNewTransport(handler: (remoteId: string, transport: TTransport) => void) {
-    const subscribers = this.subscribers.get('transport') ?? new Set();
-    subscribers.add(handler);
-    this.subscribers.set('transport', subscribers);
-    return () => this.subscribers.get('transport')?.delete(handler);
+  onNewTransport = this.#newTransportEvent.subscribe.bind(this.#newTransportEvent);
+
+  #signalEvent = new Event<{ remoteId: string; signal: TSignal }>();
+
+  onSignal = this.#signalEvent.subscribe.bind(this.#signalEvent);
+  get id() {
+    return 'WebRTC';
   }
-
-  onError(fn: (remoteId: string, error: unknown) => void) {
-    const subscribers = this.subscribers.get('error') ?? new Set();
-    subscribers.add(fn);
-    this.subscribers.set('error', subscribers);
-    return () => this.subscribers.get('error')?.delete(fn);
-  }
-
-  emitError(remoteId: string, error?: Error) {
-    const subscribers = this.subscribers.get('error');
-    if (!subscribers) return;
-    for (const handler of subscribers) {
-      handler(remoteId, error);
-    }
-  }
-
-  onClose(fn: (remoteId: string) => void) {
-    const subscribers = this.subscribers.get('close') ?? new Set();
-    subscribers.add(fn);
-    this.subscribers.set('close', subscribers);
-    return () => this.subscribers.get('close')?.delete(fn);
-  }
-
-  onSignal(handler: (remoteId: string, signal: TSignal) => void) {
-    const subscribers = this.subscribers.get('signal') ?? new Set();
-    subscribers.add(handler);
-    this.subscribers.set('signal', subscribers);
-    return () => void this.subscribers.get('signal')?.delete(handler);
-  }
-
+  #peers = new Map<string, WebRTCEndpoint>();
   async connect(remoteId: string) {
     const peer = new WebRTCEndpoint();
-    peer.onSignal((to, signal) => this.emitSignal(to, signal));
-    peer.onClose(() => this.emitClose(remoteId));
-    peer.onError((error) => this.emitError(remoteId, error));
-    this.peers.set(remoteId, peer);
+    peer.onSignal((payload) => this.#signalEvent.emit(payload));
+    peer.onClose(() => this.#closeEvent.emit(remoteId));
+    peer.onError((error) => this.#errorEvent.emit({ error, remoteId }));
+    this.#peers.set(remoteId, peer);
     const dc = await peer.connect(remoteId);
     return new WebRTCTransport(dc, peer.maxMessageSize);
   }
@@ -291,55 +226,33 @@ class WebRTCTransportFactory implements TTransportFactory {
     const parsedSignal = result.data;
     switch (parsedSignal.type) {
       case 'answer': {
-        const peer = this.peers.get(remoteId);
+        const peer = this.#peers.get(remoteId);
         if (!peer) return;
         await peer.acceptAnswer(parsedSignal.data);
         break;
       }
       case 'ice': {
-        const peer = this.peers.get(remoteId);
+        const peer = this.#peers.get(remoteId);
         if (!peer) return;
         peer.addIceCandidate(parsedSignal.data);
         break;
       }
       case 'offer': {
-        if (this.peers.has(remoteId)) return;
+        if (this.#peers.has(remoteId)) return;
         const peer = new WebRTCEndpoint();
-        peer.onSignal((to, signal) => this.emitSignal(to, signal));
-        peer.onClose(() => this.emitClose(remoteId));
-        peer.onError((error) => this.emitError(remoteId, error));
-        this.peers.set(remoteId, peer);
+        peer.onSignal((payload) => this.#signalEvent.emit(payload));
+        peer.onClose(() => this.#closeEvent.emit(remoteId));
+        peer.onError((error) => this.#errorEvent.emit({ error, remoteId }));
+        this.#peers.set(remoteId, peer);
         const dc = await peer.acceptOffer(remoteId, parsedSignal.data);
         const transport = new WebRTCTransport(dc, peer.maxMessageSize);
-        this.emitNewTransport(remoteId, transport);
+        this.#newTransportEvent.emit({ remoteId, transport });
         break;
       }
     }
   }
 
-  emitNewTransport(remoteId: string, transport: TTransport) {
-    const subscribers = this.subscribers.get('transport');
-    if (!subscribers) return;
-    for (const handler of subscribers) {
-      handler(remoteId, transport);
-    }
-  }
-
-  emitClose(remoteId: string) {
-    const subscribers = this.subscribers.get('close');
-    if (!subscribers) return;
-    for (const handler of subscribers) {
-      handler(remoteId);
-    }
-  }
-
-  emitSignal(to: string, signal: object) {
-    const subscribers = this.subscribers.get('signal');
-    if (!subscribers) return;
-    for (const handler of subscribers) {
-      handler(to, signal);
-    }
-  }
+  ready = () => Promise.resolve();
 }
 
 export const webRTCTransportFactory = new WebRTCTransportFactory();

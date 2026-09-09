@@ -6,23 +6,27 @@ import { account } from '~/signals/account';
 import { env } from '~/utils/env';
 import { isOnline } from '~/utils/signals';
 
-import { ConnectionManager } from '../messages';
-import { createPeerSocket } from '../utils';
 import type { TTransport } from '.';
 
+import { ConnectionManager } from '../messages';
+import { createPeerSocket } from '../utils';
+
 export class WebsocketTransport implements TTransport {
-  id = 'WS';
+  get id() {
+    return 'WS';
+  }
+
   get ready() {
     return this.ws.readyState === WebSocket.OPEN;
   }
 
-  constructor(readonly ws: WebSocket) {}
+  constructor(private readonly ws: WebSocket) {}
 
   close() {
     this.ws.close();
   }
 
-  onmessage(fn: (data: Uint8Array<ArrayBuffer>) => void) {
+  onMessage(fn: (data: Uint8Array<ArrayBuffer>) => void) {
     const handler = async (e: MessageEvent) => fn(new Uint8Array(await e.data.arrayBuffer()));
     this.ws.addEventListener('message', handler);
     return () => this.ws.removeEventListener('message', handler);

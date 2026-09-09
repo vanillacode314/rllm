@@ -1,157 +1,50 @@
 import { BiStream, Connection, Endpoint, EndpointAddr } from '@salvatoret/iroh';
+import { Event } from 'event-bus';
 import * as z from 'zod/mini';
 
-import type { TTransportFactory, TTransport, TSignal } from '.';
+import type { TSignal, TTransport, TTransportFactory } from '.';
 
 const ALPN = new TextEncoder().encode('rllm/1');
 
-export class IrohTransport implements TTransport {
-  id = 'Iroh';
-  subscribers = new Map<'message' | 'error', Set<(...args: any[]) => void>>();
-  started = false;
-
-  get ready() {
-    return this.conn.closeReason() === undefined;
-  }
-
-  onError(fn: (error: unknown) => void) {
-    const subscribers = this.subscribers.get('error') ?? new Set();
-    subscribers.add(fn);
-    this.subscribers.set('error', subscribers);
-    return () => this.subscribers.get('error')?.delete(fn);
-  }
-
-  emitError(error?: unknown) {
-    const subscribers = this.subscribers.get('error');
-    if (!subscribers) return;
-    for (const handler of subscribers) {
-      handler(error);
-    }
-  }
-
-  emitMessage(data: Uint8Array<ArrayBuffer>) {
-    const subscribers = this.subscribers.get('message');
-    if (!subscribers) return;
-    for (const handler of subscribers) {
-      handler(data);
-    }
-  }
-
-  constructor(
-    private readonly conn: Connection,
-    private readonly stream: BiStream
-  ) {}
-
-  close() {
-    this.stream.send.finish();
-    this.conn.close(0, new Uint8Array());
-  }
-
-  async readExact(byteLength: number) {
-    const data = new Uint8Array(byteLength);
-    let read = 0;
-    while (read < byteLength) {
-      try {
-        const chunk = await this.stream.recv.readChunk(byteLength - read);
-        if (!chunk) throw new Error('No chunk, stream closed');
-        data.set(chunk, read);
-        read += chunk.byteLength;
-      } catch (error) {
-        this.emitError(error);
-        throw error;
-      }
-    }
-    return data;
-  }
-
-  async startReadLoop() {
-    this.started = true;
-    while (true) {
-      const header = (await this.readExact(4))!;
-      if (!this.ready) return;
-
-      const view = new DataView(header.buffer, header.byteOffset, header.byteLength);
-      const messageLength = view.getUint32(0, true);
-      const message = await this.readExact(messageLength);
-      if (!this.ready) return;
-
-      this.emitMessage(message as Uint8Array<ArrayBuffer>);
-    }
-  }
-
-  onmessage(fn: (data: Uint8Array<ArrayBuffer>) => void) {
-    const subscribers = this.subscribers.get('message') ?? new Set();
-    subscribers.add(fn);
-    this.subscribers.set('message', subscribers);
-    if (!this.started) this.startReadLoop();
-    return () => this.subscribers.get('message')?.delete(fn);
-  }
-
-  send(data: Uint8Array<ArrayBuffer>) {
-    const header = new Uint8Array(4);
-    const view = new DataView(header.buffer, header.byteOffset, header.byteLength);
-    view.setUint32(0, data.byteLength, true);
-    this.stream.send
-      .write(header)
-      .then(() => this.stream.send.write(data))
-      .catch(() => this.emitError(new Error('Failed to send message')));
-  }
-}
-
 class IrohTransportFactory implements TTransportFactory {
-  id = 'Iroh';
-  endpoints = new Map<string, Endpoint>();
-  subscribers = new Map<
-    'error' | 'signal' | 'transport' | 'close',
-    Set<(...args: any[]) => void>
-  >();
-  closed = false;
+  #closeEvent = new Event<string>({ once: true });
+  onClose = this.#closeEvent.subscribe.bind(this.#closeEvent);
+  #errorEvent = new Event<{ error: unknown; remoteId: string; }>();
+  onError = this.#errorEvent.subscribe.bind(this.#errorEvent);
+  #newTransportEvent = new Event<{ remoteId: string; transport: TTransport }>();
 
-  ready = () => Promise.resolve();
+  onNewTransport = this.#newTransportEvent.subscribe.bind(this.#newTransportEvent);
 
-  emitNewTransport(remoteId: string, transport: TTransport) {
-    const subscribers = this.subscribers.get('transport');
-    if (!subscribers) return;
-    for (const handler of subscribers) {
-      handler(remoteId, transport);
-    }
+  #signalEvent = new Event<{ remoteId: string; signal: TSignal }>();
+
+  onSignal = this.#signalEvent.subscribe.bind(this.#signalEvent);
+  get id() {
+    return 'Iroh';
   }
 
-  onNewTransport(handler: (remoteId: string, transport: TTransport) => void) {
-    const subscribers = this.subscribers.get('transport') ?? new Set();
-    subscribers.add(handler);
-    this.subscribers.set('transport', subscribers);
-    return () => this.subscribers.get('transport')?.delete(handler);
-  }
-
-  onClose(fn: (remoteId: string) => void) {
-    const subscribers = this.subscribers.get('close') ?? new Set();
-    subscribers.add(fn);
-    this.subscribers.set('close', subscribers);
-    return () => this.subscribers.get('close')?.delete(fn);
-  }
+  #endpoints = new Map<string, Endpoint>();
 
   async connect(remoteId: string) {
-    if (this.endpoints.has(remoteId)) throw new Error('Already connected');
+    if (this.#endpoints.has(remoteId)) throw new Error('Already connected');
     const node = await Endpoint.create();
     await node.online();
-    this.endpoints.set(remoteId, node);
+    this.#endpoints.set(remoteId, node);
     node.setAlpns([ALPN]);
 
     const addr = node.endpointAddr();
-    this.emitSignal(remoteId, { data: addr.endpointId(), type: 'iroh' });
+    this.#signalEvent.emit({ remoteId, signal: { data: addr.endpointId(), type: 'iroh' } });
 
     const conn = await node.accept();
     if (!conn) throw new Error('No connection');
 
     const stream = await conn.acceptBi();
     const transport = new IrohTransport(conn, stream);
-    transport.onError((error) => this.emitError(remoteId, error));
+    transport.onError((error) => this.#errorEvent.emit({ error, remoteId }));
     return transport;
   }
 
   async handleSignal(remoteId: string, signal: TSignal) {
-    if (this.endpoints.has(remoteId)) return;
+    if (this.#endpoints.has(remoteId)) return;
     const signalSchema = z.discriminatedUnion('type', [
       z.object({
         data: z.string(),
@@ -165,53 +58,89 @@ class IrohTransportFactory implements TTransportFactory {
 
     const node = await Endpoint.create();
     await node.online();
-    this.endpoints.set(remoteId, node);
+    this.#endpoints.set(remoteId, node);
 
     const conn = await node.connect(remoteAddr, ALPN);
     const stream = await conn.openBi();
     const transport = new IrohTransport(conn, stream);
-    transport.onError((error) => this.emitError(remoteId, error));
-    this.emitNewTransport(remoteId, transport);
+    transport.onError((error) => this.#errorEvent.emit({ error, remoteId }));
+    this.#newTransportEvent.emit({ remoteId, transport });
+  }
+  ready = () => Promise.resolve();
+}
+
+export class IrohTransport implements TTransport {
+  #errorEvent = new Event();
+  onError = this.#errorEvent.subscribe.bind(this.#errorEvent);
+  get id() {
+    return 'Iroh';
   }
 
-  emitClose(remoteId: string) {
-    if (this.closed) return;
-    this.closed = true;
-    const subscribers = this.subscribers.get('close');
-    if (!subscribers) return;
-    for (const handler of subscribers) {
-      handler(remoteId);
+  get ready() {
+    return this.conn.closeReason() === undefined;
+  }
+
+  #messageEvent = new Event<Uint8Array<ArrayBuffer>>();
+
+  #readLoopInitialized = false;
+
+  constructor(
+    private readonly conn: Connection,
+    private readonly stream: BiStream
+  ) {}
+
+  close() {
+    this.stream.send.finish();
+    this.conn.close(0, new Uint8Array());
+  }
+
+  async initializeReadLoop() {
+    if (this.#readLoopInitialized) return;
+    this.#readLoopInitialized = true;
+    while (true) {
+      const header = (await this.readExact(4))!;
+      if (!this.ready) return;
+
+      const view = new DataView(header.buffer, header.byteOffset, header.byteLength);
+      const messageLength = view.getUint32(0, true);
+      const message = await this.readExact(messageLength);
+      if (!this.ready) return;
+
+      this.#messageEvent.emit(message);
     }
   }
 
-  onError(fn: (remoteId: string, error: unknown) => void) {
-    const subscribers = this.subscribers.get('error') ?? new Set();
-    subscribers.add(fn);
-    this.subscribers.set('error', subscribers);
-    return () => this.subscribers.get('error')?.delete(fn);
+  onMessage(fn: (data: Uint8Array<ArrayBuffer>) => void) {
+    const unsubscribe = this.#messageEvent.subscribe(fn);
+    this.initializeReadLoop();
+    return unsubscribe;
   }
 
-  emitError(remoteId: string, error?: unknown) {
-    const subscribers = this.subscribers.get('error');
-    if (!subscribers) return;
-    for (const handler of subscribers) {
-      handler(remoteId, error);
+  async readExact(byteLength: number) {
+    const data = new Uint8Array(byteLength);
+    let read = 0;
+    while (read < byteLength) {
+      try {
+        const chunk = await this.stream.recv.readChunk(byteLength - read);
+        if (!chunk) throw new Error('No chunk, stream closed');
+        data.set(chunk, read);
+        read += chunk.byteLength;
+      } catch (error) {
+        this.#errorEvent.emit(error);
+        throw error;
+      }
     }
+    return data;
   }
 
-  onSignal(handler: (to: string, signal: TSignal) => void) {
-    const subscribers = this.subscribers.get('signal') ?? new Set();
-    subscribers.add(handler);
-    this.subscribers.set('signal', subscribers);
-    return () => void this.subscribers.get('signal')?.delete(handler);
-  }
-
-  emitSignal(to: string, signal: object) {
-    const subscribers = this.subscribers.get('signal');
-    if (!subscribers) return;
-    for (const handler of subscribers) {
-      handler(to, signal);
-    }
+  send(data: Uint8Array<ArrayBuffer>) {
+    const header = new Uint8Array(4);
+    const view = new DataView(header.buffer, header.byteOffset, header.byteLength);
+    view.setUint32(0, data.byteLength, true);
+    this.stream.send
+      .write(header)
+      .then(() => this.stream.send.write(data))
+      .catch(() => this.#errorEvent.emit(new Error('Failed to send message')));
   }
 }
 
