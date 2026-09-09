@@ -9,12 +9,6 @@ import (
 	"proto/peers"
 )
 
-var ZeroDigest = []byte{}
-
-func IsZeroDigest(digest []byte) bool {
-	return len(digest) == 0
-}
-
 func Unique[T comparable](items []T) []T {
 	seen := make(map[T]struct{}, len(items))
 	out := make([]T, 0, len(items))
@@ -64,12 +58,12 @@ func ResolveDigest(tree *merkletree.MerkleTree[string, string], merkleDepth uint
 	}
 	prefixLen := maxDepth - tree.MaxDepth()
 	if tree.IsEmpty() || isVirtualPath(segments, prefixLen) {
-		return ZeroDigest, ""
+		return []byte{}, ""
 	}
 	path := SegmentsToInts(segments[prefixLen:])
 	digest, err := tree.GetHash(path)
 	if err != nil || digest == nil {
-		return ZeroDigest, ""
+		return []byte{}, ""
 	}
 	timestamp := tree.GetMetaByPath(path)
 	if timestamp == nil {
@@ -117,30 +111,40 @@ func HandleDigestUpdate(tree *merkletree.MerkleTree[string, string], merkleDepth
 	if t := tree.MaxDepth(); t > maxDepth {
 		maxDepth = t
 	}
+	lastTimestamp, mismatchPath := findMismatch(tree, merkleDepth, updates)
+	if mismatchPath == nil {
+		return nil
+	}
+	isLeafNode := len(*mismatchPath) == maxDepth
+	if isLeafNode {
+		return &Action{Kind: KindAskTimestamp, Timestamp: lastTimestamp}
+	}
+	return &Action{Kind: KindQueryChildren, Children: makeChildPaths(*mismatchPath, tree.Arity())}
+}
+
+func makeChildPaths(basePath []uint32, arity int) [][]uint32 {
+	children := make([][]uint32, 0, arity)
+	for i := range arity {
+		child := make([]uint32, 0, len(basePath)+1)
+		child = append(child, basePath...)
+		child = append(child, uint32(i))
+		children = append(children, child)
+	}
+	return children
+}
+
+func findMismatch(tree *merkletree.MerkleTree[string, string], merkleDepth uint32, updates []*peers.DigestUpdate) (string, *[]uint32) {
 	lastTimestamp := ""
 	for _, update := range updates {
 		path := update.Path
 		theirDigest := update.Digest
 		ourDigest, _ := ResolveDigest(tree, merkleDepth, path)
-		if !DigestsDiffer(theirDigest, ourDigest) {
-			lastTimestamp = update.Timestamp
-			continue
+		if DigestsDiffer(theirDigest, ourDigest) {
+			return lastTimestamp, &update.Path
 		}
-		isLeafNode := len(path) == maxDepth
-		if !isLeafNode {
-			children := make([][]uint32, 0, tree.Arity())
-			for i := range tree.Arity() {
-				child := make([]uint32, 0, len(path)+1)
-				child = append(child, path...)
-				child = append(child, uint32(i))
-				children = append(children, child)
-			}
-			return &Action{Kind: KindQueryChildren, Children: children}
-		}
-
-		return &Action{Kind: KindAskTimestamp, Timestamp: lastTimestamp}
+		lastTimestamp = update.Timestamp
 	}
-	return nil
+	return lastTimestamp, nil
 }
 
 // SegmentsToInts converts a proto path (uint32) to the int path used by the

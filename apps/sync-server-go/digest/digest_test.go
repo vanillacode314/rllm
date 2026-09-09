@@ -17,19 +17,10 @@ func buildTree(t *testing.T, timestamps ...string) *merkletree.MerkleTree[string
 	}
 	items := make([]merkletree.Item[string, string], 0, len(timestamps))
 	for _, ts := range timestamps {
-		items = append(items, merkletree.Item[string, string]{Meta: merkletree.MetaOf(ts), Value: ts})
+		items = append(items, merkletree.Item[string, string]{Meta: &ts, Value: ts})
 	}
 	tree.Insert(items)
 	return tree
-}
-
-func TestIsZeroDigest(t *testing.T) {
-	if !IsZeroDigest(nil) || !IsZeroDigest([]byte{}) {
-		t.Fatal("expected empty digests to be zero")
-	}
-	if IsZeroDigest([]byte{0}) {
-		t.Fatal("expected single zero byte not to be zero digest")
-	}
 }
 
 func TestUnique(t *testing.T) {
@@ -50,7 +41,7 @@ func TestResolveDigest(t *testing.T) {
 
 	t.Run("real path returns hash", func(t *testing.T) {
 		d, _ := ResolveDigest(tree, 0, []uint32{})
-		if IsZeroDigest(d) {
+		if len(d) == 0 {
 			t.Fatal("expected root digest for non-empty tree")
 		}
 	})
@@ -60,7 +51,7 @@ func TestResolveDigest(t *testing.T) {
 			t.Fatal(err)
 		}
 		digest, _ := ResolveDigest(empty, 0, []uint32{})
-		if !IsZeroDigest(digest) {
+		if len(digest) != 0 {
 			t.Fatal("expected zero digest for empty tree")
 		}
 	})
@@ -72,23 +63,23 @@ func TestResolveDigest(t *testing.T) {
 			t.Fatal(err)
 		}
 		d, _ := ResolveDigest(empty, 0, []uint32{})
-		if !IsZeroDigest(d) {
+		if len(d) != 0 {
 			t.Fatal("expected zero digest for empty tree")
 		}
 		// [0, 1] maps to our real path [1] (root child 1).
 		d, _ = ResolveDigest(tree, 2, []uint32{0, 1})
-		if IsZeroDigest(d) {
+		if len(d) == 0 {
 			t.Fatal("expected real digest for zero-padded path")
 		}
 		// [0, 1, 0] maps to [1, 0], deeper than our depth-1 tree → zero.
 		d, _ = ResolveDigest(tree, 2, []uint32{0, 1, 0})
-		if !IsZeroDigest(d) {
+		if len(d) != 0 {
 			t.Fatal("expected zero digest for too-deep path")
 		}
 	})
 	t.Run("out of bounds returns zero", func(t *testing.T) {
 		d, _ := ResolveDigest(tree, 0, []uint32{99})
-		if !IsZeroDigest(d) {
+		if len(d) != 0 {
 			t.Fatal("expected zero digest for out-of-bounds path")
 		}
 	})
@@ -102,7 +93,7 @@ func TestHandleDigestQuery(t *testing.T) {
 		if len(result) != 1 || len(result[0].Path) != 0 {
 			t.Fatalf("unexpected result: %+v", result)
 		}
-		if IsZeroDigest(result[0].Digest) {
+		if len(result[0].Digest) == 0 {
 			t.Fatal("expected root digest")
 		}
 	})
@@ -119,10 +110,10 @@ func TestHandleDigestQuery(t *testing.T) {
 		if len(result[0].Path) != 2 || len(result[1].Path) != 3 {
 			t.Fatal("paths not echoed")
 		}
-		if IsZeroDigest(result[0].Digest) {
+		if len(result[0].Digest) == 0 {
 			t.Fatal("expected real digest")
 		}
-		if !IsZeroDigest(result[1].Digest) {
+		if len(result[1].Digest) != 0 {
 			t.Fatal("expected zero digest for virtual path")
 		}
 	})
@@ -133,50 +124,39 @@ func TestHandleDigestUpdate(t *testing.T) {
 
 	t.Run("matching root yields no actions", func(t *testing.T) {
 		root, _ := ResolveDigest(tree, 0, []uint32{})
-		actions := HandleDigestUpdate(tree, 0, []*peers.DigestUpdate{{Path: nil, Digest: root}})
-		if len(actions) != 0 {
-			t.Fatalf("expected no actions, got %+v", actions)
+		action := HandleDigestUpdate(tree, 0, []*peers.DigestUpdate{{Path: nil, Digest: root}})
+		if action != nil {
+			t.Fatalf("expected no action, got %+v", action)
 		}
 	})
 
 	t.Run("root mismatch descends into children", func(t *testing.T) {
-		actions := HandleDigestUpdate(tree, 0, []*peers.DigestUpdate{{Path: nil, Digest: []byte("wrong")}})
-		if len(actions) != 1 {
-			t.Fatalf("expected 1 action, got %d", len(actions))
+		action := HandleDigestUpdate(tree, 0, []*peers.DigestUpdate{{Path: nil, Digest: []byte("wrong")}})
+		if action == nil {
+			t.Fatalf("expected action, got nil")
 		}
-		if actions[0].Kind != KindQueryChildren {
-			t.Fatalf("expected KindQueryChildren, got %d", actions[0].Kind)
+		if action.Kind != KindQueryChildren {
+			t.Fatalf("expected KindQueryChildren, got %d", action.Kind)
 		}
-		if len(actions[0].Children) != 16 {
-			t.Fatalf("expected 16 children, got %d", len(actions[0].Children))
+		if len(action.Children) != 16 {
+			t.Fatalf("expected 16 children, got %d", len(action.Children))
 		}
-		if len(actions[0].Children[15]) != 1 || actions[0].Children[15][0] != 15 {
-			t.Fatalf("unexpected children paths: %v", actions[0].Children[15])
-		}
-	})
-
-	t.Run("leaf with zero peer digest requests event", func(t *testing.T) {
-		single := buildTree(t, "ts1")
-		leafDigest, timestamp := ResolveDigest(single, 1, []uint32{0})
-		if IsZeroDigest(leafDigest) {
-			t.Fatal("expected non-zero leaf digest")
-		}
-		if timestamp != "ts1" {
-			t.Fatalf("expected timestamp ts1, got %q", timestamp)
-		}
-		actions := HandleDigestUpdate(single, 1, []*peers.DigestUpdate{{Path: []uint32{0}, Digest: ZeroDigest}})
-		if len(actions) != 1 || actions[0].Kind != KindSendTimestamp || actions[0].Timestamp != "ts1" {
-			t.Fatalf("expected KindSendTimestamp(ts1), got %+v", actions)
+		if len(action.Children[15]) != 1 || action.Children[15][0] != 15 {
+			t.Fatalf("unexpected children paths: %v", action.Children[15])
 		}
 	})
 
-	t.Run("virtual leaf with zero our digest is skipped", func(t *testing.T) {
-		// Peer tree deeper than ours: [1, x] is virtual (non-zero prefix), so
-		// our digest is zero and the leaf is skipped.
-		single := buildTree(t, "ts1")
-		actions := HandleDigestUpdate(single, 2, []*peers.DigestUpdate{{Path: []uint32{1, 0}, Digest: []byte("other")}})
-		if len(actions) != 0 {
-			t.Fatalf("expected no actions for virtual leaf, got %+v", actions)
+	t.Run("leaf with mismatch asks for events", func(t *testing.T) {
+		t1 := buildTree(t, "ts1")
+		t2 := buildTree(t, "ts1", "ts2")
+		d2_0, _ := ResolveDigest(t2, 1, []uint32{0})
+		d2_1, _ := ResolveDigest(t2, 1, []uint32{1})
+		action := HandleDigestUpdate(t1, 1, []*peers.DigestUpdate{{Path: []uint32{0}, Digest: d2_0, Timestamp: "ts1"}, {Path: []uint32{1}, Digest: d2_1, Timestamp: "ts2"}})
+		if action == nil {
+			t.Fatalf("expected action, got nil")
+		}
+		if action.Kind != KindAskTimestamp || action.Timestamp != "ts1" {
+			t.Fatalf("expected KindAskTimestamp, got %+v", action)
 		}
 	})
 }
