@@ -4,7 +4,6 @@ import type { TSqlDB } from '..';
 
 export function fromCapacitorSqlite(id: string, getDb: () => Promise<SQLiteDBConnection>): TSqlDB {
   const loggerDb = {
-    blobType: 'string',
     async batch(statements, tx = true) {
       const db = await getDb();
       if (tx) {
@@ -21,6 +20,7 @@ export function fromCapacitorSqlite(id: string, getDb: () => Promise<SQLiteDBCon
         );
       }
     },
+    blobType: 'string',
     async query(statement) {
       const db = await getDb();
       const result = await db.query(statement.sql, statement.params);

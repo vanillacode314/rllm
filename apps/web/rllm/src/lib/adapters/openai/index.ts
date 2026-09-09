@@ -59,15 +59,15 @@ export class OpenAIAdapter implements TAdapter {
   }
 
   async *generateCompletion(opts: {
-    sessionId: string;
     messages: TMessage[];
     model: string;
     reasoningEffort: 'high' | 'low' | 'medium' | 'minimal' | 'none' | 'xhigh';
+    sessionId: string;
     signal?: AbortSignal;
     system?: string;
     tools?: TTool[];
   }): AsyncGenerator<TChatCompletionChunk, TChatCompletionLastChunk, void> {
-    const { sessionId, messages, model, reasoningEffort, signal, system, tools } = opts;
+    const { messages, model, reasoningEffort, sessionId, signal, system, tools } = opts;
 
     const requestBody = this.buildRequestBody({
       messages,

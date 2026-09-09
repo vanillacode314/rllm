@@ -9,7 +9,7 @@ const ALPN = new TextEncoder().encode('rllm/1');
 class IrohTransportFactory implements TTransportFactory {
   #closeEvent = new Event<string>({ once: true });
   onClose = this.#closeEvent.subscribe.bind(this.#closeEvent);
-  #errorEvent = new Event<{ error: unknown; remoteId: string; }>();
+  #errorEvent = new Event<{ error: unknown; remoteId: string }>();
   onError = this.#errorEvent.subscribe.bind(this.#errorEvent);
   #newTransportEvent = new Event<{ remoteId: string; transport: TTransport }>();
 

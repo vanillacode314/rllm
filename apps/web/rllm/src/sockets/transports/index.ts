@@ -28,7 +28,7 @@ export interface TTransportFactory {
   handleSignal(remoteId: string, signal: TSignal): void;
   readonly id: string;
   onClose(fn: (remoteId: string) => void): () => void;
-  onError(fn: (payload: { error: unknown; remoteId: string; }) => void): () => void;
+  onError(fn: (payload: { error: unknown; remoteId: string }) => void): () => void;
   onNewTransport(fn: (payload: { remoteId: string; transport: TTransport }) => void): () => void;
   onSignal(fn: (payload: { remoteId: string; signal: TSignal }) => void): () => void;
   ready(): Promise<void>;

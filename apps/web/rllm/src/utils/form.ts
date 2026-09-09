@@ -1,10 +1,11 @@
 import type { $ZodFlattenedError } from 'zod/v4/core';
 
-import * as z from 'zod/mini';
-import { createDerivedStore } from './stores';
 import { createWritableMemo } from '@solid-primitives/memo';
 import { on } from 'solid-js';
+import * as z from 'zod/mini';
+
 import { produce } from './immer';
+import { createDerivedStore } from './stores';
 
 function createForm<TSchema extends z.core.$ZodObject, T extends object = z.infer<TSchema>>(
   _: TSchema,

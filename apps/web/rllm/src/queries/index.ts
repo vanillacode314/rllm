@@ -89,8 +89,6 @@ const models = {
 
 const chats = {
   fetchers: {
-    recent: (limit: number = 5) =>
-      db.select().from(tables.chats).orderBy(desc(tables.chats.lastAccessedAt)).limit(limit),
     byId: (id: string) =>
       db
         .select()
@@ -182,7 +180,9 @@ const chats = {
           sql`score is null`
         )
         .limit(limit)
-        .offset(offset)
+        .offset(offset),
+    recent: (limit: number = 5) =>
+      db.select().from(tables.chats).orderBy(desc(tables.chats.lastAccessedAt)).limit(limit)
   },
   queries: {
     all: () =>
@@ -194,12 +194,6 @@ const chats = {
         }),
         {
           _ctx: {
-            recent: (limit?: number) =>
-              queryOptions({
-                queryFn: () => chats.fetchers.recent(limit),
-                queryKey: [...chats.queries.base(), 'all', 'recent', { limit }],
-                staleTime: FIVE_MINUTES_IN_MILLISECONDS
-              }),
             count: () =>
               queryOptions({
                 queryFn: chats.fetchers.countChats,
@@ -239,6 +233,12 @@ const chats = {
                   'paged',
                   { pageSize, query, tags }
                 ]
+              }),
+            recent: (limit?: number) =>
+              queryOptions({
+                queryFn: () => chats.fetchers.recent(limit),
+                queryKey: [...chats.queries.base(), 'all', 'recent', { limit }],
+                staleTime: FIVE_MINUTES_IN_MILLISECONDS
               }),
             tags: queryOptions({
               queryFn: () => chats.fetchers.getChatTags(),

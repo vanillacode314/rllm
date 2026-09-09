@@ -166,20 +166,20 @@ export class ChatGenerationManager {
           const results = (
             await Promise.all([
               await transientDb.query(query, {
-                signal,
                 afterIndex,
                 beforeIndex,
                 documentIds: args.ids.filter((id) =>
                   attachmentsByTransientStatus.transient.has(id)
                 ),
-                limit: offset + limit
+                limit: offset + limit,
+                signal
               }),
               await vectorDb.query(query, {
-                signal,
                 afterIndex,
                 beforeIndex,
                 documentIds: args.ids.filter((id) => attachmentsByTransientStatus.library.has(id)),
-                limit: offset + limit
+                limit: offset + limit,
+                signal
               })
             ])
           )
@@ -342,12 +342,12 @@ export class ChatGenerationManager {
       { wait: 16 }
     );
     const promise = handleCompletion({
-      sessionId: chat.id,
       adapter,
       messages,
       model: chat.settings.modelId,
       onUpdate: debouncedOnUpdate.maybeExecute,
       reasoningEffort: chat.settings.reasoning,
+      sessionId: chat.id,
       signal: controller.signal,
       system,
       tools: tools.toUndefined()

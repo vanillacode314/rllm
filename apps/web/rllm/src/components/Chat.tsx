@@ -1,5 +1,6 @@
 import { createActiveElement } from '@solid-primitives/active-element';
 import { createEventListener } from '@solid-primitives/event-listener';
+import { createWritableMemo } from '@solid-primitives/memo';
 import { createResizeObserver } from '@solid-primitives/resize-observer';
 import { createTimer } from '@solid-primitives/timer';
 import { createHotkey } from '@tanstack/solid-hotkeys';
@@ -20,6 +21,7 @@ import {
   Suspense,
   Switch
 } from 'solid-js';
+import { Dynamic } from 'solid-js/web';
 import { toast } from 'solid-sonner';
 import { Button } from 'ui/button';
 import { Callout, CalloutContent, CalloutTitle } from 'ui/callout';
@@ -43,14 +45,12 @@ import { ChatGenerationManager } from '~/lib/chat/generation';
 import { queries } from '~/queries';
 import { formatToPercentage, formatToTokens } from '~/utils/number';
 import { formatAsKeyValuePair } from '~/utils/object';
-import { createWritableMemo } from '@solid-primitives/memo';
 import { createDerivedStore } from '~/utils/stores';
 import { lowlightWorkerPool } from '~/workers/lowlight';
 
 import Markdown from './markdown/Markdown';
 import { useAlertDialog } from './modals/auto-import/AlertDialog';
 import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
-import { Dynamic } from 'solid-js/web';
 
 type Props = JSX.HTMLAttributes<HTMLDivElement> & {
   chat: Omit<TChat, 'createdAt' | 'updatedAt'>;
@@ -229,7 +229,7 @@ function LLMChat(props: {
   function WorkingChunksCollapsible(props: ParentProps<{ class?: string }>) {
     const [open, setOpen] = createSignal(false);
     return (
-      <Collapsible open={open()} onOpenChange={setOpen} class="space-y-1.5 border rounded-lg p-4">
+      <Collapsible class="space-y-1.5 border rounded-lg p-4" onOpenChange={setOpen} open={open()}>
         <CollapsibleTrigger as={Button} class="p-0 w-full" variant="link">
           <span class="icon-[heroicons--chevron-down]" classList={{ 'rotate-180': open() }} />
           <span>Show Working</span>
@@ -379,12 +379,12 @@ function LLMChat(props: {
         <CollapsibleContent>
           <CardContent class="flex flex-col gap-4 p-2 overflow-x-auto">
             <Dynamic
-              component={
-                props.isPending || workingChunks().length === 0 ? 'div' : WorkingChunksCollapsible
-              }
               class={cn(
                 props.isPending || workingChunks().length === 0 ? 'contents' : 'flex flex-col gap-4'
               )}
+              component={
+                props.isPending || workingChunks().length === 0 ? 'div' : WorkingChunksCollapsible
+              }
             >
               <For each={workingChunks()}>
                 {(chunk, index) => (

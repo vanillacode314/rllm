@@ -90,10 +90,10 @@ function makeMCPCall<
   method: TMethod;
   params?: Record<string, unknown>;
   sessionId: null | string;
-  url: string;
   signal?: AbortSignal;
+  url: string;
 }): AsyncResult<TResponse, Error | Error> {
-  const { signal, id, method, params, sessionId, url } = config;
+  const { id, method, params, sessionId, signal, url } = config;
 
   const extraHeaders: Record<string, string> = {};
   if (sessionId) {

@@ -37,15 +37,6 @@ export class MCPManager {
     return this.#clients.get(id)?.client;
   }
 
-  static #removeInvalidClients(validIds: Set<string>) {
-    for (const [id] of this.#clients) {
-      if (!validIds.has(id)) {
-        this.#clients.get(id)?.client.disconnect();
-        this.#clients.delete(id);
-      }
-    }
-  }
-
   /**
    * Initialize or update MCP clients from DB
    * Creates new clients only if they don't exist or URL changed
@@ -81,6 +72,15 @@ export class MCPManager {
     } catch {
       client.disconnect();
       return [];
+    }
+  }
+
+  static #removeInvalidClients(validIds: Set<string>) {
+    for (const [id] of this.#clients) {
+      if (!validIds.has(id)) {
+        this.#clients.get(id)?.client.disconnect();
+        this.#clients.delete(id);
+      }
     }
   }
 }

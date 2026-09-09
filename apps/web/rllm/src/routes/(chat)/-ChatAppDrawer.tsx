@@ -5,11 +5,11 @@ import type { AppDrawerComponentProps } from '~/components/AppDrawer';
 
 import { ChatListSection, QuickActionsSection } from '~/components/ChatList';
 import ChatSettingsControls from '~/components/ChatSettingsControls';
-import { type TChatSettings, saveChatSettings } from '~/lib/chat/settings';
+import { useChatState } from '~/context/chat';
+import { saveChatSettings, type TChatSettings } from '~/lib/chat/settings';
 import { produce } from '~/utils/immer';
 
 import { chatState } from './-state';
-import { useChatState } from '~/context/chat';
 
 export function ChatAppDrawer(props: AppDrawerComponentProps) {
   // oxlint-disable-next-line solid/reactivity

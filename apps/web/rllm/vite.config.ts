@@ -36,8 +36,8 @@ function stubSerwistPlugin(): PluginOption {
 export default defineConfig(({ mode }) => {
   const config: UserConfig = {
     build: {
-      reportCompressedSize: false
-      // sourcemap: true
+      reportCompressedSize: false,
+      sourcemap: true
     },
     define: {
       __VERSION__: JSON.stringify(pkgJson.version)

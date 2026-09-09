@@ -1,5 +1,5 @@
 import { Keyboard } from '@capacitor/keyboard';
-import { createRouter, RouterProvider, type ErrorComponentProps } from '@tanstack/solid-router';
+import { createRouter, type ErrorComponentProps, RouterProvider } from '@tanstack/solid-router';
 import 'katex/dist/katex.css';
 
 import './styles.css';
@@ -9,12 +9,13 @@ import { onMount } from 'solid-js';
 import { render } from 'solid-js/web';
 import 'virtual:uno.css';
 import { toast } from 'solid-sonner';
+import { Button } from 'ui/button';
+import { Callout, CalloutContent, CalloutTitle } from 'ui/callout';
 
 import { routeTree } from './routeTree.gen';
-import { Callout, CalloutContent, CalloutTitle } from 'ui/callout';
-import { Button } from 'ui/button';
 
 const router = createRouter({
+  defaultErrorComponent: ErrorComponent,
   defaultGcTime: 0,
   defaultPendingComponent: import.meta.env.DEV
     ? () => <div class="bg-red-600 inset-0 w-full h-full z-50">Loading...</div>
@@ -25,28 +26,13 @@ const router = createRouter({
       ),
   defaultViewTransition: true,
   routeTree,
-  scrollRestoration: true,
-  defaultErrorComponent: ErrorComponent
+  scrollRestoration: true
 });
 
 declare module '@tanstack/solid-router' {
   interface Register {
     router: typeof router;
   }
-}
-
-function ErrorComponent(props: ErrorComponentProps) {
-  onMount(() => console.error(props.error));
-
-  return (
-    <div class="grid place-content-center h-full w-full gap-4 p-4">
-      <Callout variant="error" class="min-w-75">
-        <CalloutTitle>An Error Occurred</CalloutTitle>
-        <CalloutContent>{props.error.message.trim() || 'Unknown error'}</CalloutContent>
-      </Callout>
-      <Button onClick={() => location.reload()}>Refresh</Button>
-    </div>
-  );
 }
 
 function App() {
@@ -67,6 +53,20 @@ function App() {
     <>
       <RouterProvider router={router} />
     </>
+  );
+}
+
+function ErrorComponent(props: ErrorComponentProps) {
+  onMount(() => console.error(props.error));
+
+  return (
+    <div class="grid place-content-center h-full w-full gap-4 p-4">
+      <Callout class="min-w-75" variant="error">
+        <CalloutTitle>An Error Occurred</CalloutTitle>
+        <CalloutContent>{props.error.message.trim() || 'Unknown error'}</CalloutContent>
+      </Callout>
+      <Button onClick={() => location.reload()}>Refresh</Button>
+    </div>
   );
 }
 

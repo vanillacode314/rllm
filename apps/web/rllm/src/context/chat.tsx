@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/solid-query';
 import { useLocation, useMatchRoute } from '@tanstack/solid-router';
 import { createMemo, untrack } from 'solid-js';
+
 import { queries } from '~/queries';
 
 export function useChatState() {
@@ -28,17 +29,17 @@ export function useChatState() {
   });
 
   return {
-    get isNewChatRoute() {
-      return !!isNewChatRoute();
-    },
-    get isScratchpadRoute() {
-      return !!isScratchpadRoute();
-    },
     get currentChat() {
       return currentChat;
     },
     get currentChatId() {
       return isChatRoute() && !isNewChatRoute() ? location().search.id : undefined;
+    },
+    get isNewChatRoute() {
+      return !!isNewChatRoute();
+    },
+    get isScratchpadRoute() {
+      return !!isScratchpadRoute();
     }
   };
 }

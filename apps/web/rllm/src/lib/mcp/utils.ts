@@ -89,7 +89,7 @@ export function makeJSONRPCCall(
     signal?: AbortSignal;
   } = {}
 ): AsyncResult<{ response: Response; result: JSONRPCResponseSchema }, Error | JSONRPCError> {
-  const { signal, extraBody = {}, extraHeaders = {}, id, params } = opts;
+  const { extraBody = {}, extraHeaders = {}, id, params, signal } = opts;
 
   return tryBlock(
     async function* () {
@@ -104,14 +104,14 @@ export function makeJSONRPCCall(
 
       // Send POST request with Streamable HTTP headers
       const fetchResult = yield* safeFetch(url, {
-        signal,
         body: JSON.stringify(body),
         headers: {
           Accept: 'application/json, text/event-stream',
           'Content-Type': 'application/json',
           ...extraHeaders
         },
-        method: 'POST'
+        method: 'POST',
+        signal
       }).context('Error while making JSON-RPC call');
 
       const response = fetchResult;

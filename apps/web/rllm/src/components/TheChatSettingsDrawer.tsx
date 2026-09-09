@@ -11,14 +11,14 @@ import {
   DrawerTitle
 } from 'ui/drawer';
 
+import { useChatState } from '~/context/chat';
 import { type TChatPreset } from '~/lib/chat/presets';
-import { type TChatSettings, saveChatSettings } from '~/lib/chat/settings';
+import { saveChatSettings, type TChatSettings } from '~/lib/chat/settings';
 import { chatState } from '~/routes/(chat)/-state';
 import { isMobile } from '~/signals';
 import { produce } from '~/utils/immer';
 
 import ChatSettingsControls from './ChatSettingsControls';
-import { useChatState } from '~/context/chat';
 
 const [chatSettingsDrawerOpen, setChatSettingsDrawerOpen] = createSignal(false);
 

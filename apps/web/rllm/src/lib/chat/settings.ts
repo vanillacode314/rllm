@@ -104,7 +104,7 @@ export async function initChatSettings() {
 
 export async function saveChatSettings(
   settings: Partial<TChatSettings>,
-  opts: Partial<{ scratchpad: boolean; chatId: string }>
+  opts: Partial<{ chatId: string; scratchpad: boolean }>
 ) {
   const { chatId, scratchpad } = opts;
   if (chatState.settings.isNone()) return;

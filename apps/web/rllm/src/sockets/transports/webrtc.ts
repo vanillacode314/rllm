@@ -183,7 +183,7 @@ class WebRTCTransport implements TTransport {
 class WebRTCTransportFactory implements TTransportFactory {
   #closeEvent = new Event<string>();
   onClose = this.#closeEvent.subscribe.bind(this.#closeEvent);
-  #errorEvent = new Event<{ error: unknown; remoteId: string; }>();
+  #errorEvent = new Event<{ error: unknown; remoteId: string }>();
   onError = this.#errorEvent.subscribe.bind(this.#errorEvent);
   #newTransportEvent = new Event<{ remoteId: string; transport: TTransport }>();
 

@@ -17,8 +17,8 @@ async function loadSQLocalDb() {
     databasePath: MAIN_DATABASE_PATH,
     onInit: (sql) => [sql`PRAGMA journal_mode=MEMORY;`]
   });
-  console.debug('[DB] SQLocal Instance Info', await getDatabaseInfo());
   const drizzleDb = drizzle(driver, batchDriver, { schema: tables });
+  drizzleDb.get('SELECT 1').execute();
   const loggerDb = fromSQLocal(
     new SQLocal({
       databasePath: MAIN_DATABASE_PATH,
@@ -29,6 +29,7 @@ async function loadSQLocalDb() {
     const info = await getDatabaseInfo();
     return info.databaseSizeBytes;
   }
+  void getDatabaseInfo().then((info) => console.debug('[DB] SQLocal Instance Info', info));
   return { drizzleDb, getDatabaseSize, loggerDb };
 }
 

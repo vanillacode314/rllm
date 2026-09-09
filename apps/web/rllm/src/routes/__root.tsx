@@ -5,15 +5,16 @@ import { QueryClientProvider } from '@tanstack/solid-query';
 // import { SolidQueryDevtools } from '@tanstack/solid-query-devtools';
 import { createRootRouteWithContext, Outlet } from '@tanstack/solid-router';
 import { createSignal, For, type JSXElement, onMount, Suspense } from 'solid-js';
+import { Option } from 'ts-result-option';
 import { Button } from 'ui/button';
 import { SidebarProvider } from 'ui/sidebar';
 import { Toaster } from 'ui/sonner';
-import { Option } from 'ts-result-option';
 
 import AppDrawer from '~/components/AppDrawer';
 import TheChatSettingsDrawer from '~/components/TheChatSettingsDrawer';
 import TheCommandPrompt from '~/components/TheCommandPrompt';
 import TheSidebar from '~/components/TheSidebar';
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { logger } from '~/db/client';
 import { setupDb } from '~/db/client.platform.common';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
@@ -23,18 +24,17 @@ import { initChatSettings } from '~/lib/chat/settings';
 import { retryFailedTitleAndTags } from '~/lib/chat/tasks';
 import { MCPManager } from '~/lib/mcp/manager';
 import { ProxyManager } from '~/lib/proxy';
+import { fetchers } from '~/queries';
+import { account } from '~/signals/account';
 import { PeerManager } from '~/sockets/transports';
+import { irohTransportFactory } from '~/sockets/transports/iroh';
+import { peerJSTransportFactory } from '~/sockets/transports/peerjs';
 import { webRTCTransportFactory } from '~/sockets/transports/webrtc';
 import { initWebsocketTransport } from '~/sockets/transports/websocket';
 import { syncColorMode } from '~/utils/color-mode';
 import { once } from '~/utils/functions';
 import { queryClient } from '~/utils/query-client';
 import { clearData } from '~/utils/storage';
-import { account } from '~/signals/account';
-import { peerJSTransportFactory } from '~/sockets/transports/peerjs';
-import { irohTransportFactory } from '~/sockets/transports/iroh';
-import { fetchers } from '~/queries';
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 
 export const Route = createRootRouteWithContext()({
   beforeLoad: once(async () => {

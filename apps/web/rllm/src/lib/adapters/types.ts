@@ -7,10 +7,10 @@ import { type TModel, type TTool } from '~/types';
 export type TAdapter = {
   fetchAllModels: (signal?: AbortSignal) => AsyncResult<TModel[], Error>;
   generateCompletion: (opts: {
-    sessionId: string;
     messages: TMessage[];
     model: string;
     reasoningEffort: 'high' | 'low' | 'medium' | 'minimal' | 'none' | 'xhigh';
+    sessionId: string;
     signal?: AbortSignal;
     system?: string;
     tools?: TTool[];

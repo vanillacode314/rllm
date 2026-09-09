@@ -11,7 +11,6 @@ import { formatError } from '~/utils/errors';
 import { produce } from '~/utils/immer';
 
 export function handleCompletion(opts: {
-  sessionId: string;
   adapter: TAdapter;
   messages: TMessage[];
   model: string;
@@ -20,6 +19,7 @@ export function handleCompletion(opts: {
     usage?: (TMessage & { type: 'llm' })['usage'];
   }) => void;
   reasoningEffort?: 'high' | 'low' | 'medium' | 'minimal' | 'none' | 'xhigh';
+  sessionId: string;
   signal?: AbortSignal;
   system?: string;
   tools?: TTool[];
@@ -27,11 +27,11 @@ export function handleCompletion(opts: {
   return tryBlock(
     async function* () {
       const {
-        sessionId,
         adapter,
         model,
         onUpdate,
         reasoningEffort = 'medium',
+        sessionId,
         signal,
         system,
         tools
@@ -56,10 +56,10 @@ export function handleCompletion(opts: {
       if (signal) signal.addEventListener('abort', () => controller.abort());
       while (!controller.signal.aborted) {
         const generator = adapter.generateCompletion({
-          sessionId,
           messages,
           model,
           reasoningEffort,
+          sessionId,
           signal: controller.signal,
           system,
           tools

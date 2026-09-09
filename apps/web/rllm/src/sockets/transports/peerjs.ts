@@ -6,7 +6,7 @@ import type { TTransport, TTransportFactory } from '.';
 class PeerJSTransportFactory implements TTransportFactory {
   #closeEvent = new Event<string>({ once: true });
   onClose = this.#closeEvent.subscribe.bind(this.#closeEvent);
-  #errorEvent = new Event<{ error: unknown; remoteId: string; }>();
+  #errorEvent = new Event<{ error: unknown; remoteId: string }>();
   onError = this.#errorEvent.subscribe.bind(this.#errorEvent);
 
   #newTransportEvent = new Event<{ remoteId: string; transport: TTransport }>();

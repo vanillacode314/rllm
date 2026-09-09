@@ -6,6 +6,7 @@ import { z } from 'zod/mini';
 
 import { useAppDrawer } from '~/components/AppDrawer';
 import { FALLBACK_CHAT_SETTINGS } from '~/constants/chat-settings';
+import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { logger } from '~/db/client';
 import { fetchers, queries } from '~/queries';
 import { queryClient } from '~/utils/query-client';
@@ -15,7 +16,6 @@ import { INCREMENT_ACCESS_COUNT_THRESHOLD_MILLISECONDS } from '../-constants';
 import { useChatPage, useChatPageBeforeLoad, useChatPageLoader } from '../-layout';
 import { updateMessages } from '../-state';
 import { getLatestPath } from '../-utils';
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 
 console.error('FIX OPTIMIZE STORAGE');
 
@@ -25,7 +25,7 @@ export const Route = createFileRoute('/(chat)/chat/$')({
   loaderDeps: ({ search: { id } }) => ({ id: id ?? nanoid(), isNewChat: id === undefined }),
   // oxlint-disable-next-line perfectionist/sort-objects
   loader: async ({ deps, params, preload }) => {
-    const { loadMessages, ensureQueryData, ensureValidChatProvider } = useChatPageLoader({
+    const { ensureQueryData, ensureValidChatProvider, loadMessages } = useChatPageLoader({
       preload
     });
     const { id, isNewChat } = deps;
@@ -40,10 +40,10 @@ export const Route = createFileRoute('/(chat)/chat/$')({
         const preset = await fetchers.chatPresets.byId(defaultChatSettingsPreset);
         if (!preset) {
           await logger.dispatch({
-            type: 'deleteUserMetadata',
             data: {
               id: USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET
-            }
+            },
+            type: 'deleteUserMetadata'
           });
         } else {
           Object.assign(chatSettings, preset.settings);

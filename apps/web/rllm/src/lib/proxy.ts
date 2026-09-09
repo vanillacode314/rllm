@@ -1,9 +1,10 @@
 import type { ConfiguredMiddleware } from 'wretch';
 
-import { PROXY_HEALTH_CHECK_INTERVAL_MS, PROXY_HEALTH_CHECK_TIMEOUT_MS } from '~/constants/proxy';
 import { Event } from 'event-bus';
 
-export type TProxyHealthStatus = 'failed' | 'passing' | 'untested' | 'unset';
+import { PROXY_HEALTH_CHECK_INTERVAL_MS, PROXY_HEALTH_CHECK_TIMEOUT_MS } from '~/constants/proxy';
+
+export type TProxyHealthStatus = 'failed' | 'passing' | 'unset' | 'untested';
 
 export class ProxyManager {
   static #healthCheckInterval: null | ReturnType<typeof setTimeout> = null;
@@ -27,7 +28,7 @@ export class ProxyManager {
     this.#scheduleHealthRecheck();
   }
 
-  static async initialize(proxyUrl: string | null): Promise<void> {
+  static async initialize(proxyUrl: null | string): Promise<void> {
     this.#proxyUrl = proxyUrl;
     await this.checkHealth();
   }

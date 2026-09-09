@@ -67,7 +67,6 @@ export const generateTitleAndTags = (config: {
       });
       let titleAndTags = Option.None<{ tags: string[]; title: string }>();
       yield* handleCompletion({
-        sessionId: nanoid(),
         adapter,
         messages: [
           ...chunks,
@@ -90,6 +89,7 @@ export const generateTitleAndTags = (config: {
           }
         ],
         model,
+        sessionId: nanoid(),
         signal,
         tools: [
           makeTool({
@@ -138,7 +138,6 @@ export const summarizeChat = (config: {
       });
       let summary = Option.None<string>();
       yield* handleCompletion({
-        sessionId: nanoid(),
         adapter,
         messages: [
           ...chunks,
@@ -161,6 +160,7 @@ export const summarizeChat = (config: {
           }
         ],
         model,
+        sessionId: nanoid(),
         signal,
         tools: [
           makeTool({

@@ -1,5 +1,6 @@
 import { createActiveElement } from '@solid-primitives/active-element';
 import { createEventListenerMap } from '@solid-primitives/event-listener';
+import { createWritableMemo } from '@solid-primitives/memo';
 import { createElementSize } from '@solid-primitives/resize-observer';
 import { createHotkey } from '@tanstack/solid-hotkeys';
 import { useMutation, useQuery } from '@tanstack/solid-query';
@@ -23,13 +24,16 @@ import { unwrap } from 'solid-js/store';
 import { toast } from 'solid-sonner';
 import { Option } from 'ts-result-option';
 import { tryBlock } from 'ts-result-option/utils';
+import { Button } from 'ui/button';
 import { SidebarTrigger, useSidebar } from 'ui/sidebar';
 
 import type { TAttachment, TChat, TMessage, TUserMessageChunk } from '~/types/chat';
 
 import { Chat } from '~/components/Chat';
+import { PresetSelector } from '~/components/PresetSelector';
 import ThePromptBox from '~/components/ThePromptBox';
 import { USER_METADATA_KEYS } from '~/constants/user-metadata';
+import { useChatState } from '~/context/chat';
 import { useNotifications } from '~/context/notifications';
 import { chatsSchema, type TChat as TDBChat } from '~/db/app-schema';
 import { logger } from '~/db/client';
@@ -49,9 +53,8 @@ import { formatError } from '~/utils/errors';
 import { compressImageFile, fileToBase64 } from '~/utils/files';
 import { produce } from '~/utils/immer';
 import { queryClient } from '~/utils/query-client';
-import { createWritableMemo } from '@solid-primitives/memo';
 import { slugify } from '~/utils/string';
-import { Tree, TreeNode, type JsonTree, type TTree } from '~/utils/tree';
+import { type JsonTree, Tree, TreeNode, type TTree } from '~/utils/tree';
 
 import {
   addAttachment,
@@ -65,9 +68,6 @@ import {
   updatePrompt
 } from './-state';
 import { getLatestPath } from './-utils';
-import { Button } from 'ui/button';
-import { PresetSelector } from '~/components/PresetSelector';
-import { useChatState } from '~/context/chat';
 
 export function useChatPage(
   opts: Accessor<{
@@ -529,7 +529,6 @@ export function useChatPage(
           )}
         >
           <Show
-            when={!opts().isNewChat || (recentChatsQuery.data?.length ?? 0) === 0}
             fallback={
               <div class="gap-4 grid place-content-center h-[calc(100%-var(--prompt-box-size))]">
                 <h3 class="uppercase text-xs font-medium tracking-wider text-white/75">
@@ -540,6 +539,8 @@ export function useChatPage(
                     {(chat) => (
                       <li class="contents">
                         <Button
+                          aria-label={`Go to ${chat.title}`}
+                          class="justify-start"
                           onClick={() =>
                             navigate({
                               params: { _splat: slugify(chat.title) },
@@ -547,9 +548,7 @@ export function useChatPage(
                               to: '/chat/$'
                             })
                           }
-                          class="justify-start"
                           variant="outline"
-                          aria-label={`Go to ${chat.title}`}
                         >
                           {chat.title}
                         </Button>
@@ -577,6 +576,7 @@ export function useChatPage(
                 />
               </div>
             }
+            when={!opts().isNewChat || (recentChatsQuery.data?.length ?? 0) === 0}
           >
             <Chat
               chat={{
@@ -705,7 +705,7 @@ export async function useChatPageBeforeLoad() {
     throw redirect({ to: '/settings/account' });
   throw redirect({ to: '/settings/providers' });
 }
-export function useChatPageLoader(opts: { scratchpad?: boolean; preload?: boolean }) {
+export function useChatPageLoader(opts: { preload?: boolean; scratchpad?: boolean }) {
   async function ensureValidChatProvider(chat: TDBChat) {
     const provider = await queryClient.ensureQueryData(
       queries.providers.byId(chat.settings.providerId)

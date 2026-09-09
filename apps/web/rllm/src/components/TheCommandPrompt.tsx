@@ -14,6 +14,7 @@ import {
 } from 'ui/command';
 
 import { SETTINGS_PAGES } from '~/constants/settings';
+import { useChatState } from '~/context/chat';
 import { logger } from '~/db/client';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { saveChatSettings } from '~/lib/chat/settings';
@@ -22,7 +23,6 @@ import { slugify } from '~/utils/string';
 
 import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
 import { usePromptDialog } from './modals/auto-import/PromptDialog';
-import { useChatState } from '~/context/chat';
 
 interface TItem {
   condition?: () => boolean;

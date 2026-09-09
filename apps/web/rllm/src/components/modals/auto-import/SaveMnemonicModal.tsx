@@ -28,15 +28,6 @@ const setOpen = (mnemonic: false | null | string) => {
   }
 };
 
-async function promptForSavePassword() {
-  const { PasswordAutofill } = await import('@capawesome/capacitor-password-autofill');
-  await PasswordAutofill.savePassword({
-    domain: 'llm.raqueeb.com',
-    password: mnemonic()!,
-    username: 'passphrase'
-  });
-}
-
 export function SaveMnemonicModal() {
   const alertDialog = useAlertDialog();
 
@@ -91,6 +82,15 @@ export function SaveMnemonicModal() {
       </DialogContent>
     </Dialog>
   );
+}
+
+async function promptForSavePassword() {
+  const { PasswordAutofill } = await import('@capawesome/capacitor-password-autofill');
+  await PasswordAutofill.savePassword({
+    domain: 'llm.raqueeb.com',
+    password: mnemonic()!,
+    username: 'passphrase'
+  });
 }
 
 export default SaveMnemonicModal;

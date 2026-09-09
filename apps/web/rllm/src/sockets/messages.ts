@@ -33,7 +33,7 @@ export class ConnectionManager {
     this.accountId = accountId;
     this.clientId = clientId;
     this.transport = transport;
-    this.unsubscribe = this.transport.onmessage((data) => this.handleMessage(data));
+    this.unsubscribe = this.transport.onMessage((data) => this.handleMessage(data));
 
     this.sendTimestampBatch = new Batcher(
       (timestamps) => void this.flushSendTimestamp(timestamps),

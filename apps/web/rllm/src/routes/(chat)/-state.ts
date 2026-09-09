@@ -1,5 +1,4 @@
 import { makePersisted } from '@solid-primitives/storage';
-import { produce } from '~/utils/immer';
 import localforage from 'localforage';
 import { createStore } from 'solid-js/store';
 import { Option } from 'ts-result-option';
@@ -8,6 +7,7 @@ import * as z from 'zod/mini';
 
 import { chatSettingsSchema, type TChatSettings } from '~/lib/chat/settings';
 import { attachmentsSchema, type TAttachment, type TMessage } from '~/types/chat';
+import { produce } from '~/utils/immer';
 import { Tree, type TTree } from '~/utils/tree';
 
 const CHAT_STATE_LOCALFORAGE_KEY = 'rllm:chat-state';

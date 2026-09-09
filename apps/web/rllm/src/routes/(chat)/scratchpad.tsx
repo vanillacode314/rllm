@@ -31,9 +31,9 @@ export const Route = createFileRoute('/(chat)/scratchpad')({
   component: ScratchpadPageComponent,
   // oxlint-disable-next-line perfectionist/sort-objects
   loader: async ({ preload }) => {
-    const { loadMessages, ensureQueryData, ensureValidChatProvider } = useChatPageLoader({
-      scratchpad: true,
-      preload
+    const { ensureQueryData, ensureValidChatProvider, loadMessages } = useChatPageLoader({
+      preload,
+      scratchpad: true
     });
     const { defaultChatSettingsPreset, providers, scratchpad } = await ensureQueryData();
     const jsonChat = Option.from(scratchpad);

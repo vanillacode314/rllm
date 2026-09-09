@@ -48,11 +48,6 @@ const bodyHtmlToMarkdownProcessor = unified()
   .use(remarkGfm)
   .use(remarkStringify);
 
-function extractBodyContent(html: string): string {
-  const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-  return bodyMatch ? bodyMatch[1] : html;
-}
-
 function epubToString(buffer: ArrayBuffer): AsyncResult<string, Error> {
   return tryBlock<string, Error>(
     async function* () {
@@ -126,6 +121,11 @@ function epubToString(buffer: ArrayBuffer): AsyncResult<string, Error> {
     },
     (e) => new Error(`Failed to parse epub file`, { cause: e })
   );
+}
+
+function extractBodyContent(html: string): string {
+  const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  return bodyMatch ? bodyMatch[1] : html;
 }
 
 function getEpubAuthor(buffer: ArrayBuffer): AsyncResult<string, Error> {

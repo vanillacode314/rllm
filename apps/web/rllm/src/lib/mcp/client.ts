@@ -65,7 +65,6 @@ class MCPClient implements TMCPClient {
 
     const sessionId = this.#sessionId.unwrap();
     const result = await makeMCPCall({
-      signal,
       id: this.id,
       method: 'tools/call',
       params: {
@@ -73,6 +72,7 @@ class MCPClient implements TMCPClient {
         name
       },
       sessionId,
+      signal,
       url: this.url
     });
 

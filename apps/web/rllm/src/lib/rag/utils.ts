@@ -1,5 +1,6 @@
-import * as ort from 'onnxruntime-web/wasm';
 import { Tokenizer } from '@huggingface/tokenizers';
+import localforage from 'localforage';
+import * as ort from 'onnxruntime-web/wasm';
 import { Result } from 'ts-result-option';
 import { tryBlock } from 'ts-result-option/utils';
 
@@ -7,9 +8,9 @@ import { IterativeTextSplitter } from '~/utils/string';
 import * as rag from '~/workers/rag';
 
 import type { TRAGAdapter } from './types';
-import ortWasm from '../../../../../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url';
+
 import ortMjs from '../../../../../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs?url';
-import localforage from 'localforage';
+import ortWasm from '../../../../../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url';
 
 const MODEL_URL =
   'https://huggingface.co/minishlab/potion-retrieval-32m-onnx/resolve/main/model.onnx';
@@ -18,10 +19,32 @@ const TOKENIZER_URL =
 const TOKENIZER_CONFIG_URL =
   'https://huggingface.co/minishlab/potion-retrieval-32m-onnx/resolve/main/tokenizer_config.json';
 
-ort.env.wasm.wasmPaths = { wasm: ortWasm, mjs: ortMjs };
+ort.env.wasm.wasmPaths = { mjs: ortMjs, wasm: ortWasm };
 
 let session: ort.InferenceSession | undefined;
 let tokenizer: Tokenizer | undefined;
+
+export async function getEmbedding(
+  text: string,
+  onProgress?: (n: number) => void
+): Promise<number[]> {
+  const { session, tokenizer } = await load(onProgress);
+
+  const { ids } = tokenizer.encode(text, { add_special_tokens: false });
+
+  // 3. The model2vec ONNX graph is a torch EmbeddingBag(mean):
+  //    flat input_ids + an offsets vector marking where the (single) sequence starts.
+  const inputIds = new ort.Tensor('int64', BigInt64Array.from(ids.map(BigInt)), [1, ids.length]);
+  const attentionMask = new ort.Tensor(
+    'int64',
+    BigInt64Array.from(new Array(ids.length).fill(1n)),
+    [1, ids.length]
+  );
+
+  // 4. Run and read out. Output name is `embeddings`, already L2-normalized.
+  const { embeddings } = await session.run({ attention_mask: attentionMask, input_ids: inputIds });
+  return Array.from(embeddings.data as Float32Array);
+}
 
 async function load(onProgress?: (n: number) => void) {
   if (session !== undefined && tokenizer !== undefined) {
@@ -69,28 +92,6 @@ async function load(onProgress?: (n: number) => void) {
   tokenizer = new Tokenizer(json, config);
 
   return { session, tokenizer };
-}
-
-export async function getEmbedding(
-  text: string,
-  onProgress?: (n: number) => void
-): Promise<number[]> {
-  const { session, tokenizer } = await load(onProgress);
-
-  const { ids } = tokenizer.encode(text, { add_special_tokens: false });
-
-  // 3. The model2vec ONNX graph is a torch EmbeddingBag(mean):
-  //    flat input_ids + an offsets vector marking where the (single) sequence starts.
-  const inputIds = new ort.Tensor('int64', BigInt64Array.from(ids.map(BigInt)), [1, ids.length]);
-  const attentionMask = new ort.Tensor(
-    'int64',
-    BigInt64Array.from(new Array(ids.length).fill(1n)),
-    [1, ids.length]
-  );
-
-  // 4. Run and read out. Output name is `embeddings`, already L2-normalized.
-  const { embeddings } = await session.run({ input_ids: inputIds, attention_mask: attentionMask });
-  return Array.from(embeddings.data as Float32Array);
 }
 
 export const splitter = new IterativeTextSplitter({

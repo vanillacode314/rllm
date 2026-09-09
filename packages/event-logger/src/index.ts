@@ -173,7 +173,7 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
       }
     },
     clearMetadata: async (key: string, tx: TSqlRunner = db) => {
-      if (['merkle-tree', 'clientId', 'clock', 'version'].includes(key))
+      if (['clientId', 'clock', 'merkle-tree', 'version'].includes(key))
         throw new Error(`not allowed to clear metadata key: ${key}`);
       await tx.query(sql`DELETE FROM metadata WHERE key = ${key}`);
     },
@@ -440,7 +440,7 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
       await tx.query(sql`UPDATE metadata SET value = ${clock.toString()} WHERE key = 'clock'`);
     },
     setMetadata: async (key: string, value: string, tx: TSqlRunner = db) => {
-      if (['merkle-tree', 'clientId', 'clock', 'version'].includes(key))
+      if (['clientId', 'clock', 'merkle-tree', 'version'].includes(key))
         throw new Error(`not allowed to manually set metadata key: ${key}`);
       await tx.query(
         sql`INSERT INTO metadata (key, value) VALUES (${key}, ${value}) ON CONFLICT(key) DO UPDATE SET value = ${value}`
