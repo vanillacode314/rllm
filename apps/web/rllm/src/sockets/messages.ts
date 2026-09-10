@@ -2,14 +2,12 @@ import type { MerkleTree } from 'event-logger';
 
 import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
 import { Batcher } from '@tanstack/solid-pacer';
-import { inArray } from 'drizzle-orm';
 import { ethers } from 'ethers';
 import * as EventPB from 'proto/events/v1/event_pb';
 import * as PeerPB from 'proto/peers/v1/peer_pb';
 import * as z from 'zod/mini';
 
-import { db, logger } from '~/db/client';
-import { tables } from '~/db/schema';
+import { logger } from '~/db/client';
 import { type TValidEvent, validEventSchema } from '~/queries/mutations';
 import { account } from '~/signals/account';
 import { decrypt, encrypt } from '~/workers/encryption';
@@ -163,15 +161,8 @@ export class ConnectionManager {
   async flushSendTimestamp(timestamps: string[]) {
     const unique = [...new Set(timestamps)];
     if (unique.length === 0) return;
-    const events = await db
-      .select({
-        data: tables.events.data,
-        timestamp: tables.events.timestamp,
-        type: tables.events.type,
-        version: tables.events.version
-      })
-      .from(tables.events)
-      .where(inArray(tables.events.timestamp, unique));
+    const sql = `SELECT "data", "timestamp", "type", "version" FROM "events" WHERE "timestamp" IN (${unique.map(() => '?').join(',')})`;
+    const events = await logger.db.query<EventRow>({ sql, params: unique });
     await this.flushSendEvents(events);
   }
 

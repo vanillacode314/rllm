@@ -1,22 +1,21 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/solid-query';
-import { and, count, desc, eq, exists, inArray, like, sql } from 'drizzle-orm';
 
-import type { TProvider } from '~/db/app-schema';
+import type { TChat, TChatPreset, TDocument, TMCP, TProvider } from '~/db/app-schema';
 
-import { db, logger } from '~/db/client';
-import { tables } from '~/db/schema';
+import { logger } from '~/db/client';
 import { MCPClient } from '~/lib/mcp/client';
+import { parseDbRowsInPlace } from '~/utils/db';
 
 const FIVE_MINUTES_IN_MILLISECONDS = 5 * 60 * 1000;
 
 const userMetadata = {
   fetchers: {
-    byId: (id: string): Promise<null | string> =>
-      db
-        .select({ value: tables.userMetadata.value })
-        .from(tables.userMetadata)
-        .where(eq(tables.userMetadata.id, id))
-        .then((rows) => rows[0]?.value ?? null),
+    byId: async (id: string): Promise<null | string> => {
+      const rows = await logger.db.query<{ value: string }>(
+        logger.sql`SELECT value FROM userMetadata WHERE id = ${id}`
+      );
+      return rows[0]?.value ?? null;
+    },
     staleTime: Infinity
   },
   queries: {
@@ -31,24 +30,32 @@ const userMetadata = {
 
 const providers = {
   fetchers: {
-    byId: (id: string): Promise<null | TProvider> =>
-      db
-        .select()
-        .from(tables.providers)
-        .where(eq(tables.providers.id, id))
-        .then((rows) => rows[0] ?? null),
+    byId: async (id: string): Promise<null | TProvider> => {
+      const rows = await logger.db.query<TProvider>(
+        logger.sql`SELECT * FROM providers WHERE id = ${id}`
+      );
+      parseDbRowsInPlace(rows, { jsonKeys: ['defaultModelIds'] });
+      return rows[0] ?? null;
+    },
     countProviders: () =>
-      db
-        .select({ value: sql<number>`count(*)`.as('value') })
-        .from(tables.providers)
+      logger.db
+        .query<{ value: number }>(logger.sql`SELECT count(*) as value FROM providers`)
         .then((rows) => rows[0]?.value ?? 0),
-    getAllProviders: () => db.select().from(tables.providers)
+    getAllProviders: () =>
+      logger.db
+        .query<TProvider>(
+          logger.sql`SELECT "baseUrl", "createdAt", "defaultModelIds", "id", "name", "token", "type" FROM providers`
+        )
+        .then((rows) => {
+          parseDbRowsInPlace(rows, { jsonKeys: ['defaultModelIds'] });
+          return rows;
+        })
   },
   queries: {
     all: () => {
       return Object.assign(
         queryOptions({
-          queryFn: () => providers.fetchers.getAllProviders().orderBy(tables.providers.name),
+          queryFn: () => providers.fetchers.getAllProviders(),
           queryKey: [...providers.queries.base(), 'all'],
           staleTime: Infinity
         }),
@@ -68,11 +75,12 @@ const providers = {
       queryOptions({
         queryFn: () => {
           if (!id) throw new Error(`Invalid id ${id}`);
-          return db
-            .select()
-            .from(tables.providers)
-            .where(eq(tables.providers.id, id))
-            .then((rows) => rows[0] ?? null);
+          return logger.db
+            .query<TProvider>(logger.sql`SELECT * FROM providers WHERE id = ${id}`)
+            .then((rows) => {
+              parseDbRowsInPlace(rows, { jsonKeys: ['defaultModelIds'] });
+              return rows[0] ?? null;
+            });
         },
         queryKey: [...providers.queries.base(), 'byId', id],
         staleTime: Infinity
@@ -90,41 +98,56 @@ const models = {
 const chats = {
   fetchers: {
     byId: (id: string) =>
-      db
-        .select()
-        .from(tables.chats)
-        .where(eq(tables.chats.id, id))
-        .then((rows) => rows[0] ?? null),
+      logger.db
+        .query<TChat>(logger.sql`SELECT * FROM chats WHERE id = ${id}`)
+        .then((rows) => {
+          parseDbRowsInPlace(rows, {
+            booleanKeys: ['finished'],
+            jsonKeys: ['messages', 'settings', 'tags']
+          });
+          return rows[0] ?? null;
+        }),
     countChats: () =>
-      db
-        .select({ count: count() })
-        .from(tables.chats)
+      logger.db
+        .query<{ count: number }>(logger.sql`SELECT count(*) as count FROM chats`)
         .then((rows) => rows[0]?.count ?? 0),
-    countFilteredChats: (query?: string, tags?: string[]) =>
-      db
-        .select({ count: count() })
-        .from(tables.chats)
-        .where(
-          and(
-            like(sql`LOWER(${tables.chats.title})`, `%${query?.toLowerCase()}%`).if(
-              query && query.trim().length > 0
-            ),
-            exists(
-              db
-                .select({ value: sql`1` })
-                .from(sql`json_each(${tables.chats.tags})`)
-                .where(
-                  inArray(
-                    sql`LOWER(json_each.value)`,
-                    tags?.filter((tag) => tag.trim().length > 0).map((tag) => tag.toLowerCase()) ??
-                      []
-                  )
-                )
-            ).if(tags && tags.filter((tag) => tag.trim().length > 0).length > 0)
-          )
+    countFilteredChats: (query?: string, tags?: string[]) => {
+      const conditions: string[] = [];
+      const params: string[] = [];
+
+      if (query && query.trim().length > 0) {
+        conditions.push(`LOWER("title") LIKE ?`);
+        params.push(`%${query.toLowerCase()}%`);
+      }
+
+      if (tags && tags.filter((tag) => tag.trim().length > 0).length > 0) {
+        const filteredTags = tags
+          .filter((tag) => tag.trim().length > 0)
+          .map((tag) => tag.toLowerCase());
+        conditions.push(
+          `EXISTS (SELECT 1 FROM json_each("chats"."tags") WHERE LOWER(json_each.value) IN (${filteredTags.map(() => '?').join(', ')}))`
+        );
+        params.push(...filteredTags);
+      }
+
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+      return logger.db
+        .query<{ count: number }>({
+          sql: `SELECT count(*) as count FROM chats ${whereClause}`,
+          params
+        })
+        .then((rows) => rows[0]?.count ?? 0);
+    },
+    getAllChats: () =>
+      logger.db
+        .query<TChat>(
+          logger.sql`SELECT "accessCount", "createdAt", "finished", "id", "lastAccessedAt", "messages", "settings", "tags", "title" FROM chats ORDER BY "createdAt" DESC`
         )
-        .then((rows) => rows[0]?.count ?? 0),
-    getAllChats: () => db.select().from(tables.chats).orderBy(desc(tables.chats.createdAt)),
+        .then((rows) => {
+          parseDbRowsInPlace(rows, { booleanKeys: ['finished'], jsonKeys: ['messages', 'settings', 'tags'] });
+          return rows;
+        }),
     getChatTags: () =>
       logger.db
         .query<{ value: string }>(
@@ -132,57 +155,54 @@ const chats = {
         )
         .then((rows) => rows.map((row) => row.value)),
     getMinimalChats: () =>
-      db
-        .select({
-          finished: tables.chats.finished,
-          id: tables.chats.id,
-          tags: tables.chats.tags,
-          title: tables.chats.title
-        })
-        .from(tables.chats)
-        .orderBy(desc(tables.chats.createdAt)),
-    getPagedMinimalChats: (limit: number, offset: number, query?: string, tags?: string[]) =>
-      db
-        .select({
-          finished: tables.chats.finished,
-          id: tables.chats.id,
-          score:
-            sql`${tables.chats.accessCount} * MAX(0, 1 - (strftime('%s','now') - (${tables.chats.lastAccessedAt} / 1000.0)) / (86400.0 * 7))`.as(
-              'score'
-            ),
-          tags: tables.chats.tags,
-          title: tables.chats.title
-        })
-        .from(tables.chats)
-        .where(
-          and(
-            like(sql`LOWER(${tables.chats.title})`, `%${query?.toLowerCase()}%`).if(
-              query && query.trim().length > 0
-            ),
-            exists(
-              db
-                .select({ value: sql`1` })
-                .from(sql`json_each(${tables.chats.tags})`)
-                .where(
-                  inArray(
-                    sql`LOWER(json_each.value)`,
-                    tags?.filter((tag) => tag.trim().length > 0).map((tag) => tag.toLowerCase()) ??
-                      []
-                  )
-                )
-            ).if(tags && tags.filter((tag) => tag.trim().length > 0).length > 0)
-          )
+      logger.db
+        .query<Pick<TChat, 'finished' | 'id' | 'tags' | 'title'>>(
+          logger.sql`SELECT "finished", "id", "tags", "title" FROM chats ORDER BY "createdAt" DESC`
         )
-        .orderBy(
-          sql`score desc`,
-          desc(tables.chats.lastAccessedAt),
-          desc(tables.chats.createdAt),
-          sql`score is null`
-        )
-        .limit(limit)
-        .offset(offset),
+        .then((rows) => {
+          parseDbRowsInPlace(rows, { booleanKeys: ['finished'], jsonKeys: ['tags'] });
+          return rows;
+        }),
+    getPagedMinimalChats: (limit: number, offset: number, query?: string, tags?: string[]) => {
+      const conditions: string[] = [];
+      const params: string[] = [];
+
+      if (query && query.trim().length > 0) {
+        conditions.push(`LOWER("title") LIKE ?`);
+        params.push(`%${query.toLowerCase()}%`);
+      }
+
+      if (tags && tags.filter((tag) => tag.trim().length > 0).length > 0) {
+        const filteredTags = tags
+          .filter((tag) => tag.trim().length > 0)
+          .map((tag) => tag.toLowerCase());
+        conditions.push(
+          `EXISTS (SELECT 1 FROM json_each("chats"."tags") WHERE LOWER(json_each.value) IN (${filteredTags.map(() => '?').join(', ')}))`
+        );
+        params.push(...filteredTags);
+      }
+
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+      return logger.db
+        .query<Pick<TChat, 'finished' | 'id' | 'tags' | 'title'> & { score: number }>({
+          sql: `SELECT "finished", "id", "accessCount" * MAX(0, 1 - (strftime('%s','now') - ("lastAccessedAt" / 1000.0)) / (86400.0 * 7)) as "score", "tags", "title" FROM chats ${whereClause} ORDER BY "score" DESC, "lastAccessedAt" DESC, "createdAt" DESC, "score" IS NULL LIMIT ? OFFSET ?`,
+          params: [...params, String(limit), String(offset)]
+        })
+        .then((rows) => {
+          parseDbRowsInPlace(rows, { booleanKeys: ['finished'], jsonKeys: ['tags'] });
+          return rows;
+        });
+    },
     recent: (limit: number = 5) =>
-      db.select().from(tables.chats).orderBy(desc(tables.chats.lastAccessedAt)).limit(limit)
+      logger.db
+        .query<TChat>(
+          logger.sql`SELECT "accessCount", "createdAt", "finished", "id", "lastAccessedAt", "messages", "settings", "tags", "title" FROM chats ORDER BY "lastAccessedAt" DESC LIMIT ${String(limit)}`
+        )
+        .then((rows) => {
+          parseDbRowsInPlace(rows, { booleanKeys: ['finished'], jsonKeys: ['messages', 'settings', 'tags'] });
+          return rows;
+        })
   },
   queries: {
     all: () =>
@@ -260,11 +280,13 @@ const chats = {
 
 const mcps = {
   fetchers: {
-    getAllMcps: () => db.select().from(tables.mcps),
+    getAllMcps: () =>
+      logger.db.query<Pick<TMCP, 'createdAt' | 'id' | 'name' | 'url'>>(
+        logger.sql`SELECT "createdAt", "id", "name", "url" FROM mcps ORDER BY "name"`
+      ),
     getClients: (proxy?: null | string | undefined) =>
       mcps.fetchers
         .getAllMcps()
-        .orderBy(tables.mcps.name)
         .then((mcps) =>
           mcps.map((mcp) => new MCPClient(mcp.name, proxy ? proxy.replace('%s', mcp.url) : mcp.url))
         )
@@ -273,7 +295,10 @@ const mcps = {
     all: () =>
       Object.assign(
         queryOptions({
-          queryFn: () => mcps.fetchers.getAllMcps().orderBy(desc(tables.mcps.createdAt)),
+          queryFn: () =>
+            logger.db.query<Pick<TMCP, 'createdAt' | 'id' | 'name' | 'url'>>(
+              logger.sql`SELECT "createdAt", "id", "name", "url" FROM mcps ORDER BY "createdAt" DESC`
+            ),
           queryKey: [...mcps.queries.base(), 'all'],
           staleTime: Infinity
         }),
@@ -292,10 +317,8 @@ const mcps = {
     byId: (id: string) =>
       queryOptions({
         queryFn: () =>
-          db
-            .select()
-            .from(tables.mcps)
-            .where(eq(tables.mcps.id, id))
+          logger.db
+            .query<TMCP>(logger.sql`SELECT * FROM mcps WHERE id = ${id}`)
             .then((rows) => rows[0] ?? null),
         queryKey: [...mcps.queries.base(), 'byId', id],
         staleTime: Infinity
@@ -306,17 +329,13 @@ const mcps = {
 const events = {
   fetchers: {
     countEvents: () =>
-      db
-        .select({ count: count() })
-        .from(tables.events)
+      logger.db
+        .query<{ count: number }>(logger.sql`SELECT count(*) as count FROM events`)
         .then((rows) => rows[0]?.count ?? 0),
     getPaginatedEvents: (page: number, pageSize: number) =>
-      db
-        .select()
-        .from(tables.events)
-        .orderBy(desc(tables.events.timestamp))
-        .limit(pageSize)
-        .offset((page - 1) * pageSize)
+      logger.db.query<{ data: string; timestamp: string; type: string; version: string }>(
+        logger.sql`SELECT "data", "timestamp", "type", "version" FROM events ORDER BY "timestamp" DESC LIMIT ${String(pageSize)} OFFSET ${String((page - 1) * pageSize)}`
+      )
   },
   queries: {
     all: (page: number, pageSize: number) =>
@@ -338,13 +357,21 @@ const events = {
 const chatPresets = {
   fetchers: {
     byId: (id: string) =>
-      db
-        .select()
-        .from(tables.chatPresets)
-        .where(eq(tables.chatPresets.id, id))
-        .then((rows) => (rows.length > 0 ? rows[0] : null)),
+      logger.db
+        .query<TChatPreset>(logger.sql`SELECT * FROM chatPresets WHERE id = ${id}`)
+        .then((rows) => {
+          parseDbRowsInPlace(rows, { jsonKeys: ['settings'] });
+          return rows.length > 0 ? rows[0] : null;
+        }),
     getAllPresets: () =>
-      db.select().from(tables.chatPresets).orderBy(desc(tables.chatPresets.createdAt))
+      logger.db
+        .query<TChatPreset>(
+          logger.sql`SELECT "createdAt", "id", "name", "settings" FROM chatPresets ORDER BY "createdAt" DESC`
+        )
+        .then((rows) => {
+          parseDbRowsInPlace(rows, { jsonKeys: ['settings'] });
+          return rows;
+        })
   },
   queries: {
     all: () =>
@@ -365,12 +392,11 @@ const chatPresets = {
 
 const documents = {
   fetchers: {
-    all: () => db.select().from(tables.documents).orderBy(desc(tables.documents.createdAt)),
+    all: () =>
+      logger.db.query<TDocument>(logger.sql`SELECT "id", "name" FROM documents ORDER BY "createdAt" DESC`),
     byId: (id: string) =>
-      db
-        .select()
-        .from(tables.documents)
-        .where(eq(tables.documents.id, id))
+      logger.db
+        .query<TDocument>(logger.sql`SELECT * FROM documents WHERE id = ${id}`)
         .then((rows) => rows[0] ?? null)
   },
   queries: {

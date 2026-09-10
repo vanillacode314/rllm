@@ -1,18 +1,17 @@
-import { eq, or } from 'drizzle-orm';
-
-import { db } from '~/db/client';
-import { tables } from '~/db/schema';
+import { logger } from '~/db/client';
 
 import { createTask, type TTask } from '../background-task-manager/tasks';
+import type { TChat } from '~/db/app-schema';
+import { parseDbRowsInPlace } from '~/utils/db';
 
 export async function retryFailedTitleAndTags() {
   const controller = new AbortController();
-  const chats = await db
-    .select({ id: tables.chats.id, settings: tables.chats.settings })
-    .from(tables.chats)
-    .where(
-      or(eq(tables.chats.title, 'Untitled Chat'), eq(tables.chats.title, 'Untitled New Chat'))
-    );
+  const chats = parseDbRowsInPlace(
+    await logger.db.query<Pick<TChat, 'id' | 'settings'>>(
+      logger.sql`SELECT "id", "settings" FROM "chats" WHERE "title" = 'Untitled Chat' OR "title" = 'Untitled New Chat'`
+    ),
+    { jsonKeys: ['settings'] }
+  );
   console.debug(`Found ${chats.length} chats with default titles`);
   const tasks = [] as TTask[];
   for (const chat of chats)

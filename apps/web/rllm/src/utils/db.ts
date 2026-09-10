@@ -4,7 +4,7 @@ import type { Transaction } from 'sqlocal';
 import { getTableColumns, sql, type SQL } from 'drizzle-orm';
 import { AsyncResult, Result } from 'ts-result-option';
 
-import { db, logger } from '~/db/client';
+import { logger } from '~/db/client';
 
 const buildConflictUpdateColumns = <T extends SQLiteTable, Q extends keyof T['_']['columns']>(
   table: T,
@@ -55,5 +55,29 @@ const withTransaction: WithTransactionFn = (fn) =>
     },
     (e) => new Error('Failed to run transaction', { cause: e })
   );
+
+export async function parseDbRowsInPlace<TRow extends Record<string, unknown>>(
+  rowsPromise: TRow[] | Promise<TRow[]>,
+  opts: Partial<{
+    jsonKeys: (keyof TRow)[];
+    booleanKeys: (keyof TRow)[];
+  }> = {}
+): Promise<TRow[]> {
+  const rows = await rowsPromise;
+  const { jsonKeys = [], booleanKeys = [] } = opts;
+  for (const row of rows) {
+    for (const key of jsonKeys) {
+      if (key in row) {
+        row[key] = JSON.parse(row[key] as string);
+      }
+    }
+    for (const key of booleanKeys) {
+      if (key in row) {
+        row[key] = Boolean(row[key]) as never;
+      }
+    }
+  }
+  return rows;
+}
 
 export { buildConflictUpdateColumns, tableToObject, withTransaction };

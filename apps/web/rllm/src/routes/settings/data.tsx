@@ -5,12 +5,14 @@ import { Button } from 'ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'ui/card';
 
 import { USER_METADATA_KEYS } from '~/constants/user-metadata';
-import { db, logger } from '~/db/client';
+import type { TChat, TChatPreset, TMCP, TProvider, TUserMetadata } from '~/db/app-schema';
+import { logger } from '~/db/client';
 import { MAIN_DATABASE_NAME } from '~/db/client.constants';
 import * as schema from '~/db/schema';
 import { VECTOR_DATABASE_NAME } from '~/lib/vector-db/client.constants';
 import { TRANSIENT_VECTOR_DATABASE_NAME } from '~/lib/vector-db/transient.constants';
 import { setAccount } from '~/signals/account';
+import { parseDbRowsInPlace } from '~/utils/db';
 import { getFile } from '~/utils/files';
 import { round } from '~/utils/math';
 import { clearData } from '~/utils/storage';
@@ -73,11 +75,28 @@ function SettingsStorageComponent() {
   const data = Route.useLoaderData();
   async function exportData() {
     const [chats, mcps, providers, userMetadata, chatPresets] = await Promise.all([
-      db.select().from(schema.chats).orderBy(schema.chats.createdAt),
-      db.select().from(schema.mcps).orderBy(schema.mcps.createdAt),
-      db.select().from(schema.providers).orderBy(schema.providers.createdAt),
-      db.select().from(schema.userMetadata).orderBy(schema.userMetadata.createdAt),
-      db.select().from(schema.chatPresets).orderBy(schema.chatPresets.createdAt)
+      parseDbRowsInPlace(
+        logger.db.query<TChat>(logger.sql`SELECT * FROM "chats" ORDER BY "chats"."createdAt"`),
+        { jsonKeys: ['settings', 'messages', 'tags'], booleanKeys: ['finished'] }
+      ),
+      parseDbRowsInPlace(
+        logger.db.query<TMCP>(logger.sql`SELECT * FROM "mcps" ORDER BY "mcps"."createdAt"`)
+      ),
+      parseDbRowsInPlace(
+        logger.db.query<TProvider>(
+          logger.sql`SELECT * FROM "providers" ORDER BY "providers"."createdAt"`
+        ),
+        { jsonKeys: ['defaultModelIds'] }
+      ),
+      logger.db.query<TUserMetadata>(
+        logger.sql`SELECT * FROM "userMetadata" ORDER BY "userMetadata"."createdAt"`
+      ),
+      parseDbRowsInPlace(
+        logger.db.query<TChatPreset>(
+          logger.sql`SELECT * FROM "chatPresets" ORDER BY "chatPresets"."createdAt"`
+        ),
+        { jsonKeys: ['settings'] }
+      )
     ]);
     const json = { chatPresets, chats, mcps, providers, userMetadata };
     const blob = new Blob([JSON.stringify(json)], { type: 'application/json' });
@@ -92,10 +111,24 @@ function SettingsStorageComponent() {
 
   async function exportDataWithoutChats() {
     const [mcps, providers, userMetadata, chatPresets] = await Promise.all([
-      db.select().from(schema.mcps).orderBy(schema.mcps.createdAt),
-      db.select().from(schema.providers).orderBy(schema.providers.createdAt),
-      db.select().from(schema.userMetadata).orderBy(schema.userMetadata.createdAt),
-      db.select().from(schema.chatPresets).orderBy(schema.chatPresets.createdAt)
+      parseDbRowsInPlace(
+        logger.db.query<TMCP>(logger.sql`SELECT * FROM "mcps" ORDER BY "mcps"."createdAt"`)
+      ),
+      parseDbRowsInPlace(
+        logger.db.query<TProvider>(
+          logger.sql`SELECT * FROM "providers" ORDER BY "providers"."createdAt"`
+        ),
+        { jsonKeys: ['defaultModelIds'] }
+      ),
+      logger.db.query<TUserMetadata>(
+        logger.sql`SELECT * FROM "userMetadata" ORDER BY "userMetadata"."createdAt"`
+      ),
+      parseDbRowsInPlace(
+        logger.db.query<TChatPreset>(
+          logger.sql`SELECT * FROM "chatPresets" ORDER BY "chatPresets"."createdAt"`
+        ),
+        { jsonKeys: ['settings'] }
+      )
     ]);
     const json = {
       chatPresets,
