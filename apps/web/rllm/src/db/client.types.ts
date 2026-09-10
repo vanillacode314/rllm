@@ -1,13 +1,15 @@
-import type { drizzle } from 'drizzle-orm/sqlite-proxy';
-import type { createEventLogger } from 'event-logger';
+import type { SqliteRemoteDatabase } from 'drizzle-orm/sqlite-proxy';
+import type { Logger } from 'event-logger';
 
 import type { TValidEvent } from '~/queries/mutations';
 
 import type { tables } from './schema';
 
+export type DrizzleDB = SqliteRemoteDatabase<typeof tables>;
+export type LoggerInstance = Logger<TValidEvent & { timestamp: string; version: string }>;
+
 export interface SqliteAdapter {
-  DATABASE_PATH: string;
-  db: ReturnType<typeof drizzle<typeof tables>>;
-  getDatabaseSize: () => Promise<number>;
-  logger: Awaited<ReturnType<typeof createEventLogger<TValidEvent>>>;
+  getDb: () => Promise<DrizzleDB>;
+  getLogger: () => Promise<LoggerInstance>;
+  logger: LoggerInstance;
 }

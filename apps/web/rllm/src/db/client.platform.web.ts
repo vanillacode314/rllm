@@ -9,48 +9,74 @@ import { processMessage, type TValidEvent, validEventSchema } from '~/queries/mu
 import { queryClient } from '~/utils/query-client';
 
 import { MAIN_DATABASE_PATH } from './client.constants';
+import { createLoggerProxy, setupDb } from './client.platform.common';
+import type { DrizzleDB, LoggerInstance } from './client.types';
 import { tables } from './schema';
 
-async function loadSQLocalDb() {
-  console.debug('[DB] Loading SQLocal Instance');
-  const { batchDriver, driver, getDatabaseInfo } = new SQLocalDrizzle({
-    databasePath: MAIN_DATABASE_PATH,
-    onInit: (sql) => [sql`PRAGMA journal_mode=MEMORY;`]
-  });
-  const drizzleDb = drizzle(driver, batchDriver, { schema: tables });
-  drizzleDb.get('SELECT 1').execute();
-  const loggerDb = fromSQLocal(
-    new SQLocal({
-      databasePath: MAIN_DATABASE_PATH,
-      onInit: (sql) => [sql`PRAGMA journal_mode=MEMORY;`]
-    })
-  );
-  async function getDatabaseSize() {
-    const info = await getDatabaseInfo();
-    return info.databaseSizeBytes;
+let loggerPromise: Promise<LoggerInstance> | null = null;
+let loggerInstance: LoggerInstance | null = null;
+
+let dbPromise: Promise<DrizzleDB> | null = null;
+let dbInstance: DrizzleDB | null = null;
+
+async function getLogger(): Promise<LoggerInstance> {
+  if (loggerInstance) return loggerInstance;
+  if (!loggerPromise) {
+    loggerPromise = (async () => {
+      const loggerDb = fromSQLocal(
+        new SQLocal({
+          databasePath: MAIN_DATABASE_PATH,
+          onInit: (sql) => [sql`PRAGMA journal_mode=MEMORY;`]
+        })
+      );
+      const instance = await createEventLogger<TValidEvent>({
+        db: loggerDb,
+        eventToUpdates: processMessage,
+        invalidate: async (items) => {
+          const uniqueKeys = new Map<string, string[]>();
+          for (const { keys } of items) {
+            for (const key of keys) {
+              const hash = hashKey(key);
+              if (!uniqueKeys.has(hash)) uniqueKeys.set(hash, key);
+            }
+          }
+          await Promise.all(
+            Array.from(uniqueKeys.values()).map((key) =>
+              queryClient.invalidateQueries({ queryKey: key })
+            )
+          );
+        },
+        validateEvent: (event) => validEventSchema.parse(event)
+      });
+      await setupDb(instance);
+      loggerInstance = instance;
+      return instance;
+    })();
   }
-  void getDatabaseInfo().then((info) => console.debug('[DB] SQLocal Instance Info', info));
-  return { drizzleDb, getDatabaseSize, loggerDb };
+  return loggerPromise;
 }
 
-const { drizzleDb: db, getDatabaseSize, loggerDb } = await loadSQLocalDb();
+async function getDb(): Promise<DrizzleDB> {
+  if (dbInstance) return dbInstance;
+  if (!dbPromise) {
+    dbPromise = (async () => {
+      await getLogger();
+      const { batchDriver, driver, getDatabaseInfo } = new SQLocalDrizzle({
+        databasePath: MAIN_DATABASE_PATH,
+        onInit: (sql) => [sql`PRAGMA journal_mode=MEMORY;`]
+      });
+      void getDatabaseInfo().then((info) => console.debug('[DB] SQLocal Instance Info', info));
+      const drizzleDb = drizzle(driver, batchDriver, { schema: tables });
 
-const logger = await createEventLogger<TValidEvent>({
-  db: loggerDb,
-  eventToUpdates: processMessage,
-  invalidate: async (items) => {
-    const uniqueKeys = new Map<string, string[]>();
-    for (const { keys } of items) {
-      for (const key of keys) {
-        const hash = hashKey(key);
-        if (!uniqueKeys.has(hash)) uniqueKeys.set(hash, key);
-      }
-    }
-    await Promise.all(
-      uniqueKeys.values().map((key) => queryClient.invalidateQueries({ queryKey: key }))
-    );
-  },
-  validateEvent: (event) => validEventSchema.parse(event)
-});
+      await drizzleDb.get('SELECT 1').execute();
 
-export { db, getDatabaseSize, logger };
+      dbInstance = drizzleDb;
+      return drizzleDb;
+    })();
+  }
+  return dbPromise;
+}
+
+export const logger = createLoggerProxy(getLogger);
+
+export { getDb, getLogger };

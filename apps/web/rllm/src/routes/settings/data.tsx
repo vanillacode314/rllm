@@ -1,6 +1,5 @@
 import { createFileRoute } from '@tanstack/solid-router';
 import { toast } from 'solid-sonner';
-import { AsyncResult } from 'ts-result-option';
 import { Button } from 'ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'ui/card';
 
@@ -15,7 +14,7 @@ import { setAccount } from '~/signals/account';
 import { parseDbRowsInPlace } from '~/utils/db';
 import { getFile } from '~/utils/files';
 import { round } from '~/utils/math';
-import { clearData } from '~/utils/storage';
+import { clearData, getDatabaseSize } from '~/utils/storage';
 
 export const Route = createFileRoute('/settings/data')({
   component: SettingsStorageComponent,
@@ -46,29 +45,6 @@ function formatBytes(value: number): string {
 
   value = round(value, 2);
   return `${value} ${units[i]}`;
-}
-
-async function getDatabaseSize(name: string): Promise<number> {
-  if (import.meta.env.VITE_MODE === 'android') {
-    const { Filesystem } = await import('@capacitor/filesystem');
-    const { App } = await import('@capacitor/app');
-    const info = await App.getInfo();
-    const result = AsyncResult.from(
-      () =>
-        Filesystem.stat({
-          path: `/data/data/${info.id}/databases/${name}SQLite.db`
-        }),
-      (e) => new Error('Failed to get database size', { cause: e })
-    );
-    return result
-      .map((info) => info.size)
-      .inspectErr((e) => console.error(e))
-      .unwrapOr(0);
-  }
-  const root = await navigator.storage.getDirectory();
-  const fileHandle = await root.getFileHandle(`${name}.db`);
-  const file = await fileHandle.getFile();
-  return file.size;
 }
 
 function SettingsStorageComponent() {

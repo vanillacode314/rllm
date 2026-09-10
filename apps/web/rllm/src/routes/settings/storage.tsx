@@ -1,6 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/solid-query';
 import { createFileRoute, useBlocker } from '@tanstack/solid-router';
-import { count, gt } from 'drizzle-orm';
 import { ethers } from 'ethers';
 import { createSignal, Match, onMount, Show, Switch } from 'solid-js';
 import { createStore } from 'solid-js/store';
@@ -12,14 +11,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'ui/ca
 import * as z from 'zod/mini';
 
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
-import { db, getDatabaseSize, logger } from '~/db/client';
+import { logger } from '~/db/client';
+import { MAIN_DATABASE_NAME } from '~/db/client.constants';
 import { tables } from '~/db/schema';
 import { account } from '~/signals/account';
 import { env } from '~/utils/env';
 import { round } from '~/utils/math';
 import { queryClient } from '~/utils/query-client';
 import { createDebouncedMemo } from '~/utils/signals';
-import { optimizeMessages, optimizeStorage as optimizeStorageUtil } from '~/utils/storage';
+import {
+  getDatabaseSize,
+  optimizeMessages,
+  optimizeStorage as optimizeStorageUtil
+} from '~/utils/storage';
 import { getMessages as getServerMessages } from '~/utils/sync-server';
 import { createAuthenticatedSyncServerFetcher } from '~/utils/sync-server';
 import { encryptionWorkerPool } from '~/workers/encryption';
@@ -28,13 +32,9 @@ export const Route = createFileRoute('/settings/storage')({
   component: SettingsStorageComponent,
   async loader() {
     const [size] = await Promise.all([
-      getDatabaseSize(),
+      getDatabaseSize(MAIN_DATABASE_NAME),
       queryClient.ensureQueryData({
-        queryFn: () =>
-          db
-            .select({ count: count() })
-            .from(tables.events)
-            .then((res) => res[0].count),
+        queryFn: () => 0,
         queryKey: ['db', 'messages', 'count']
       })
     ]);
@@ -84,11 +84,7 @@ function SettingsStorageComponent() {
   }));
 
   const messages = useQuery(() => ({
-    queryFn: () =>
-      db
-        .select({ count: count() })
-        .from(tables.events)
-        .then((res) => res[0].count),
+    queryFn: () => 0,
     queryKey: ['db', 'messages', 'count']
   }));
 
@@ -154,7 +150,7 @@ function SettingsStorageComponent() {
             ['encrypt', 'decrypt']
           );
 
-          const [{ count: total }] = await db.select({ count: count() }).from(tables.events);
+          const total = 0;
           setServerOptimizationStatus({
             processed: 0,
             total,
@@ -169,13 +165,7 @@ function SettingsStorageComponent() {
             .res();
 
           const pageSize = 100;
-          const getMessages = (after?: string) =>
-            db
-              .select()
-              .from(tables.events)
-              .where(gt(tables.events.timestamp, after!).if(after))
-              .orderBy(tables.events.timestamp)
-              .limit(pageSize + 1);
+          const getMessages = (after?: string) => [];
 
           let hasMore = true;
           let messages = await getMessages();

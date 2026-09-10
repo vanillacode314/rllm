@@ -2,17 +2,17 @@ import type { Transaction } from 'sqlocal';
 
 import { asc, count, inArray } from 'drizzle-orm';
 import localforage from 'localforage';
-import { type AsyncResult, Result } from 'ts-result-option';
+import { AsyncResult, Result } from 'ts-result-option';
 import { tryBlock } from 'ts-result-option/utils';
 
-import type { TEvent } from '~/db/schema';
+import type { TEvent } from '~/db/events-schema';
 
-import { db } from '~/db/client';
+import { getDb } from '~/db/client';
 import { MAIN_DATABASE_NAME } from '~/db/client.constants';
 import { tables } from '~/db/schema';
 import { VECTOR_DATABASE_NAME } from '~/lib/vector-db/client.constants';
 import { TRANSIENT_VECTOR_DATABASE_NAME } from '~/lib/vector-db/transient.constants';
-import { type TValidMessage } from '~/queries/mutations';
+import { type TValidEvent } from '~/queries/mutations';
 
 import { withTransaction } from './db';
 
@@ -40,6 +40,7 @@ const optimizeStorage = ({
 } = {}): AsyncResult<void, Error> =>
   tryBlock<void, Error>(
     async function* () {
+      const db = await getDb();
       if (!tx) {
         yield* withTransaction((tx) => optimizeStorage({ tail, tx }));
         await db.run('VACUUM;');
@@ -77,6 +78,29 @@ export async function clearData(): Promise<void> {
   localStorage.clear();
 }
 
+export async function getDatabaseSize(name: string): Promise<number> {
+  if (import.meta.env.VITE_MODE === 'android') {
+    const { Filesystem } = await import('@capacitor/filesystem');
+    const { App } = await import('@capacitor/app');
+    const info = await App.getInfo();
+    const result = AsyncResult.from(
+      () =>
+        Filesystem.stat({
+          path: `/data/data/${info.id}/databases/${name}SQLite.db`
+        }),
+      (e) => new Error('Failed to get database size', { cause: e })
+    );
+    return result
+      .map((info) => info.size)
+      .inspectErr((e) => console.error(e))
+      .unwrapOr(0);
+  }
+  const root = await navigator.storage.getDirectory();
+  const fileHandle = await root.getFileHandle(`${name}.db`);
+  const file = await fileHandle.getFile();
+  return file.size;
+}
+
 export async function deleteDatabaseFile(name: string) {
   if (import.meta.env.VITE_MODE === 'android') {
     const { Filesystem } = await import('@capacitor/filesystem');
@@ -110,7 +134,7 @@ async function produceMessagesOptimizationState(events: TEvent[]): Promise<TOpti
     const event = events[i - 1];
     switch (event.type) {
       case 'add_mcp': {
-        const typesafeEvent = event as unknown as TValidMessage & {
+        const typesafeEvent = event as unknown as TValidEvent & {
           type: typeof event.type;
         };
         const mcpId = typesafeEvent.data.id;
@@ -123,7 +147,7 @@ async function produceMessagesOptimizationState(events: TEvent[]): Promise<TOpti
         break;
       }
       case 'add_provider': {
-        const typesafeEvent = event as unknown as TValidMessage & {
+        const typesafeEvent = event as unknown as TValidEvent & {
           type: typeof event.type;
         };
         const providerId = typesafeEvent.data.id;
@@ -136,7 +160,7 @@ async function produceMessagesOptimizationState(events: TEvent[]): Promise<TOpti
         break;
       }
       case 'create_chat': {
-        const typesafeEvent = event as unknown as TValidMessage & {
+        const typesafeEvent = event as unknown as TValidEvent & {
           type: typeof event.type;
         };
         const chatId = typesafeEvent.data.id;
@@ -149,7 +173,7 @@ async function produceMessagesOptimizationState(events: TEvent[]): Promise<TOpti
         break;
       }
       case 'delete_chat': {
-        const typesafeEvent = event as unknown as TValidMessage & {
+        const typesafeEvent = event as unknown as TValidEvent & {
           type: typeof event.type;
         };
         const chatId = typesafeEvent.data.id;
@@ -157,7 +181,7 @@ async function produceMessagesOptimizationState(events: TEvent[]): Promise<TOpti
         break;
       }
       case 'delete_mcp': {
-        const typesafeEvent = event as unknown as TValidMessage & {
+        const typesafeEvent = event as unknown as TValidEvent & {
           type: typeof event.type;
         };
         const mcpId = typesafeEvent.data.id;
@@ -165,7 +189,7 @@ async function produceMessagesOptimizationState(events: TEvent[]): Promise<TOpti
         break;
       }
       case 'delete_provider': {
-        const typesafeEvent = event as unknown as TValidMessage & {
+        const typesafeEvent = event as unknown as TValidEvent & {
           type: typeof event.type;
         };
         const providerId = typesafeEvent.data.id;
@@ -173,7 +197,7 @@ async function produceMessagesOptimizationState(events: TEvent[]): Promise<TOpti
         break;
       }
       case 'set_user_metadata': {
-        const typesafeEvent = event as unknown as TValidMessage & {
+        const typesafeEvent = event as unknown as TValidEvent & {
           type: typeof event.type;
         };
         const key = typesafeEvent.data.id;
@@ -185,7 +209,7 @@ async function produceMessagesOptimizationState(events: TEvent[]): Promise<TOpti
         break;
       }
       case 'update_chat': {
-        const typesafeEvent = event as unknown as TValidMessage & {
+        const typesafeEvent = event as unknown as TValidEvent & {
           type: typeof event.type;
         };
         const chatId = typesafeEvent.data.id;
@@ -199,7 +223,7 @@ async function produceMessagesOptimizationState(events: TEvent[]): Promise<TOpti
       }
 
       case 'update_mcp': {
-        const typesafeEvent = event as unknown as TValidMessage & {
+        const typesafeEvent = event as unknown as TValidEvent & {
           type: typeof event.type;
         };
         const mcpId = typesafeEvent.data.id;
@@ -212,7 +236,7 @@ async function produceMessagesOptimizationState(events: TEvent[]): Promise<TOpti
         break;
       }
       case 'update_provider': {
-        const typesafeEvent = event as unknown as TValidMessage & {
+        const typesafeEvent = event as unknown as TValidEvent & {
           type: typeof event.type;
         };
         const providerId = typesafeEvent.data.id;

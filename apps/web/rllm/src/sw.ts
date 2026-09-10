@@ -18,7 +18,6 @@ declare const self: ServiceWorkerGlobalScope;
 const serwist = new Serwist({
   cacheId: 'rllm',
   clientsClaim: true,
-  navigationPreload: true,
   precacheEntries: self.__SW_MANIFEST,
   // TODO: figure this out later
   // runtimeCaching: defaultCache,

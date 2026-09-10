@@ -1,10 +1,10 @@
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
-import type { Transaction } from 'sqlocal';
 
 import { getTableColumns, sql, type SQL } from 'drizzle-orm';
 import { AsyncResult, Result } from 'ts-result-option';
 
 import { logger } from '~/db/client';
+import type { TSqlRunner } from 'event-logger';
 
 const buildConflictUpdateColumns = <T extends SQLiteTable, Q extends keyof T['_']['columns']>(
   table: T,
@@ -24,10 +24,10 @@ const buildConflictUpdateColumns = <T extends SQLiteTable, Q extends keyof T['_'
 };
 
 interface WithTransactionFn {
-  <T, E>(fn: (tx: Transaction) => AsyncResult<T, E>): AsyncResult<T, E | Error>;
-  <T, E>(fn: (tx: Transaction) => Result<T, E>): AsyncResult<T, E | Error>;
-  <T, E>(fn: (tx: Transaction) => Promise<Result<T, E>>): AsyncResult<T, E | Error>;
-  <T>(fn: (tx: Transaction) => Promise<T>): AsyncResult<T, Error>;
+  <T, E>(fn: (tx: TSqlRunner) => AsyncResult<T, E>): AsyncResult<T, E | Error>;
+  <T, E>(fn: (tx: TSqlRunner) => Result<T, E>): AsyncResult<T, E | Error>;
+  <T, E>(fn: (tx: TSqlRunner) => Promise<Result<T, E>>): AsyncResult<T, E | Error>;
+  <T>(fn: (tx: TSqlRunner) => Promise<T>): AsyncResult<T, Error>;
 }
 
 function tableToObject<T extends object>(rows: never[][], columns: (keyof T)[]): T[] {

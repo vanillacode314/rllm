@@ -59,7 +59,7 @@ export type TUpdate =
       table: string;
     };
 
-interface Logger<T extends TBaseEvent> {
+export interface Logger<T extends TBaseEvent> {
   clearMetadata: (key: string, tx?: TSqlRunner) => Promise<void>;
   db: TSqlDB;
   dispatch: (
@@ -90,7 +90,7 @@ interface Logger<T extends TBaseEvent> {
 
 type MaybePromise<T> = Promise<T> | T;
 
-type TBaseEvent = { data: unknown; timestamp: string; type: string; version: string };
+export type TBaseEvent = { data: unknown; timestamp: string; type: string; version: string };
 
 export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timestamp' | 'version'>>({
   db,
@@ -724,7 +724,7 @@ async function readColumnTimestamps(
   return new Map(rows.map((row) => [row.column, row.timestamp]));
 }
 
-function sql(strings: TemplateStringsArray, ...values: unknown[]): TStatement {
+export function sql(strings: TemplateStringsArray, ...values: unknown[]): TStatement {
   return {
     params: values.map(toSql),
     sql: strings.reduce((sql, part, i) => sql + part + (i < values.length ? '?' : ''), '')

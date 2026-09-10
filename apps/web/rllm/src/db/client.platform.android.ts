@@ -8,80 +8,103 @@ import { processMessage, type TValidEvent, validEventSchema } from '~/queries/mu
 import { queryClient } from '~/utils/query-client';
 
 import { MAIN_DATABASE_PATH } from './client.constants';
+import { createLoggerProxy, setupDb } from './client.platform.common';
+import type { DrizzleDB, LoggerInstance } from './client.types';
 import { tables } from './schema';
 
-async function loadCapacitorSqliteDb() {
-  console.debug('[DB] Loading CapacitorSQLite Instance');
-  const sqlite = new SQLiteConnection(CapacitorSQLite);
-  async function getDb() {
-    await sqlite.checkConnectionsConsistency();
-    const { result: hasConnection } = await sqlite.isConnection(MAIN_DATABASE_PATH, false);
-    const db = hasConnection
-      ? await sqlite.retrieveConnection(MAIN_DATABASE_PATH, false)
-      : await sqlite.createConnection(MAIN_DATABASE_PATH, false, 'secret', 1, false);
-    const { result: isOpen } = await db.isDBOpen();
-    if (!isOpen) await db.open();
-    return db;
-  }
+let loggerPromise: Promise<LoggerInstance> | null = null;
+let loggerInstance: LoggerInstance | null = null;
 
-  const loggerDb = fromCapacitorSqlite('main', getDb);
-  const drizzleDb = drizzle(
-    async function (sql, params, method) {
-      const db = await getDb();
-      let rows: any[] = [];
+let dbPromise: Promise<DrizzleDB> | null = null;
+let dbInstance: DrizzleDB | null = null;
 
-      switch (method) {
-        case 'all':
-        case 'get':
-        case 'values': {
-          const result = await db.query(sql, params);
-          rows = result.values ?? [];
-          break;
-        }
-        case 'run': {
-          const result = await db.run(sql, params);
-          rows = [
-            {
-              changes: result.changes?.changes ?? 0,
-              lastId: result.changes?.lastId ?? 0
-            }
-          ];
-          break;
-        }
-        default:
-          throw new Error(`Unknown method: ${method}`);
-      }
+const sqlite = new SQLiteConnection(CapacitorSQLite);
 
-      const mappedRows = rows.map((row) => Object.values(row));
-      return { rows: method === 'get' ? mappedRows[0] : mappedRows };
-    },
-    { schema: tables }
-  );
-  async function getDatabaseSize() {
-    throw new Error('Remove this later');
-  }
-
-  return { drizzleDb, getDatabaseSize, loggerDb };
+async function getConnection() {
+  await sqlite.checkConnectionsConsistency();
+  const { result: hasConnection } = await sqlite.isConnection(MAIN_DATABASE_PATH, false);
+  const db = hasConnection
+    ? await sqlite.retrieveConnection(MAIN_DATABASE_PATH, false)
+    : await sqlite.createConnection(MAIN_DATABASE_PATH, false, 'secret', 1, false);
+  const { result: isOpen } = await db.isDBOpen();
+  if (!isOpen) await db.open();
+  return db;
 }
 
-const { drizzleDb: db, getDatabaseSize, loggerDb } = await loadCapacitorSqliteDb();
+async function getLogger(): Promise<LoggerInstance> {
+  if (loggerInstance) return loggerInstance;
+  if (!loggerPromise) {
+    loggerPromise = (async () => {
+      console.debug('[DB] Loading CapacitorSQLite Instance');
+      const instance = await createEventLogger<TValidEvent>({
+        db: fromCapacitorSqlite('main', getConnection),
+        eventToUpdates: processMessage,
+        invalidate: async (items) => {
+          const uniqueKeys = new Map<string, string[]>();
+          for (const { keys } of items) {
+            for (const key of keys) {
+              const hash = hashKey(key);
+              if (!uniqueKeys.has(hash)) uniqueKeys.set(hash, key);
+            }
+          }
+          await Promise.all(
+            Array.from(uniqueKeys.values()).map((key) =>
+              queryClient.invalidateQueries({ queryKey: key })
+            )
+          );
+        },
+        validateEvent: (event) => validEventSchema.parse(event)
+      });
+      await setupDb(instance);
+      loggerInstance = instance;
+      return instance;
+    })();
+  }
+  return loggerPromise;
+}
 
-const logger = await createEventLogger<TValidEvent>({
-  db: loggerDb,
-  eventToUpdates: processMessage,
-  invalidate: async (items) => {
-    const uniqueKeys = new Map<string, string[]>();
-    for (const { keys } of items) {
-      for (const key of keys) {
-        const hash = hashKey(key);
-        if (!uniqueKeys.has(hash)) uniqueKeys.set(hash, key);
-      }
-    }
-    await Promise.all(
-      uniqueKeys.values().map((key) => queryClient.invalidateQueries({ queryKey: key }))
-    );
-  },
-  validateEvent: (event) => validEventSchema.parse(event)
-});
+async function getDb(): Promise<DrizzleDB> {
+  if (dbInstance) return dbInstance;
+  if (!dbPromise) {
+    dbPromise = (async () => {
+      await getLogger();
+      const drizzleDb = drizzle(
+        async function (sql, params, method) {
+          const db = await getConnection();
+          let rows: Record<string, unknown>[];
 
-export { db, getDatabaseSize, logger };
+          switch (method) {
+            case 'all':
+            case 'get':
+            case 'values': {
+              const result = await db.query(sql, params);
+              rows = result.values ?? [];
+              break;
+            }
+            case 'run': {
+              const { changes } = await db.run(sql, params);
+              rows = [{ changes: changes?.changes ?? 0, lastId: changes?.lastId ?? 0 }];
+              break;
+            }
+            default:
+              throw new Error(`Unknown method: ${method}`);
+          }
+
+          const mappedRows = rows.map((row) => Object.values(row));
+          return { rows: method === 'get' ? mappedRows[0] : mappedRows };
+        },
+        { schema: tables }
+      );
+
+      await drizzleDb.get('SELECT 1').execute();
+
+      dbInstance = drizzleDb;
+      return drizzleDb;
+    })();
+  }
+  return dbPromise;
+}
+
+export const logger = createLoggerProxy(getLogger);
+
+export { getDb, getLogger };
