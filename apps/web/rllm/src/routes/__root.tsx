@@ -50,7 +50,7 @@ export const Route = createRootRouteWithContext()({
       const proxyUrl = await fetchers.userMetadata.byId(USER_METADATA_KEYS.CORS_PROXY_URL);
       await ProxyManager.initialize(proxyUrl);
     }
-    void initProxyManager().finally(() => void MCPManager.initialize());
+    void initProxyManager().finally(() => ProxyManager.subscribe(() => MCPManager.initialize()));
     void BackgroundTaskManager.init();
 
     const debouncedMcpInitialized = debounce(() => MCPManager.initialize(), { wait: 1000 });

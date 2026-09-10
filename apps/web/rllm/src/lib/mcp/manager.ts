@@ -12,18 +12,6 @@ import { MCPClient } from './client';
 export class MCPManager {
   static #clients = new ReactiveMap<string, { client: TMCPClient; id: string }>();
 
-  /**
-   * Disconnect all clients
-   */
-  static disconnectAll(): void {
-    for (const { client } of this.#clients.values()) {
-      client.disconnect();
-    }
-  }
-
-  /**
-   * Get all clients
-   */
   static getAllClients(): TMCPClient[] {
     return this.#clients
       .values()
@@ -45,54 +33,17 @@ export class MCPManager {
     return tools;
   }
 
-  /**
-   * Get client by ID
-   */
   static getClient(id: string): TMCPClient | undefined {
     return this.#clients.get(id)?.client;
   }
 
-  /**
-   * Get client by name (first match)
-   */
-  static getClientByName(name: string): TMCPClient | undefined {
-    for (const { client } of this.#clients.values()) {
-      if (client.name === name) return client;
+  static #removeInvalidClients(validIds: Set<string>) {
+    for (const [id] of this.#clients) {
+      if (!validIds.has(id)) {
+        this.#clients.get(id)?.client.disconnect();
+        this.#clients.delete(id);
+      }
     }
-    return undefined;
-  }
-
-  /**
-   * Get only connected clients
-   */
-  static getConnectedClients(): TMCPClient[] {
-    return this.#clients
-      .values()
-      .filter(({ client }) => client.status === 'connected')
-      .map(({ client }) => client)
-      .toArray();
-  }
-
-  /**
-   * Initialize session for all clients
-   */
-  static async initAll(): Promise<void> {
-    ProxyManager.subscribe(() => this.initialize());
-
-    const initPromises: Promise<void>[] = [];
-    for (const { client } of this.#clients.values()) {
-      initPromises.push(client.initSession().catch(() => {}));
-    }
-    await Promise.all(initPromises);
-  }
-
-  /**
-   * Initialize session for a specific client
-   */
-  static async initClient(clientId: string): Promise<void> {
-    const client = this.#clients.get(clientId)?.client;
-    if (!client) return;
-    await client.initSession();
   }
 
   /**
@@ -101,29 +52,18 @@ export class MCPManager {
    */
   static async initialize(): Promise<void> {
     const mcps = await fetchers.mcps.getAllMcps();
-
-    // Remove invalid clients
-    const validIds = new Set(mcps.map((m) => m.id));
-    for (const [id] of this.#clients) {
-      if (!validIds.has(id)) {
-        this.#clients.get(id)?.client.disconnect();
-        this.#clients.delete(id);
-      }
-    }
-    // Create new or update existing clients
+    this.#removeInvalidClients(new Set(mcps.map((m) => m.id)));
     for (const mcp of mcps) {
       const url = ProxyManager.proxifyUrl(mcp.url);
       const existingClient = this.#clients.get(mcp.id)?.client;
-      if (existingClient && url !== existingClient.url) {
-        existingClient.disconnect();
+      if (existingClient) {
         existingClient.url = url;
-        existingClient.initSession();
-      } else {
-        this.#clients.set(mcp.id, {
-          client: new MCPClient(mcp.name, url, mcp.id),
-          id: mcp.id
-        });
+        continue;
       }
+      this.#clients.set(mcp.id, {
+        client: new MCPClient(mcp.name, url, mcp.id),
+        id: mcp.id
+      });
     }
   }
 
