@@ -7,3 +7,4 @@ dist-ssr
 .nitro
 .tanstack
 auto-imports.d.ts
+capacitor.config.json

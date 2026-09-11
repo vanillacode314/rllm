@@ -1,3 +1,6 @@
+import { writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
@@ -50,4 +53,7 @@ if (process.env.ANDROID_DEBUG) {
   };
 }
 
-export default config;
+const outputPath = resolve(import.meta.dirname, '../capacitor.config.json');
+writeFileSync(outputPath, JSON.stringify(config, null, 2), 'utf-8');
+
+console.log('✔ Updated capacitor.config.json');
