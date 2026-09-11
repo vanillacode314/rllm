@@ -1,7 +1,8 @@
+import path from 'node:path';
+
 import { serwist } from '@serwist/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
-import path from 'node:path';
 import sqlocalPlugin from 'sqlocal/vite';
 import UnoCSS from 'unocss/vite';
 import AutoImport from 'unplugin-auto-import/vite';
@@ -44,14 +45,16 @@ export default defineConfig(({ mode }) => {
     },
     resolve: {
       alias: {
-        // 'decode-named-character-reference': path.resolve(
-        //   import.meta.dirname,
-        //   '../../../node_modules/decode-named-character-reference/index.js'
-        // ),
-        // 'hast-util-from-html-isomorphic': path.resolve(
-        //   import.meta.dirname,
-        //   '../../../node_modules/hast-util-from-html-isomorphic/index.js'
-        // ),
+        // NOTE: needed to run parsing in web workers
+        'decode-named-character-reference': path.resolve(
+          import.meta.dirname,
+          '../../../node_modules/decode-named-character-reference/index.js'
+        ),
+        // NOTE: needed to run parsing in web workers
+        'hast-util-from-html-isomorphic': path.resolve(
+          import.meta.dirname,
+          '../../../node_modules/hast-util-from-html-isomorphic/index.js'
+        ),
         '~/db/client':
           mode === 'android'
             ? path.resolve(import.meta.dirname, './src/db/client.platform.android.ts')

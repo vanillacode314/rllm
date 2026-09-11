@@ -8,7 +8,7 @@ export function makeNewEncryptionWorker() {
 
 export const encryptionWorkerPool = new ObjectPool(
   makeNewEncryptionWorker,
-  navigator.hardwareConcurrency
+  Math.min(navigator.hardwareConcurrency, 4)
 );
 
 export async function decrypt(data: Uint8Array, key: CryptoKey) {

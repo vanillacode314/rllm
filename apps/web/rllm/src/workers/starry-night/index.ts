@@ -9,5 +9,5 @@ export function makeNewStarryNightWorker() {
 
 export const starryNightWorkerPool = new ObjectPool(
   makeNewStarryNightWorker,
-  navigator.hardwareConcurrency
+  Math.min(navigator.hardwareConcurrency, 4)
 );

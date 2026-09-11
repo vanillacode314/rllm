@@ -9,5 +9,5 @@ export function makeNewLowlightWorker() {
 
 export const lowlightWorkerPool = new ObjectPool(
   makeNewLowlightWorker,
-  navigator.hardwareConcurrency
+  Math.min(navigator.hardwareConcurrency, 4)
 );

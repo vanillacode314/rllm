@@ -22,6 +22,7 @@ console.error('FIX OPTIMIZE STORAGE');
 export const Route = createFileRoute('/(chat)/chat/$')({
   beforeLoad: useChatPageBeforeLoad,
   component: ChatPageComponent,
+  remountDeps: () => 'chat-page',
   loaderDeps: ({ search: { id } }) => ({ id: id ?? nanoid(), isNewChat: id === undefined }),
   // oxlint-disable-next-line perfectionist/sort-objects
   loader: async ({ deps, params, preload }) => {
@@ -66,11 +67,6 @@ export const Route = createFileRoute('/(chat)/chat/$')({
       id: chat.id,
       isNewChat
     };
-  },
-  shouldReload: ({ deps }) => {
-    const { isNewChat } = deps;
-    if (isNewChat) return true;
-    return undefined;
   },
   validateSearch: z.object({ id: z.optional(z.string()) })
 });
