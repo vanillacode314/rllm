@@ -6,10 +6,12 @@ import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import {
   createMemo,
+  createRenderEffect,
   createSignal,
   Index,
   type JSX,
   Match,
+  on,
   onCleanup,
   type ParentProps,
   Show,
@@ -31,11 +33,27 @@ import { rehypePlugins, remarkPlugins } from '~/utils/markdown';
 import { randomFloat } from '~/utils/math';
 import { createLatestAsync } from '~/utils/signals';
 import { createDerivedStore } from '~/utils/stores';
+import * as markdownWorker from '~/workers/markdown';
 
 import CopyButton from './CopyButton';
 import { MarkdownRoot } from './Renderer';
 void hoverStateChange;
 
+type TProps = JSX.HTMLAttributes<HTMLDivElement> & {
+  content: string;
+  contentId: string;
+  inProgress?: boolean;
+};
+
+function LineSkeleton() {
+  const width = randomFloat({ max: 1, min: 0.5 });
+  return (
+    <div
+      class="h-[1em] rounded-full bg-primary/10 animate-pulse"
+      style={{ width: `${width * 100}%` }}
+    />
+  );
+}
 function SourceComponent(
   props: ParentProps<
     { documentId: string; id: string; type: 'document' } | { href: string; type: 'url' }
@@ -103,95 +121,7 @@ const createProcessor = () =>
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypePlugins);
 
-type TProps = JSX.HTMLAttributes<HTMLDivElement> & {
-  content: string;
-  contentId: string;
-  inProgress?: boolean;
-  queryKey?: string[];
-  worker?: boolean;
-};
-function LineSkeleton() {
-  const width = randomFloat({ max: 1, min: 0.5 });
-  return (
-    <div
-      class="h-[1em] rounded-full bg-primary/10 animate-pulse"
-      style={{ width: `${width * 100}%` }}
-    />
-  );
-}
-
-function Markdown(props: TProps) {
-  const [local, others] = splitProps(props, [
-    'content',
-    'contentId',
-    'queryKey',
-    'worker',
-    'class',
-    'inProgress'
-  ]);
-  const processor = createProcessor();
-
-  const [parsedTree] = createLatestAsync(
-    () => local.content,
-    async (content) => {
-      const file = new VFile();
-      file.value = content;
-      const tree = await processor.run(processor.parse(file), file);
-      return tree;
-    }
-  );
-  const node = createDerivedStore(() =>
-    parsedTree.latest ? parsedTree.latest : { children: [], type: 'root' }
-  );
-
-  return (
-    <Show fallback={<MarkdownSkeleton content={local.content} />} when={parsedTree.latest}>
-      <div class={local.class} {...others}>
-        <MarkdownRoot
-          context={{
-            listDepth: 0,
-            options: {
-              components: {
-                'mention-src': (
-                  props: ParentProps<
-                    | { 'data-document-id': string; 'data-id': string; 'data-type': 'document' }
-                    | { 'data-href': string; 'data-type': 'url' }
-                  >
-                ) => {
-                  const parsedProps = createMemo(() =>
-                    props['data-type'] === 'url'
-                      ? {
-                          href: props['data-href'],
-                          type: 'url' as const
-                        }
-                      : {
-                          documentId: props['data-document-id'],
-                          id: props['data-id'],
-                          type: 'document' as const
-                        }
-                  );
-                  return <SourceComponent {...parsedProps()}>{props.children}</SourceComponent>;
-                },
-                pre: (props: any) => <Pre pending={!!local.inProgress} {...props} />,
-                table: (props: any) => {
-                  return (
-                    <div class="overflow-x-auto">
-                      <table {...props} />
-                    </div>
-                  );
-                }
-              }
-            },
-            schema: html
-          }}
-          node={node}
-        />
-      </div>
-    </Show>
-  );
-}
-
-function MarkdownSkeleton(props: { content: string }) {
+export function MarkdownSkeleton(props: { content: string }) {
   const paragraphs = () => props.content.split('\n\n');
   return (
     <div class="flex flex-col gap-4">
@@ -207,6 +137,84 @@ function MarkdownSkeleton(props: { content: string }) {
           );
         }}
       </Index>
+    </div>
+  );
+}
+
+function Markdown(props: TProps) {
+  const [local, others] = splitProps(props, ['content', 'contentId', 'class', 'inProgress']);
+
+  const processor = createProcessor();
+
+  const [parsedTree] = createLatestAsync(
+    () => local.content,
+    async (content) => {
+      const lessThan1KB = content.length < 1024;
+      const file = new VFile({ value: content });
+      if (lessThan1KB) {
+        return processor.run(processor.parse(file), file);
+      }
+      const tree = await markdownWorker.parse(file);
+      return tree;
+    }
+  );
+
+  const node = createDerivedStore(() => {
+    const tree = parsedTree();
+    return tree ? tree : { children: [], type: 'root' };
+  });
+
+  createRenderEffect(
+    on(
+      () => parsedTree.latest,
+      () =>
+        document.dispatchEvent(
+          new CustomEvent('chat:updated', { detail: props.inProgress ? 'smooth' : 'instant' })
+        )
+    )
+  );
+
+  return (
+    <div class={local.class} {...others}>
+      <MarkdownRoot
+        context={{
+          listDepth: 0,
+          options: {
+            components: {
+              'mention-src': (
+                props: ParentProps<
+                  | { 'data-document-id': string; 'data-id': string; 'data-type': 'document' }
+                  | { 'data-href': string; 'data-type': 'url' }
+                >
+              ) => {
+                const parsedProps = createMemo(() =>
+                  props['data-type'] === 'url'
+                    ? {
+                        href: props['data-href'],
+                        type: 'url' as const
+                      }
+                    : {
+                        documentId: props['data-document-id'],
+                        id: props['data-id'],
+                        type: 'document' as const
+                      }
+                );
+                return <SourceComponent {...parsedProps()}>{props.children}</SourceComponent>;
+              },
+              pre: (props: any) => <Pre pending={!!local.inProgress} {...props} />,
+              table: (props: any) => {
+                return (
+                  <div class="overflow-x-auto">
+                    <table {...props} />
+                  </div>
+                );
+              }
+            }
+          },
+          schema: html
+        }}
+        node={node}
+      />
     </div>
   );
 }

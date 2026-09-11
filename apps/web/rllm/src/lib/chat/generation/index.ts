@@ -390,7 +390,6 @@ export class ChatGenerationManager {
   }
 
   private static emitUpdate(id: string) {
-    document.dispatchEvent(new CustomEvent('chat:updated:noscroll'));
     const chat = this.chats.get(id);
     if (!chat) {
       console.warn(`Chat ${id} not found`);

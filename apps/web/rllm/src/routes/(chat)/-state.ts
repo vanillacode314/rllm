@@ -6,10 +6,10 @@ import { safeParseJson } from 'ts-result-option/utils';
 import * as z from 'zod/mini';
 
 import {
-  chatSettingsSchema,
-  type TChatSettings,
   attachmentsSchema,
+  chatSettingsSchema,
   type TAttachment,
+  type TChatSettings,
   type TMessage
 } from '~/types/chat';
 import { produce } from '~/utils/immer';

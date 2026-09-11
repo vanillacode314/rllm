@@ -8,11 +8,11 @@ import { rehypePlugins, remarkPlugins } from '~/utils/markdown';
 const processor = unified()
   .use(remarkParse)
   .use(remarkPlugins)
-  .use(remarkRehype)
+  .use(remarkRehype, { allowDangerousHtml: true })
   .use(rehypePlugins);
 
 async function parse(file: VFile) {
-  return processor.runSync(processor.parse(file), file);
+  return processor.run(processor.parse(file), file);
 }
 
 export { parse };

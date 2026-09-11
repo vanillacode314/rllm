@@ -84,17 +84,18 @@ export function Chat(props: Props): JSXElement {
   const nodes = createDerivedStore(
     () => {
       const result = [];
-      let parent = toNestedJsonTree(structuredClone(props.chat.messages));
+      const { nodes } = structuredClone(props.chat.messages);
       for (let index = 0; index < props.path.length; index++) {
-        const pathIndex = props.path[index];
-        const node = parent.children[pathIndex];
+        const key = props.path.slice(0, index + 1).join('.');
+        const node = nodes[key];
+        const parentKey = props.path.slice(0, index).join('.');
+        const parentNode = nodes[parentKey];
         result.push({
           id: index,
           node,
-          numberOfSiblings: parent.children.length - 1,
-          pathIndex
+          numberOfSiblings: parentNode.childrenIds.length - 1,
+          pathIndex: props.path[index]
         });
-        parent = node;
       }
       return result;
     },
@@ -103,83 +104,95 @@ export function Chat(props: Props): JSXElement {
 
   const [offsetBottomPixels, setOffsetBottomPixels] = createSignal(0);
 
-  const displayName = useQuery(() =>
-    queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME)
-  );
+  const displayName = useQuery(() => ({
+    ...queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME),
+    initialData: 'user'
+  }));
 
   return (
     <div class="h-full relative overflow-hidden grid">
-      <div
-        class={cn('flex flex-col gap-10 overflow-auto', props.class)}
-        ref={(el) => {
-          if (typeof local.ref === 'function') {
-            local.ref(el);
-          } else {
-            local.ref = el;
-          }
-          function updatePadding(scroll: boolean = false) {
-            const index = nodes.findLastIndex((node) => node.node.value?.type === 'user');
-            if (index === -1) return;
-            const el2 = el.querySelector(`#user-chat-${index}`) as HTMLElement;
-            if (!el2) return;
-            const dh = el.scrollHeight - offsetBottomPixels() - el2.offsetTop;
-            const needsPadding = el.scrollHeight > el.clientHeight && dh < el.clientHeight;
-            const gap = parseInt(getComputedStyle(el).paddingTop.slice(0, -2));
-            setOffsetBottomPixels(needsPadding ? el.clientHeight - dh - gap : 0);
-            if (scroll) {
-              setTimeout(() => {
-                el.scrollTo({ behavior: 'smooth', top: el2.offsetTop - 24 });
-              });
+      <div class={cn('overflow-auto', props.class)} use:autoScroll {...others}>
+        <div
+          class="flex flex-col gap-10"
+          ref={(el) => {
+            function updatePadding(scroll?: 'smooth' | 'instant') {
+              console.log('🪚 scroll:', scroll);
+              const index = nodes.findLastIndex((node) => node.node.value?.type === 'user');
+              if (index === -1) return;
+              const userChatBoxElement = el.querySelector(`#user-chat-${index}`) as HTMLElement;
+              if (!userChatBoxElement) return;
+              const scrollElement = el.parentElement;
+              if (!scrollElement) return;
+              const dh =
+                scrollElement.scrollHeight - offsetBottomPixels() - scrollElement.offsetTop;
+              const needsPadding =
+                scrollElement.scrollHeight > scrollElement.clientHeight &&
+                dh < scrollElement.clientHeight;
+              console.log('🪚 needsPadding:', needsPadding);
+              const gap = parseInt(getComputedStyle(scrollElement).paddingTop.slice(0, -2));
+              setOffsetBottomPixels(needsPadding ? scrollElement.clientHeight - dh - gap : 0);
+              if (scroll) {
+                el.parentElement?.scrollTo({
+                  behavior: scroll,
+                  top: userChatBoxElement.offsetTop - 24
+                });
+              }
             }
-          }
-          createEventListener(document, 'chat:updated', () => updatePadding(true));
-          createEventListener(document, 'chat:updated:noscroll', () => updatePadding());
-          createResizeObserver(el, () => updatePadding());
-          createTimer(() => updatePadding(true), 0, setTimeout);
-        }}
-        use:autoScroll
-        {...others}
-      >
-        <For each={nodes}>
-          {(data, index) => {
-            const message = () => data.node.value!;
-            const currentPath = createMemo(() => props.path.slice(0, index() + 1));
-
-            return (
-              <Show
-                fallback={
-                  <UserChat
-                    canDelete={
-                      message().chunks.length > 1 &&
-                      (index() !== 0 || data.numberOfSiblings > 0 || props.path[0] !== 0)
-                    }
-                    displayName={
-                      displayName.isSuccess && displayName.data ? displayName.data : 'user'
-                    }
-                    id={`user-chat-${index()}`}
-                    index={data.pathIndex}
-                    message={message() as TMessage & { type: 'user' }}
-                    numberOfSiblings={data.numberOfSiblings}
-                    onDelete={props.onDelete.bind(null, currentPath())}
-                    onEdit={props.onEdit.bind(null, currentPath())}
-                    onTraversal={props.onTraversal.bind(null, currentPath())}
-                  />
-                }
-                when={message().type === 'llm'}
-              >
-                <LLMChat
-                  index={data.pathIndex}
-                  isPending={isPending() && index() === nodes.length - 1}
-                  message={message() as TMessage & { type: 'llm' }}
-                  numberOfSiblings={data.numberOfSiblings}
-                  onDelete={props.onDelete.bind(null, currentPath())}
-                  onRegenerate={props.onRegenerate.bind(null, currentPath())}
-                  onTraversal={props.onTraversal.bind(null, currentPath())}
-                />
-              </Show>
+            createEventListener(document, 'chat:updated', (event: Event) =>
+              updatePadding(event.detail)
             );
+            createResizeObserver(el, () => setTimeout(() => updatePadding()));
           }}
-        </For>
+        >
+          <Suspense
+            fallback={
+              <div class="h-full grid place-content-center">
+                <span class="text-4xl icon-[svg-spinners--bars-scale]" />
+              </div>
+            }
+          >
+            <For each={nodes}>
+              {(data, index) => {
+                const message = () => data.node.value!;
+                const currentPath = createMemo(() => props.path.slice(0, index() + 1));
+
+                return (
+                  <Show
+                    fallback={
+                      <UserChat
+                        canDelete={
+                          message().chunks.length > 1 &&
+                          (index() !== 0 || data.numberOfSiblings > 0 || props.path[0] !== 0)
+                        }
+                        displayName={
+                          displayName.isSuccess && displayName.data ? displayName.data : 'user'
+                        }
+                        id={`user-chat-${index()}`}
+                        index={data.pathIndex}
+                        message={message() as TMessage & { type: 'user' }}
+                        numberOfSiblings={data.numberOfSiblings}
+                        onDelete={props.onDelete.bind(null, currentPath())}
+                        onEdit={props.onEdit.bind(null, currentPath())}
+                        onTraversal={props.onTraversal.bind(null, currentPath())}
+                      />
+                    }
+                    when={message().type === 'llm'}
+                  >
+                    <LLMChat
+                      index={data.pathIndex}
+                      isPending={isPending() && index() === nodes.length - 1}
+                      message={message() as TMessage & { type: 'llm' }}
+                      numberOfSiblings={data.numberOfSiblings}
+                      onDelete={props.onDelete.bind(null, currentPath())}
+                      onRegenerate={props.onRegenerate.bind(null, currentPath())}
+                      onTraversal={props.onTraversal.bind(null, currentPath())}
+                    />
+                  </Show>
+                );
+              }}
+            </For>
+          </Suspense>
+        </div>
         <div
           class={cn('w-full shrink-0', offsetBottomPixels() <= 0 && 'hidden')}
           style={{ height: `${Math.ceil(offsetBottomPixels())}px` }}
@@ -634,9 +647,7 @@ function UserChat(props: {
       <Card class="border-primary border" id={props.id}>
         <Collapsible onOpenChange={setOpen} open={open()}>
           <div class="flex empty:pb-0 p-4 gap-2 justify-end items-center relative">
-            <div class="absolute left-4 text-sm font-semibold top-4">
-              <Suspense>@{props.displayName}</Suspense>
-            </div>
+            <div class="absolute left-4 text-sm font-semibold top-4">@{props.displayName}</div>
             <CollapsibleTrigger
               as={Button<'button'>}
               class="size-6"

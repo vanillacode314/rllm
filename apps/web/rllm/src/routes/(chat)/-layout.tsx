@@ -18,6 +18,7 @@ import {
   onCleanup,
   onMount,
   Show,
+  startTransition,
   untrack
 } from 'solid-js';
 import { unwrap } from 'solid-js/store';
@@ -126,13 +127,17 @@ export function useChatPage(
             newPath.length >= $currentPath.length &&
             newPath.slice(0, $currentPath.length).every((v, i) => v === $currentPath[i]);
           if (newPathFollowsCurrentPath)
-            updateMessages({
-              messages: $chat.messages,
-              path: newPath
+            startTransition(() => {
+              updateMessages({
+                messages: $chat.messages,
+                path: newPath
+              });
             });
           else
-            updateMessages({
-              messages: $chat.messages
+            startTransition(() => {
+              updateMessages({
+                messages: $chat.messages
+              });
             });
         });
       })
@@ -265,7 +270,6 @@ export function useChatPage(
         });
       }
     }
-    document.dispatchEvent(new CustomEvent('chat:updated'));
     sendPrompt.mutate({
       id: $chat.id,
       path: chatState.path
@@ -754,7 +758,7 @@ export function useChatPageLoader(opts: { preload?: boolean; scratchpad?: boolea
     const tree = Tree.fromJSON(messages);
     purgeOnlyErrorResponses(tree);
     flushOldToolCalls(tree);
-    updateMessages({ messages: tree, path: getLatestPath(tree) });
+    startTransition(() => updateMessages({ messages: tree, path: getLatestPath(tree) }));
 
     function purgeOnlyErrorResponses(tree: TTree<TMessage>) {
       const pathsToRemove = [] as number[][];
