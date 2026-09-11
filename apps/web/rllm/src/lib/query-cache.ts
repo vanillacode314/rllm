@@ -1,6 +1,5 @@
-import type { DehydratedState } from '@tanstack/solid-query';
-
 import { Debouncer } from '@tanstack/solid-pacer';
+import type { DehydratedState } from '@tanstack/solid-query';
 import {
   defaultShouldDehydrateQuery,
   dehydrate,

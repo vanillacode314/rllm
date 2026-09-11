@@ -1,7 +1,6 @@
+import * as ComboboxPrimitive from '@kobalte/core/combobox';
 import type { PolymorphicProps } from '@kobalte/core/polymorphic';
 import type { JSX, JSXElement, ValidComponent } from 'solid-js';
-
-import * as ComboboxPrimitive from '@kobalte/core/combobox';
 import { Show, splitProps } from 'solid-js';
 import { cn } from 'ui/utils/tailwind';
 

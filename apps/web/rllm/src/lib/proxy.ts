@@ -1,6 +1,5 @@
-import type { ConfiguredMiddleware } from 'wretch';
-
 import { Event } from 'event-bus';
+import type { ConfiguredMiddleware } from 'wretch';
 
 import { PROXY_HEALTH_CHECK_INTERVAL_MS, PROXY_HEALTH_CHECK_TIMEOUT_MS } from '~/constants/proxy';
 

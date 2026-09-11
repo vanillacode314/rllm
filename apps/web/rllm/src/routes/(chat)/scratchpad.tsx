@@ -5,8 +5,6 @@ import { Option } from 'ts-result-option';
 import { safeParseJson } from 'ts-result-option/utils';
 import { z } from 'zod/mini';
 
-import type { TMessage } from '~/types/chat';
-
 import { useAppDrawer } from '~/components/AppDrawer';
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
 import { FALLBACK_CHAT_SETTINGS } from '~/constants/chat-settings';
@@ -16,6 +14,7 @@ import { logger } from '~/db/client';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { createTask } from '~/lib/background-task-manager/tasks';
 import { queries } from '~/queries';
+import type { TMessage } from '~/types/chat';
 import { queryClient } from '~/utils/query-client';
 import { slugify } from '~/utils/string';
 import { Tree } from '~/utils/tree';

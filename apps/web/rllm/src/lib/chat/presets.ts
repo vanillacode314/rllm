@@ -1,8 +1,7 @@
 import { nanoid } from 'nanoid';
 
-import type { TChatPreset } from '~/db/app-schema';
-
 import { USER_METADATA_KEYS } from '~/constants/user-metadata';
+import type { TChatPreset } from '~/db/app-schema';
 import { logger } from '~/db/client';
 import { fetchers } from '~/queries';
 

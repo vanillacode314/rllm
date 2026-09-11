@@ -1,5 +1,4 @@
 import type { PolymorphicProps } from '@kobalte/core';
-
 import * as TextFieldPrimitive from '@kobalte/core/text-field';
 import { createEventListenerMap } from '@solid-primitives/event-listener';
 import { createEffect, type JSXElement, splitProps, untrack, type ValidComponent } from 'solid-js';

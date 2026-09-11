@@ -1,9 +1,8 @@
 import { AsyncResult, Option } from 'ts-result-option';
 import { safeFetch, safeParseJson, tryBlock } from 'ts-result-option/utils';
 
-import type { TTool } from '~/types';
-
 import { ProxyManager } from '~/lib/proxy';
+import type { TTool } from '~/types';
 import { formatError } from '~/utils/errors';
 
 import { MCPClient } from './client';

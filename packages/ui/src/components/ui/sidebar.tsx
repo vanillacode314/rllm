@@ -1,9 +1,8 @@
 import type { PolymorphicProps } from '@kobalte/core';
-import type { VariantProps } from 'class-variance-authority';
-import type { Accessor, Component, ComponentProps, JSX, ValidComponent } from 'solid-js';
-
 import { Polymorphic } from '@kobalte/core';
+import type { VariantProps } from 'class-variance-authority';
 import { cva } from 'class-variance-authority';
+import type { Accessor, Component, ComponentProps, JSX, ValidComponent } from 'solid-js';
 import {
   createContext,
   createEffect,
@@ -20,7 +19,6 @@ import {
 import { cn } from 'ui/utils/tailwind';
 
 import type { ButtonProps } from './button';
-
 import { Button } from './button';
 import { Separator } from './separator';
 import { Sheet, SheetContent } from './sheet';

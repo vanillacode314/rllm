@@ -11,10 +11,9 @@ import {
   DialogTitle
 } from 'ui/dialog';
 
-import type { TAttachment } from '~/types/chat';
-
 import { queries } from '~/queries';
 import { chatState } from '~/routes/(chat)/-state';
+import type { TAttachment } from '~/types/chat';
 
 const [open, setOpen] = createSignal(false);
 const selectedIds = new ReactiveSet();
@@ -34,14 +33,12 @@ export function LibraryPickerModal() {
   function confirm() {
     const libraryAttachments = (documents.data ?? [])
       .filter((document) => selectedIds.has(document.id))
-      .map(
-        (document): TAttachment => ({
-          description: document.name,
-          id: document.id,
-          progress: 1,
-          transient: false
-        })
-      );
+      .map((document): TAttachment => ({
+        description: document.name,
+        id: document.id,
+        progress: 1,
+        transient: false
+      }));
     close(libraryAttachments);
   }
 

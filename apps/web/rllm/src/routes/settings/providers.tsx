@@ -10,11 +10,10 @@ import {
   DropdownMenuTrigger
 } from 'ui/dropdown-menu';
 
-import type { TProvider } from '~/db/app-schema';
-
 import { setAddProviderModalOpen } from '~/components/modals/auto-import/AddProviderModal';
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
 import { setEditProviderModalOpen } from '~/components/modals/auto-import/EditProviderModal';
+import type { TProvider } from '~/db/app-schema';
 import { logger } from '~/db/client';
 import { queries } from '~/queries';
 import { queryClient } from '~/utils/query-client';

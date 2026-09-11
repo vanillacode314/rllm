@@ -1,6 +1,5 @@
-import type { TVectorDB } from 'vector-db';
-
 import { SQLocal } from 'sqlocal';
+import type { TVectorDB } from 'vector-db';
 import { createVectorDB } from 'vector-db';
 import { fromSQLocal } from 'vector-db/sqlocal';
 

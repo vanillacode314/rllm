@@ -1,9 +1,8 @@
 import { Result } from 'ts-result-option';
 import { tryBlock } from 'ts-result-option/utils';
 
-import type { TModel } from '~/types';
-
 import { OpenAIAdapter } from '~/lib/adapters/openai';
+import type { TModel } from '~/types';
 import { formatError } from '~/utils/errors';
 
 export type TestProviderResult =

@@ -53,7 +53,7 @@ function SettingsStorageComponent() {
     const [chats, mcps, providers, userMetadata, chatPresets] = await Promise.all([
       parseDbRowsInPlace(
         logger.db.query<TChat>(logger.sql`SELECT * FROM "chats" ORDER BY "chats"."createdAt"`),
-        { jsonKeys: ['settings', 'messages', 'tags'], booleanKeys: ['finished'] }
+        { booleanKeys: ['finished'], jsonKeys: ['settings', 'messages', 'tags'] }
       ),
       parseDbRowsInPlace(
         logger.db.query<TMCP>(logger.sql`SELECT * FROM "mcps" ORDER BY "mcps"."createdAt"`)

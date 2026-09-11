@@ -10,11 +10,10 @@ import {
 } from 'ui/dropdown-menu';
 import { cn } from 'ui/utils/tailwind';
 
-import type { TAttachment } from '~/types/chat';
-
 import { logger } from '~/db/client';
 import { MCPManager } from '~/lib/mcp/manager';
 import { chatState } from '~/routes/(chat)/-state';
+import type { TAttachment } from '~/types/chat';
 import { getFile } from '~/utils/files';
 
 import { useAppDrawer } from './AppDrawer';

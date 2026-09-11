@@ -1,7 +1,6 @@
-import type { MaybePromise, Prettify, WithoutFn } from './types';
-
 import { Option } from './option';
 import { Result } from './result';
+import type { MaybePromise, Prettify, WithoutFn } from './types';
 
 type MaybeAsyncResult<T, E> = AsyncResult<T, E> | Result<T, E>;
 

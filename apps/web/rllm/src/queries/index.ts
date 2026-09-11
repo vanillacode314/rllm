@@ -1,7 +1,6 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/solid-query';
 
 import type { TChat, TChatPreset, TDocument, TMCP, TProvider } from '~/db/app-schema';
-
 import { logger } from '~/db/client';
 import { MCPClient } from '~/lib/mcp/client';
 import { QueryCacheManager } from '~/lib/query-cache';
@@ -134,8 +133,8 @@ const chats = {
 
       return logger.db
         .query<{ count: number }>({
-          sql: `SELECT count(*) as count FROM chats ${whereClause}`,
-          params
+          params,
+          sql: `SELECT count(*) as count FROM chats ${whereClause}`
         })
         .then((rows) => rows[0]?.count ?? 0);
     },
@@ -189,8 +188,8 @@ const chats = {
 
       return logger.db
         .query<Pick<TChat, 'finished' | 'id' | 'tags' | 'title'> & { score: number }>({
-          sql: `SELECT "finished", "id", "accessCount" * MAX(0, 1 - (strftime('%s','now') - ("lastAccessedAt" / 1000.0)) / (86400.0 * 7)) as "score", "tags", "title" FROM chats ${whereClause} ORDER BY "score" DESC, "lastAccessedAt" DESC, "createdAt" DESC, "score" IS NULL LIMIT ? OFFSET ?`,
-          params: [...params, limit, offset]
+          params: [...params, limit, offset],
+          sql: `SELECT "finished", "id", "accessCount" * MAX(0, 1 - (strftime('%s','now') - ("lastAccessedAt" / 1000.0)) / (86400.0 * 7)) as "score", "tags", "title" FROM chats ${whereClause} ORDER BY "score" DESC, "lastAccessedAt" DESC, "createdAt" DESC, "score" IS NULL LIMIT ? OFFSET ?`
         })
         .then((rows) => {
           parseDbRowsInPlace(rows, { booleanKeys: ['finished'], jsonKeys: ['tags'] });

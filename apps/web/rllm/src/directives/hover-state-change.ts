@@ -1,6 +1,5 @@
-import type { Accessor } from 'solid-js';
-
 import { createEventListenerMap } from '@solid-primitives/event-listener';
+import type { Accessor } from 'solid-js';
 
 export function hoverStateChange(ref: HTMLElement, options: Accessor<(value: boolean) => void>) {
   const onChange = options();

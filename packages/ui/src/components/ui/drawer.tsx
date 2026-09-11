@@ -5,9 +5,8 @@ import type {
   LabelProps,
   OverlayProps
 } from '@corvu/drawer';
-import type { Component, ComponentProps, JSX, ValidComponent } from 'solid-js';
-
 import DrawerPrimitive from '@corvu/drawer';
+import type { Component, ComponentProps, JSX, ValidComponent } from 'solid-js';
 import { splitProps } from 'solid-js';
 import { cn } from 'ui/utils/tailwind';
 

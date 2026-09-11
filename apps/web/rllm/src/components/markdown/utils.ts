@@ -1,9 +1,8 @@
-import type { Element, Root } from 'hast';
-import type { Position } from 'unist';
-
 import { stringify as commas } from 'comma-separated-tokens';
+import type { Element, Root } from 'hast';
 import { find } from 'property-information';
 import { stringify as spaces } from 'space-separated-tokens';
+import type { Position } from 'unist';
 
 import type { Context } from './types';
 

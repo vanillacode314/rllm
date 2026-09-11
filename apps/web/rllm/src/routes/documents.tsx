@@ -5,10 +5,9 @@ import { toast } from 'solid-sonner';
 import { Button } from 'ui/button';
 import { Card, CardHeader, CardTitle } from 'ui/card';
 
-import type { TDocument } from '~/db/app-schema';
-
 import { AppDrawerFab } from '~/components/AppDrawer';
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
+import type { TDocument } from '~/db/app-schema';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { createTask } from '~/lib/background-task-manager/tasks';
 import { deleteDocument } from '~/lib/vector-db/client.platform.common';

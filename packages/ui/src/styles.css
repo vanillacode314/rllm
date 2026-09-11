@@ -261,7 +261,7 @@
 @utility container {
   @apply px-8;
 
-  @media (width >=--theme(--breakpoint-sm)) {
+  @media (width >= --theme(--breakpoint-sm)) {
     @apply max-w-none;
   }
 

@@ -1,9 +1,8 @@
+import * as AlertPrimitive from '@kobalte/core/alert';
 import type { PolymorphicProps } from '@kobalte/core/polymorphic';
 import type { VariantProps } from 'class-variance-authority';
-import type { Component, ComponentProps, ValidComponent } from 'solid-js';
-
-import * as AlertPrimitive from '@kobalte/core/alert';
 import { cva } from 'class-variance-authority';
+import type { Component, ComponentProps, ValidComponent } from 'solid-js';
 import { splitProps } from 'solid-js';
 import { cn } from 'ui/utils/tailwind';
 

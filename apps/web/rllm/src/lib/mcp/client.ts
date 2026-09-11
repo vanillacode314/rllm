@@ -3,12 +3,10 @@ import { createSignal, type Signal } from 'solid-js';
 import { Option } from 'ts-result-option';
 
 import type { TTool } from '~/types';
-
 import { formatError } from '~/utils/errors';
 
-import type { TToolContent, TToolsCallResult, TToolsListResult } from './types';
-
 import { initializeMCPSession, makeMCPCall } from '.';
+import type { TToolContent, TToolsCallResult, TToolsListResult } from './types';
 
 interface TMCPClient {
   callTool(name: string, args: Record<string, unknown>, signal: AbortSignal): Promise<string>;

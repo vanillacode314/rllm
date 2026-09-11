@@ -1,7 +1,6 @@
+import * as AccordionPrimitive from '@kobalte/core/accordion';
 import type { PolymorphicProps } from '@kobalte/core/polymorphic';
 import type { JSX, ValidComponent } from 'solid-js';
-
-import * as AccordionPrimitive from '@kobalte/core/accordion';
 import { splitProps } from 'solid-js';
 import { cn } from 'ui/utils/tailwind';
 

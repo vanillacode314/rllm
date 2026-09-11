@@ -1,6 +1,5 @@
-import type { TVectorDB } from 'vector-db';
-
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
+import type { TVectorDB } from 'vector-db';
 import { createVectorDB } from 'vector-db';
 import { fromCapacitorSqlite } from 'vector-db/capacitorjs';
 

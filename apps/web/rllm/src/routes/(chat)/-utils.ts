@@ -1,7 +1,6 @@
 import type { TChat, TMessage } from '~/types/chat';
-import type { TTree } from '~/utils/tree';
-
 import { formatError } from '~/utils/errors';
+import type { TTree } from '~/utils/tree';
 
 export function finalizeChat(chat: TChat, path: number[], error?: string) {
   const node = chat.messages.traverse(path).expect('should be able to traverse to node');

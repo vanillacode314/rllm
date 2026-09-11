@@ -3,9 +3,8 @@ import { AsyncResult, Option } from 'ts-result-option';
 import { safeParseJson, tryBlock } from 'ts-result-option/utils';
 
 import type { TAdapter, TCompletionLastChunkUsage } from '~/lib/adapters/types';
-import type { TLLMMessageChunk, TMessage } from '~/types/chat';
-
 import { type TTool } from '~/types';
+import type { TLLMMessageChunk, TMessage } from '~/types/chat';
 import { ajv } from '~/utils/ajv';
 import { formatError } from '~/utils/errors';
 import { produce } from '~/utils/immer';

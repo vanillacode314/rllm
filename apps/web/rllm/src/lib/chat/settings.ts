@@ -1,5 +1,4 @@
 import type { ParsedLocation } from '@tanstack/solid-router';
-
 import { Option } from 'ts-result-option';
 import { safeParseJson } from 'ts-result-option/utils';
 import * as z from 'zod/mini';

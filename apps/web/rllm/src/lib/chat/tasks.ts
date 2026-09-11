@@ -1,8 +1,8 @@
+import type { TChat } from '~/db/app-schema';
 import { logger } from '~/db/client';
+import { parseDbRowsInPlace } from '~/utils/db';
 
 import { createTask, type TTask } from '../background-task-manager/tasks';
-import type { TChat } from '~/db/app-schema';
-import { parseDbRowsInPlace } from '~/utils/db';
 
 export async function retryFailedTitleAndTags() {
   const controller = new AbortController();

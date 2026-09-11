@@ -3,12 +3,11 @@ import { AsyncResult, Option } from 'ts-result-option';
 import { tryBlock } from 'ts-result-option/utils';
 import * as z from 'zod/mini';
 
-import type { TMessage } from '~/types/chat';
-
 import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { fetchers } from '~/queries';
 import { type TTool } from '~/types';
+import type { TMessage } from '~/types/chat';
 import { produce } from '~/utils/immer';
 import { dedent } from '~/utils/string';
 

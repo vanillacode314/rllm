@@ -7,7 +7,6 @@ import { env } from '~/utils/env';
 import { isOnline } from '~/utils/signals';
 
 import type { TTransport } from '.';
-
 import { ConnectionManager } from '../messages';
 import { createPeerSocket } from '../utils';
 

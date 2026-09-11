@@ -1,8 +1,7 @@
-import type { MerkleTree } from 'event-logger';
-
 import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
 import { Batcher } from '@tanstack/solid-pacer';
 import { ethers } from 'ethers';
+import type { MerkleTree } from 'event-logger';
 import * as EventPB from 'proto/events/v1/event_pb';
 import * as PeerPB from 'proto/peers/v1/peer_pb';
 import * as z from 'zod/mini';
@@ -162,7 +161,7 @@ export class ConnectionManager {
     const unique = [...new Set(timestamps)];
     if (unique.length === 0) return;
     const sql = `SELECT "data", "timestamp", "type", "version" FROM "events" WHERE "timestamp" IN (${unique.map(() => '?').join(',')})`;
-    const events = await logger.db.query<EventRow>({ sql, params: unique });
+    const events = await logger.db.query<EventRow>({ params: unique, sql });
     await this.flushSendEvents(events);
   }
 

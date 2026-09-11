@@ -11,10 +11,9 @@ import type {
   TChatCompletionLastChunk,
   TCompletionLastChunkUsage
 } from '~/lib/adapters/types';
-import type { TMessage } from '~/types/chat';
-
 import { ProxyManager } from '~/lib/proxy';
 import { modelSchema, type TModel, type TTool } from '~/types';
+import type { TMessage } from '~/types/chat';
 import { makeSSEParser } from '~/utils/response';
 
 import {

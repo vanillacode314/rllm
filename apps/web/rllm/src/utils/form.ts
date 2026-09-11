@@ -1,8 +1,7 @@
-import type { $ZodFlattenedError } from 'zod/v4/core';
-
 import { createWritableMemo } from '@solid-primitives/memo';
 import { on } from 'solid-js';
 import * as z from 'zod/mini';
+import type { $ZodFlattenedError } from 'zod/v4/core';
 
 import { produce } from './immer';
 import { createDerivedStore } from './stores';

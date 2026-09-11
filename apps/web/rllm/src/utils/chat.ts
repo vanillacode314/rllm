@@ -1,5 +1,4 @@
 import type { ParsedLocation } from '@tanstack/solid-router';
-
 import { Result } from 'ts-result-option';
 
 import type { TMessage } from '~/types/chat';

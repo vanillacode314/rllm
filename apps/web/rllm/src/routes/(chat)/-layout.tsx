@@ -27,8 +27,6 @@ import { tryBlock } from 'ts-result-option/utils';
 import { Button } from 'ui/button';
 import { SidebarTrigger, useSidebar } from 'ui/sidebar';
 
-import type { TAttachment, TChat, TMessage, TUserMessageChunk } from '~/types/chat';
-
 import { Chat } from '~/components/Chat';
 import { PresetSelector } from '~/components/PresetSelector';
 import ThePromptBox from '~/components/ThePromptBox';
@@ -48,6 +46,7 @@ import { transientDb } from '~/lib/vector-db/transient';
 import { fetchers, queries } from '~/queries';
 import { isMobile } from '~/signals';
 import { account } from '~/signals/account';
+import type { TAttachment, TChat, TMessage, TUserMessageChunk } from '~/types/chat';
 import { env } from '~/utils/env';
 import { formatError } from '~/utils/errors';
 import { compressImageFile, fileToBase64 } from '~/utils/files';

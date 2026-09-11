@@ -2,7 +2,6 @@ import { createWritableMemo } from '@solid-primitives/memo';
 import { Separator } from 'ui/separator';
 
 import type { AppDrawerComponentProps } from '~/components/AppDrawer';
-
 import { ChatListSection, QuickActionsSection } from '~/components/ChatList';
 import ChatSettingsControls from '~/components/ChatSettingsControls';
 import { useChatState } from '~/context/chat';

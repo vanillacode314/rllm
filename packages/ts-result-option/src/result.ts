@@ -1,10 +1,9 @@
+import { AsyncResult } from './async-result';
+import { Option } from './option';
 // ──────────────────────────────────────────────────────────────
 //  types.ts – unchanged (you still import Prettify, WithoutFn)
 // ──────────────────────────────────────────────────────────────
 import type { Prettify, WithoutFn } from './types';
-
-import { AsyncResult } from './async-result';
-import { Option } from './option';
 
 /**
  * The single implementation of Result.

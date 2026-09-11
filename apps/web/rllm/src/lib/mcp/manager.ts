@@ -1,12 +1,10 @@
 import { ReactiveMap } from '@solid-primitives/map';
 
-import type { TTool } from '~/types';
-
 import { ProxyManager } from '~/lib/proxy';
 import { fetchers } from '~/queries';
+import type { TTool } from '~/types';
 
 import type { TMCPClient } from './client';
-
 import { MCPClient } from './client';
 
 export class MCPManager {

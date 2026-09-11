@@ -3,13 +3,23 @@ import { sql } from 'event-logger';
 import { AsyncResult } from 'ts-result-option';
 
 import type { LoggerInstance } from './client.types';
-
 import { migrationHooks } from './migrationHooks';
 import migrations from './migrations.json' with { type: 'json' };
 
 export function createLoggerProxy(getLogger: () => Promise<LoggerInstance>): LoggerInstance {
   return {
     clearMetadata: async (key, tx) => (await getLogger()).clearMetadata(key, tx),
+    get db() {
+      return {
+        batch: (statements: Parameters<LoggerInstance['db']['batch']>[0]) =>
+          getLogger().then((instance) => instance.db.batch(statements)),
+        query: (statement: Parameters<LoggerInstance['db']['query']>[0]) =>
+          getLogger().then((instance) => instance.db.query(statement)),
+        transaction: <T>(
+          fn: (tx: Parameters<Parameters<LoggerInstance['db']['transaction']>[0]>[0]) => Promise<T>
+        ) => getLogger().then((instance) => instance.db.transaction(fn))
+      } as LoggerInstance['db'];
+    },
     dispatch: async (...events) => (await getLogger()).dispatch(...events),
     getClientId: async () => (await getLogger()).getClientId(),
     getClock: async () => (await getLogger()).getClock(),
@@ -17,10 +27,6 @@ export function createLoggerProxy(getLogger: () => Promise<LoggerInstance>): Log
     getMetadata: async (key) => (await getLogger()).getMetadata(key),
     getVersion: async () => (await getLogger()).getVersion(),
     invalidateSchema: async () => (await getLogger()).invalidateSchema(),
-    receive: async (events, tx) => (await getLogger()).receive(events, tx),
-    setMetadata: async (key, value) => (await getLogger()).setMetadata(key, value),
-    setVersion: async (version, tx) => (await getLogger()).setVersion(version, tx),
-
     on: (type, handler, opts) => {
       let unsubscribe: (() => void) | null = null;
       let isCancelled = false;
@@ -36,18 +42,11 @@ export function createLoggerProxy(getLogger: () => Promise<LoggerInstance>): Log
         if (unsubscribe) unsubscribe();
       };
     },
+    receive: async (events, tx) => (await getLogger()).receive(events, tx),
 
-    get db() {
-      return {
-        batch: (statements: Parameters<LoggerInstance['db']['batch']>[0]) =>
-          getLogger().then((instance) => instance.db.batch(statements)),
-        query: (statement: Parameters<LoggerInstance['db']['query']>[0]) =>
-          getLogger().then((instance) => instance.db.query(statement)),
-        transaction: <T>(
-          fn: (tx: Parameters<Parameters<LoggerInstance['db']['transaction']>[0]>[0]) => Promise<T>
-        ) => getLogger().then((instance) => instance.db.transaction(fn))
-      } as LoggerInstance['db'];
-    },
+    setMetadata: async (key, value) => (await getLogger()).setMetadata(key, value),
+
+    setVersion: async (version, tx) => (await getLogger()).setVersion(version, tx),
 
     get sql() {
       return sql;

@@ -36,13 +36,12 @@ import {
 import { TextField, TextFieldTextArea } from 'ui/text-field';
 import { cn } from 'ui/utils/tailwind';
 
-import type { TChat } from '~/db/app-schema';
-import type { TLLMMessageChunk, TMessage, TUserMessageChunk } from '~/types/chat';
-
 import { USER_METADATA_KEYS } from '~/constants/user-metadata';
+import type { TChat } from '~/db/app-schema';
 import { useAutoScroll } from '~/directives/auto-scroll';
 import { ChatGenerationManager } from '~/lib/chat/generation';
 import { queries } from '~/queries';
+import type { TLLMMessageChunk, TMessage, TUserMessageChunk } from '~/types/chat';
 import { formatToPercentage, formatToTokens } from '~/utils/number';
 import { formatAsKeyValuePair } from '~/utils/object';
 import { createDerivedStore } from '~/utils/stores';

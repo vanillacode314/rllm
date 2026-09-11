@@ -10,11 +10,10 @@ import {
   DropdownMenuTrigger
 } from 'ui/dropdown-menu';
 
-import type { TMCP } from '~/db/app-schema';
-
 import { setAddMCPModalOpen } from '~/components/modals/auto-import/AddMCPModal';
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
 import { setEditMCPModalOpen } from '~/components/modals/auto-import/EditMCPModal';
+import type { TMCP } from '~/db/app-schema';
 import { logger } from '~/db/client';
 import { queries } from '~/queries';
 import { queryClient } from '~/utils/query-client';

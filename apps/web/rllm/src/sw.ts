@@ -1,5 +1,4 @@
 import type { PrecacheEntry, SerwistGlobalConfig } from 'serwist';
-
 // import { defaultCache } from '@serwist/vite/worker';
 import { disableNavigationPreload, Serwist } from 'serwist';
 

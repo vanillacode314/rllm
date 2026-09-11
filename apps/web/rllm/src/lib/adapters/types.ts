@@ -1,8 +1,7 @@
 import { AsyncResult, Option } from 'ts-result-option';
 
-import type { TMessage } from '~/types/chat';
-
 import { type TModel, type TTool } from '~/types';
+import type { TMessage } from '~/types/chat';
 
 export type TAdapter = {
   fetchAllModels: (signal?: AbortSignal) => AsyncResult<TModel[], Error>;

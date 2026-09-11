@@ -3,62 +3,6 @@ import { HLC } from 'hlc';
 import { MerkleTree, stringHasher } from 'merkle-tree';
 import { nanoid } from 'nanoid';
 
-export type TConfig<TEvent extends Omit<TBaseEvent, 'timestamp' | 'version'>> = {
-  db: TSqlDB;
-  eventToUpdates: TEventTransformer<TEvent>;
-  invalidate?: (
-    items: Array<{
-      event: NoInfer<TEvent & { timestamp: string; version: string }>;
-      keys: string[][];
-    }>
-  ) => MaybePromise<void>;
-  validateEvent?: (event: unknown) => TEvent;
-};
-
-export type TEventTransformer<TEvent = TBaseEvent> = (
-  event: NoInfer<TEvent & { timestamp: string; version: string }>,
-  tx: TSqlRunner
-) => MaybePromise<TUpdate[]>;
-
-export interface TSqlDB extends TSqlRunner {
-  transaction<T>(callback: (tx: TSqlRunner) => Promise<T>): Promise<T>;
-}
-
-export interface TSqlRunner {
-  batch(statements: TStatement[]): Promise<void>;
-  query<T extends Record<string, unknown>>(statement: TStatement): Promise<T[]>;
-}
-
-export type TStatement = {
-  params: unknown[];
-  sql: string;
-};
-export type TUpdate =
-  | {
-      creates: boolean;
-      id: string;
-      invalidate?: Array<string[]>;
-      operation: 'sql';
-      statements: Record<
-        string,
-        Array<{ executeEvenIfTimestampIsOlder?: boolean; params: unknown[]; sql: string }>
-      >;
-      table: string;
-    }
-  | {
-      data: Record<string, unknown>;
-      id: string;
-      invalidate?: Array<string[]>;
-      operation: 'insert' | 'update' | 'upsert';
-      table: string;
-    }
-  | {
-      id: string;
-      invalidate?: Array<string[]>;
-      operation: 'delete';
-      table: string;
-    };
-
 export interface Logger<T extends TBaseEvent> {
   clearMetadata: (key: string, tx?: TSqlRunner) => Promise<void>;
   db: TSqlDB;
@@ -88,9 +32,65 @@ export interface Logger<T extends TBaseEvent> {
   sql: typeof sql;
 }
 
-type MaybePromise<T> = Promise<T> | T;
-
 export type TBaseEvent = { data: unknown; timestamp: string; type: string; version: string };
+
+export type TConfig<TEvent extends Omit<TBaseEvent, 'timestamp' | 'version'>> = {
+  db: TSqlDB;
+  eventToUpdates: TEventTransformer<TEvent>;
+  invalidate?: (
+    items: Array<{
+      event: NoInfer<TEvent & { timestamp: string; version: string }>;
+      keys: string[][];
+    }>
+  ) => MaybePromise<void>;
+  validateEvent?: (event: unknown) => TEvent;
+};
+
+export type TEventTransformer<TEvent = TBaseEvent> = (
+  event: NoInfer<TEvent & { timestamp: string; version: string }>,
+  tx: TSqlRunner
+) => MaybePromise<TUpdate[]>;
+
+export interface TSqlDB extends TSqlRunner {
+  transaction<T>(callback: (tx: TSqlRunner) => Promise<T>): Promise<T>;
+}
+export interface TSqlRunner {
+  batch(statements: TStatement[]): Promise<void>;
+  query<T extends Record<string, unknown>>(statement: TStatement): Promise<T[]>;
+}
+
+export type TStatement = {
+  params: unknown[];
+  sql: string;
+};
+
+export type TUpdate =
+  | {
+      creates: boolean;
+      id: string;
+      invalidate?: Array<string[]>;
+      operation: 'sql';
+      statements: Record<
+        string,
+        Array<{ executeEvenIfTimestampIsOlder?: boolean; params: unknown[]; sql: string }>
+      >;
+      table: string;
+    }
+  | {
+      data: Record<string, unknown>;
+      id: string;
+      invalidate?: Array<string[]>;
+      operation: 'insert' | 'update' | 'upsert';
+      table: string;
+    }
+  | {
+      id: string;
+      invalidate?: Array<string[]>;
+      operation: 'delete';
+      table: string;
+    };
+
+type MaybePromise<T> = Promise<T> | T;
 
 export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timestamp' | 'version'>>({
   db,
@@ -489,6 +489,13 @@ const toSql = (value: unknown) => {
   }
 };
 
+export function sql(strings: TemplateStringsArray, ...values: unknown[]): TStatement {
+  return {
+    params: values.map(toSql),
+    sql: strings.reduce((sql, part, i) => sql + part + (i < values.length ? '?' : ''), '')
+  };
+}
+
 async function checkRecordExists(
   tableName: string,
   id: string,
@@ -637,7 +644,6 @@ async function convertUpdateToStatement(
     }
   }
 }
-
 async function migratePendingEventsStatements(db: TSqlDB): Promise<void> {
   const MIGRATION_KEY = '__event_logger_migration_v1_pendingEvents_statements';
   const existing = await db.query<{ value: string }>({
@@ -712,6 +718,7 @@ async function processPendingEvents(
     });
   }
 }
+
 async function readColumnTimestamps(
   tx: TSqlRunner,
   table: string,
@@ -722,13 +729,6 @@ async function readColumnTimestamps(
     sql: `SELECT "column", timestamp FROM updates WHERE "table" = ? AND rowId = ?`
   });
   return new Map(rows.map((row) => [row.column, row.timestamp]));
-}
-
-export function sql(strings: TemplateStringsArray, ...values: unknown[]): TStatement {
-  return {
-    params: values.map(toSql),
-    sql: strings.reduce((sql, part, i) => sql + part + (i < values.length ? '?' : ''), '')
-  };
 }
 
 async function storePendingEvent(

@@ -1,12 +1,13 @@
 import { Keyboard } from '@capacitor/keyboard';
 import { createRouter, type ErrorComponentProps, RouterProvider } from '@tanstack/solid-router';
-import 'katex/dist/katex.css';
 
+import 'katex/dist/katex.css';
 import './styles.css';
 // import './styles/starry-night/vscode-dark.css';
 import 'highlight.js/styles/dark.css';
 import { onMount } from 'solid-js';
 import { render } from 'solid-js/web';
+
 import 'virtual:uno.css';
 import { toast } from 'solid-sonner';
 import { Button } from 'ui/button';

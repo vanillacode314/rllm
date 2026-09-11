@@ -1,8 +1,7 @@
 import type { DialogRootProps } from '@kobalte/core/dialog';
-import type { Component, ComponentProps, ParentProps, VoidProps } from 'solid-js';
-
 import * as DialogPrimitive from '@kobalte/core/dialog';
 import * as CommandPrimitive from 'cmdk-solid';
+import type { Component, ComponentProps, ParentProps, VoidProps } from 'solid-js';
 import { splitProps } from 'solid-js';
 import { cn } from 'ui/utils/tailwind';
 

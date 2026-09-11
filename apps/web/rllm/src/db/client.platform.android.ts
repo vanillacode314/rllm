@@ -12,10 +12,10 @@ import { createLoggerProxy, setupDb } from './client.platform.common';
 import type { DrizzleDB, LoggerInstance } from './client.types';
 import { tables } from './schema';
 
-let loggerPromise: Promise<LoggerInstance> | null = null;
+let loggerPromise: null | Promise<LoggerInstance> = null;
 let loggerInstance: LoggerInstance | null = null;
 
-let dbPromise: Promise<DrizzleDB> | null = null;
+let dbPromise: null | Promise<DrizzleDB> = null;
 let dbInstance: DrizzleDB | null = null;
 
 const sqlite = new SQLiteConnection(CapacitorSQLite);
@@ -29,38 +29,6 @@ async function getConnection() {
   const { result: isOpen } = await db.isDBOpen();
   if (!isOpen) await db.open();
   return db;
-}
-
-async function getLogger(): Promise<LoggerInstance> {
-  if (loggerInstance) return loggerInstance;
-  if (!loggerPromise) {
-    loggerPromise = (async () => {
-      console.debug('[DB] Loading CapacitorSQLite Instance');
-      const instance = await createEventLogger<TValidEvent>({
-        db: fromCapacitorSqlite('main', getConnection),
-        eventToUpdates: processMessage,
-        invalidate: async (items) => {
-          const uniqueKeys = new Map<string, string[]>();
-          for (const { keys } of items) {
-            for (const key of keys) {
-              const hash = hashKey(key);
-              if (!uniqueKeys.has(hash)) uniqueKeys.set(hash, key);
-            }
-          }
-          await Promise.all(
-            Array.from(uniqueKeys.values()).map((key) =>
-              queryClient.invalidateQueries({ queryKey: key })
-            )
-          );
-        },
-        validateEvent: (event) => validEventSchema.parse(event)
-      });
-      await setupDb(instance);
-      loggerInstance = instance;
-      return instance;
-    })();
-  }
-  return loggerPromise;
 }
 
 async function getDb(): Promise<DrizzleDB> {
@@ -103,6 +71,38 @@ async function getDb(): Promise<DrizzleDB> {
     })();
   }
   return dbPromise;
+}
+
+async function getLogger(): Promise<LoggerInstance> {
+  if (loggerInstance) return loggerInstance;
+  if (!loggerPromise) {
+    loggerPromise = (async () => {
+      console.debug('[DB] Loading CapacitorSQLite Instance');
+      const instance = await createEventLogger<TValidEvent>({
+        db: fromCapacitorSqlite('main', getConnection),
+        eventToUpdates: processMessage,
+        invalidate: async (items) => {
+          const uniqueKeys = new Map<string, string[]>();
+          for (const { keys } of items) {
+            for (const key of keys) {
+              const hash = hashKey(key);
+              if (!uniqueKeys.has(hash)) uniqueKeys.set(hash, key);
+            }
+          }
+          await Promise.all(
+            Array.from(uniqueKeys.values()).map((key) =>
+              queryClient.invalidateQueries({ queryKey: key })
+            )
+          );
+        },
+        validateEvent: (event) => validEventSchema.parse(event)
+      });
+      await setupDb(instance);
+      loggerInstance = instance;
+      return instance;
+    })();
+  }
+  return loggerPromise;
 }
 
 export const logger = createLoggerProxy(getLogger);

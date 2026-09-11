@@ -1,12 +1,8 @@
-import type { Accessor } from 'solid-js';
-
 import { Debouncer } from '@tanstack/solid-pacer';
+import type { Accessor } from 'solid-js';
 import { createMemo, from } from 'solid-js';
 import { Option } from 'ts-result-option';
 import * as z from 'zod/mini';
-
-import type { TProvider } from '~/db/app-schema';
-import type { TAttachment, TChat, TMessage } from '~/types/chat';
 
 import { useFeedbackModal } from '~/components/modals/auto-import/FeedbackModal';
 import {
@@ -17,20 +13,21 @@ import {
   WEB_SEARCH_SYSTEM_PROMPT
 } from '~/constants/prompts';
 import { USER_METADATA_KEYS } from '~/constants/user-metadata';
+import type { TProvider } from '~/db/app-schema';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { MCPManager } from '~/lib/mcp/manager';
 import { vectorDb } from '~/lib/vector-db/client';
 import { transientDb } from '~/lib/vector-db/transient';
 import { fetchers } from '~/queries';
 import { finalizeChat } from '~/routes/(chat)/-utils';
+import type { TAttachment, TChat, TMessage } from '~/types/chat';
 import { getMessagesForPath } from '~/utils/chat';
 import { formatError } from '~/utils/errors';
 import { Tree, TreeNode } from '~/utils/tree';
 
-import type { ChatGenerationStorage } from './storages';
-
 import { handleCompletion } from '..';
 import { makeTool } from '../utils';
+import type { ChatGenerationStorage } from './storages';
 
 export class ChatGenerationManager {
   private static chats = new Map<

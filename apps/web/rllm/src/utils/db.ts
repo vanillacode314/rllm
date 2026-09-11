@@ -1,10 +1,9 @@
-import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
-
 import { getTableColumns, sql, type SQL } from 'drizzle-orm';
+import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
+import type { TSqlRunner } from 'event-logger';
 import { AsyncResult, Result } from 'ts-result-option';
 
 import { logger } from '~/db/client';
-import type { TSqlRunner } from 'event-logger';
 
 const buildConflictUpdateColumns = <T extends SQLiteTable, Q extends keyof T['_']['columns']>(
   table: T,
@@ -57,14 +56,14 @@ const withTransaction: WithTransactionFn = (fn) =>
   );
 
 export async function parseDbRowsInPlace<TRow extends Record<string, unknown>>(
-  rowsPromise: TRow[] | Promise<TRow[]>,
+  rowsPromise: Promise<TRow[]> | TRow[],
   opts: Partial<{
-    jsonKeys: (keyof TRow)[];
     booleanKeys: (keyof TRow)[];
+    jsonKeys: (keyof TRow)[];
   }> = {}
 ): Promise<TRow[]> {
   const rows = await rowsPromise;
-  const { jsonKeys = [], booleanKeys = [] } = opts;
+  const { booleanKeys = [], jsonKeys = [] } = opts;
   for (const row of rows) {
     for (const key of jsonKeys) {
       if (key in row) {

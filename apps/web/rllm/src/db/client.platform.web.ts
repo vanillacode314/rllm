@@ -13,11 +13,32 @@ import { createLoggerProxy, setupDb } from './client.platform.common';
 import type { DrizzleDB, LoggerInstance } from './client.types';
 import { tables } from './schema';
 
-let loggerPromise: Promise<LoggerInstance> | null = null;
+let loggerPromise: null | Promise<LoggerInstance> = null;
 let loggerInstance: LoggerInstance | null = null;
 
-let dbPromise: Promise<DrizzleDB> | null = null;
+let dbPromise: null | Promise<DrizzleDB> = null;
 let dbInstance: DrizzleDB | null = null;
+
+async function getDb(): Promise<DrizzleDB> {
+  if (dbInstance) return dbInstance;
+  if (!dbPromise) {
+    dbPromise = (async () => {
+      await getLogger();
+      const { batchDriver, driver, getDatabaseInfo } = new SQLocalDrizzle({
+        databasePath: MAIN_DATABASE_PATH,
+        onInit: (sql) => [sql`PRAGMA journal_mode=MEMORY;`]
+      });
+      void getDatabaseInfo().then((info) => console.debug('[DB] SQLocal Instance Info', info));
+      const drizzleDb = drizzle(driver, batchDriver, { schema: tables });
+
+      await drizzleDb.get('SELECT 1').execute();
+
+      dbInstance = drizzleDb;
+      return drizzleDb;
+    })();
+  }
+  return dbPromise;
+}
 
 async function getLogger(): Promise<LoggerInstance> {
   if (loggerInstance) return loggerInstance;
@@ -54,27 +75,6 @@ async function getLogger(): Promise<LoggerInstance> {
     })();
   }
   return loggerPromise;
-}
-
-async function getDb(): Promise<DrizzleDB> {
-  if (dbInstance) return dbInstance;
-  if (!dbPromise) {
-    dbPromise = (async () => {
-      await getLogger();
-      const { batchDriver, driver, getDatabaseInfo } = new SQLocalDrizzle({
-        databasePath: MAIN_DATABASE_PATH,
-        onInit: (sql) => [sql`PRAGMA journal_mode=MEMORY;`]
-      });
-      void getDatabaseInfo().then((info) => console.debug('[DB] SQLocal Instance Info', info));
-      const drizzleDb = drizzle(driver, batchDriver, { schema: tables });
-
-      await drizzleDb.get('SELECT 1').execute();
-
-      dbInstance = drizzleDb;
-      return drizzleDb;
-    })();
-  }
-  return dbPromise;
 }
 
 export const logger = createLoggerProxy(getLogger);

@@ -1,6 +1,5 @@
-import type { TEventTransformer } from 'event-logger';
-
 import { getTableName } from 'drizzle-orm';
+import type { TEventTransformer } from 'event-logger';
 import { HLC } from 'hlc';
 import * as z from 'zod/mini';
 

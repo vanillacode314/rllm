@@ -7,10 +7,9 @@ import { tryBlock } from 'ts-result-option/utils';
 import { IterativeTextSplitter } from '~/utils/string';
 import * as rag from '~/workers/rag';
 
-import type { TRAGAdapter } from './types';
-
 import ortMjs from '../../../../../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs?url';
 import ortWasm from '../../../../../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url';
+import type { TRAGAdapter } from './types';
 
 const MODEL_URL =
   'https://huggingface.co/minishlab/potion-retrieval-32m-onnx/resolve/main/model.onnx';

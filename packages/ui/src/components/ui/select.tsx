@@ -1,8 +1,7 @@
 import type { PolymorphicProps } from '@kobalte/core/polymorphic';
-import type { JSX, ValidComponent } from 'solid-js';
-
 import * as SelectPrimitive from '@kobalte/core/select';
 import { cva } from 'class-variance-authority';
+import type { JSX, ValidComponent } from 'solid-js';
 import { splitProps } from 'solid-js';
 import { cn } from 'ui/utils/tailwind';
 

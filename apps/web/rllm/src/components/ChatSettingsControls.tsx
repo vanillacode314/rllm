@@ -9,14 +9,13 @@ import { SwitchControl, SwitchLabel, Switch as SwitchPrimitive, SwitchThumb } fr
 import { TextField, TextFieldInput, TextFieldLabel, TextFieldTextArea } from 'ui/text-field';
 import { cn } from 'ui/utils/tailwind';
 
-import type { TModel, TProvider } from '~/types';
-
 import { REASONING_VALUE_TO_LABEL_MAP } from '~/constants/chat-settings';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { createPreset, type TChatPreset } from '~/lib/chat/presets';
 import { type TChatSettings } from '~/lib/chat/settings';
 import { MCPManager } from '~/lib/mcp/manager';
 import { queries } from '~/queries';
+import type { TModel, TProvider } from '~/types';
 
 import ModelSelector from './ModelSelector';
 import PresetSelector from './PresetSelector';

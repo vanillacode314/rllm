@@ -10,9 +10,8 @@ import {
 } from 'ui/dropdown-menu';
 import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from 'ui/sidebar';
 
-import type { TChat } from '~/types/chat';
-
 import { ChatGenerationManager } from '~/lib/chat/generation';
+import type { TChat } from '~/types/chat';
 
 export interface ChatListItemProps {
   chat: Pick<TChat, 'id' | 'tags' | 'title'>;
