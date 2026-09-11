@@ -90,8 +90,12 @@ export async function deleteDatabaseFile(name: string) {
     }
     return;
   }
-  const root = await navigator.storage.getDirectory();
-  await root.removeEntry(`${name}.db`);
+  try {
+    const root = await navigator.storage.getDirectory();
+    await root.removeEntry(`${name}.db`);
+  } catch (error) {
+    console.error(new Error(`Failed to delete database file`, { cause: error }));
+  }
 }
 
 export async function getDatabaseSize(name: string): Promise<number> {
