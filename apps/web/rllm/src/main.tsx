@@ -84,9 +84,8 @@ if (!rootElement.innerHTML) {
 async function bootDatabase() {
   try {
     await getLogger();
-    await queryClient.invalidateQueries();
+    await QueryCacheManager.start();
     await router.invalidate();
-    QueryCacheManager.start();
   } catch (error) {
     console.error(error);
   }

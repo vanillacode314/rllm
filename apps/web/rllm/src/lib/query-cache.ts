@@ -100,10 +100,11 @@ export class QueryCacheManager {
     }
   }
 
-  static start(): void {
+  static async start(): Promise<void> {
     if (this.#unsubscribe) return;
 
     this.#unsubscribe = queryClient.getQueryCache().subscribe(() => this.#write.maybeExecute());
+    await this.#invalidate();
     document.addEventListener('visibilitychange', this.#handleVisibilityChange);
 
     this.#writeNow();
@@ -226,6 +227,14 @@ export class QueryCacheManager {
     }
 
     return selected;
+  }
+
+  static #invalidate() {
+    return Promise.all(
+      this.#registrations
+        .values()
+        .map(({ queryKey }) => queryClient.invalidateQueries({ queryKey, refetchType: 'all' }))
+    );
   }
 
   static #writeNow(): void {
