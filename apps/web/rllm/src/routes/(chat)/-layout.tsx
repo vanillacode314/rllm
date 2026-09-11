@@ -244,20 +244,14 @@ export function useChatPage(
       await router.invalidate();
     } else {
       if (opts().isNewChat) {
-        await logger.dispatch(
-          {
-            data: {
-              ...$chat,
-              messages: chatState.messages.toJSON(),
-              settings: chatState.settings.unwrap()
-            },
-            type: 'createChat'
+        await logger.dispatch({
+          data: {
+            ...$chat,
+            messages: chatState.messages.toJSON(),
+            settings: chatState.settings.unwrap()
           },
-          {
-            data: { id: $chat.id },
-            type: 'incrementChatAccessCount'
-          }
-        );
+          type: 'createChat'
+        });
         await navigate({
           params: { _splat: slugify($chat.title) },
           replace: true,
