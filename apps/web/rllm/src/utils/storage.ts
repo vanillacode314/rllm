@@ -111,10 +111,18 @@ export async function getDatabaseSize(name: string): Promise<number> {
       .inspectErr((e) => console.error(e))
       .unwrapOr(0);
   }
-  const root = await navigator.storage.getDirectory();
-  const fileHandle = await root.getFileHandle(`${name}.db`);
-  const file = await fileHandle.getFile();
-  return file.size;
+  const result = AsyncResult.from(
+    async () => {
+      const root = await navigator.storage.getDirectory();
+      const fileHandle = await root.getFileHandle(`${name}.db`);
+      return await fileHandle.getFile();
+    },
+    (e) => new Error('Failed to get database size', { cause: e })
+  );
+  return result
+    .map((file) => file.size)
+    .inspectErr((e) => console.error(e))
+    .unwrapOr(0);
 }
 
 async function produceMessagesOptimizationState(events: TEvent[]): Promise<TOptimizationState> {
