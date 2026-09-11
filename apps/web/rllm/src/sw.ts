@@ -1,7 +1,7 @@
 import type { PrecacheEntry, SerwistGlobalConfig } from 'serwist';
 
 // import { defaultCache } from '@serwist/vite/worker';
-import { Serwist } from 'serwist';
+import { disableNavigationPreload, Serwist } from 'serwist';
 
 // This declares the value of `injectionPoint` to TypeScript.
 // `injectionPoint` is the string that will be replaced by the
@@ -29,5 +29,12 @@ const serwist = new Serwist({
   },
   skipWaiting: false
 });
+
+// Navigation preload must stay off: Serwist's PrecacheStrategy returns `event.preloadResponse`
+// (the network response) before it consults the precache, so an enabled preload turns every
+// navigation into a network round trip instead of serving the cached index.html. The flag lives on
+// the registration, not the worker, and Serwist only ever *enables* it — so it has to be explicitly
+// disabled for installs that already have it on.
+disableNavigationPreload();
 
 serwist.addEventListeners();

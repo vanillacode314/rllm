@@ -96,7 +96,7 @@ export default defineConfig(({ mode }) => {
       sqlocalPlugin(),
       serwist({
         globDirectory: 'dist',
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,wasm}'],
+        globPatterns: ['**/*.{js,css,html,ico,json,png,svg,woff,woff2,wasm}'],
         injectionPoint: 'self.__SW_MANIFEST',
         maximumFileSizeToCacheInBytes: 100 * 1024 * 1024,
         rollupFormat: 'es',
