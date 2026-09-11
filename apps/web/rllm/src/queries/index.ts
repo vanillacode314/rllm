@@ -190,7 +190,7 @@ const chats = {
       return logger.db
         .query<Pick<TChat, 'finished' | 'id' | 'tags' | 'title'> & { score: number }>({
           sql: `SELECT "finished", "id", "accessCount" * MAX(0, 1 - (strftime('%s','now') - ("lastAccessedAt" / 1000.0)) / (86400.0 * 7)) as "score", "tags", "title" FROM chats ${whereClause} ORDER BY "score" DESC, "lastAccessedAt" DESC, "createdAt" DESC, "score" IS NULL LIMIT ? OFFSET ?`,
-          params: [...params, String(limit), String(offset)]
+          params: [...params, limit, offset]
         })
         .then((rows) => {
           parseDbRowsInPlace(rows, { booleanKeys: ['finished'], jsonKeys: ['tags'] });
@@ -198,17 +198,9 @@ const chats = {
         });
     },
     recent: (limit: number = 5) =>
-      logger.db
-        .query<TChat>(
-          logger.sql`SELECT "accessCount", "createdAt", "finished", "id", "lastAccessedAt", "messages", "settings", "tags", "title" FROM chats ORDER BY "lastAccessedAt" DESC LIMIT ${String(limit)}`
-        )
-        .then((rows) => {
-          parseDbRowsInPlace(rows, {
-            booleanKeys: ['finished'],
-            jsonKeys: ['messages', 'settings', 'tags']
-          });
-          return rows;
-        })
+      logger.db.query<Pick<TChat, 'id' | 'title'>>(
+        logger.sql`SELECT "id", "title" FROM chats ORDER BY "lastAccessedAt" DESC LIMIT ${limit}`
+      )
   },
   queries: {
     all: () =>
@@ -340,7 +332,7 @@ const events = {
         .then((rows) => rows[0]?.count ?? 0),
     getPaginatedEvents: (page: number, pageSize: number) =>
       logger.db.query<{ data: string; timestamp: string; type: string; version: string }>(
-        logger.sql`SELECT "data", "timestamp", "type", "version" FROM events ORDER BY "timestamp" DESC LIMIT ${String(pageSize)} OFFSET ${String((page - 1) * pageSize)}`
+        logger.sql`SELECT "data", "timestamp", "type", "version" FROM events ORDER BY "timestamp" DESC LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`
       )
   },
   queries: {
@@ -445,13 +437,12 @@ export const fetchers = {
   userMetadata: userMetadata.fetchers
 };
 
-// Registered here rather than in the route modules that consume these keys: this module is always
-// evaluated, so a registration in a lazily loaded route would only cover keys once visited.
 QueryCacheManager.register(
   { queryKey: userMetadata.queries.base() },
   { queryKey: providers.queries.base() },
   { maxEntries: 3, queryKey: [...chats.queries.base(), 'byId'] },
   { queryKey: [...chats.queries.base(), 'all', 'minimal', 'paged'] },
+  { queryKey: [...chats.queries.base(), 'all', 'recent'] },
   { queryKey: chatPresets.queries.base() },
   { queryKey: documents.queries.base() },
   {
