@@ -7,7 +7,6 @@ import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import type { TChat, TChatPreset, TMCP, TProvider, TUserMetadata } from '~/db/app-schema';
 import { logger } from '~/db/client';
 import { MAIN_DATABASE_NAME } from '~/db/client.constants';
-import * as schema from '~/db/schema';
 import { VECTOR_DATABASE_NAME } from '~/lib/vector-db/client.constants';
 import { TRANSIENT_VECTOR_DATABASE_NAME } from '~/lib/vector-db/transient.constants';
 import { setAccount } from '~/signals/account';
@@ -15,6 +14,8 @@ import { parseDbRowsInPlace } from '~/utils/db';
 import { getFile } from '~/utils/files';
 import { round } from '~/utils/math';
 import { clearData, getDatabaseSize } from '~/utils/storage';
+
+import { EXPORT_VERSION, migrateExport, type TExportData } from './-data-migrations';
 
 export const Route = createFileRoute('/settings/data')({
   component: SettingsStorageComponent,
@@ -29,6 +30,45 @@ export const Route = createFileRoute('/settings/data')({
     return { size };
   }
 });
+
+async function buildExportData(): Promise<TExportData> {
+  const [chats, mcps, providers, userMetadata, chatPresets] = await Promise.all([
+    parseDbRowsInPlace(
+      logger.db.query<TChat>(logger.sql`SELECT * FROM "chats" ORDER BY "chats"."createdAt"`),
+      { booleanKeys: ['finished'], jsonKeys: ['settings', 'messages', 'tags'] }
+    ),
+    parseDbRowsInPlace(
+      logger.db.query<TMCP>(logger.sql`SELECT * FROM "mcps" ORDER BY "mcps"."createdAt"`)
+    ),
+    parseDbRowsInPlace(
+      logger.db.query<TProvider>(
+        logger.sql`SELECT * FROM "providers" ORDER BY "providers"."createdAt"`
+      ),
+      { jsonKeys: ['defaultModelIds'] }
+    ),
+    logger.db.query<TUserMetadata>(
+      logger.sql`SELECT * FROM "userMetadata" ORDER BY "userMetadata"."createdAt"`
+    ),
+    parseDbRowsInPlace(
+      logger.db.query<TChatPreset>(
+        logger.sql`SELECT * FROM "chatPresets" ORDER BY "chatPresets"."createdAt"`
+      ),
+      { jsonKeys: ['settings'] }
+    )
+  ]);
+  return { chatPresets, chats, mcps, providers, userMetadata, version: EXPORT_VERSION };
+}
+
+function downloadExport(data: TExportData): void {
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  a.href = url;
+  a.download = `rllm-${timestamp}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 function formatBytes(value: number): string {
   if (value === 0) {
@@ -50,79 +90,16 @@ function formatBytes(value: number): string {
 function SettingsStorageComponent() {
   const data = Route.useLoaderData();
   async function exportData() {
-    const [chats, mcps, providers, userMetadata, chatPresets] = await Promise.all([
-      parseDbRowsInPlace(
-        logger.db.query<TChat>(logger.sql`SELECT * FROM "chats" ORDER BY "chats"."createdAt"`),
-        { booleanKeys: ['finished'], jsonKeys: ['settings', 'messages', 'tags'] }
-      ),
-      parseDbRowsInPlace(
-        logger.db.query<TMCP>(logger.sql`SELECT * FROM "mcps" ORDER BY "mcps"."createdAt"`)
-      ),
-      parseDbRowsInPlace(
-        logger.db.query<TProvider>(
-          logger.sql`SELECT * FROM "providers" ORDER BY "providers"."createdAt"`
-        ),
-        { jsonKeys: ['defaultModelIds'] }
-      ),
-      logger.db.query<TUserMetadata>(
-        logger.sql`SELECT * FROM "userMetadata" ORDER BY "userMetadata"."createdAt"`
-      ),
-      parseDbRowsInPlace(
-        logger.db.query<TChatPreset>(
-          logger.sql`SELECT * FROM "chatPresets" ORDER BY "chatPresets"."createdAt"`
-        ),
-        { jsonKeys: ['settings'] }
-      )
-    ]);
-    const json = { chatPresets, chats, mcps, providers, userMetadata };
-    const blob = new Blob([JSON.stringify(json)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    a.href = url;
-    a.download = `rllm-${timestamp}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadExport(await buildExportData());
   }
 
   async function exportDataWithoutChats() {
-    const [mcps, providers, userMetadata, chatPresets] = await Promise.all([
-      parseDbRowsInPlace(
-        logger.db.query<TMCP>(logger.sql`SELECT * FROM "mcps" ORDER BY "mcps"."createdAt"`)
-      ),
-      parseDbRowsInPlace(
-        logger.db.query<TProvider>(
-          logger.sql`SELECT * FROM "providers" ORDER BY "providers"."createdAt"`
-        ),
-        { jsonKeys: ['defaultModelIds'] }
-      ),
-      logger.db.query<TUserMetadata>(
-        logger.sql`SELECT * FROM "userMetadata" ORDER BY "userMetadata"."createdAt"`
-      ),
-      parseDbRowsInPlace(
-        logger.db.query<TChatPreset>(
-          logger.sql`SELECT * FROM "chatPresets" ORDER BY "chatPresets"."createdAt"`
-        ),
-        { jsonKeys: ['settings'] }
-      )
-    ]);
-    const json = {
-      chatPresets,
-      chats: [],
-      mcps,
-      providers,
-      userMetadata: userMetadata.filter(
-        (metadata) => metadata.id !== USER_METADATA_KEYS.SCRATCHPAD_CHAT
-      )
-    };
-    const blob = new Blob([JSON.stringify(json)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    a.href = url;
-    a.download = `rllm-${timestamp}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const json = await buildExportData();
+    json.chats = [];
+    json.userMetadata = json.userMetadata.filter(
+      (metadata) => metadata.id !== USER_METADATA_KEYS.SCRATCHPAD_CHAT
+    );
+    downloadExport(json);
   }
 
   async function importData() {
@@ -133,34 +110,36 @@ function SettingsStorageComponent() {
       toast.error('No file selected');
       return;
     }
-    const { chatPresets, chats, mcps, providers, userMetadata } = JSON.parse(await file.text());
+    const { chatPresets, chats, mcps, providers, userMetadata } = migrateExport(
+      JSON.parse(await file.text()) as TExportData
+    );
     await Promise.all([
       logger.dispatch(
-        ...(providers as (typeof schema.providers.$inferSelect)[]).map((provider) => ({
+        ...providers.map((provider) => ({
           data: provider,
           type: 'createProvider' as const
         }))
       ),
       logger.dispatch(
-        ...(mcps as (typeof schema.mcps.$inferSelect)[]).map((mcp) => ({
+        ...mcps.map((mcp) => ({
           data: mcp,
           type: 'createMcp' as const
         }))
       ),
       logger.dispatch(
-        ...(chats as (typeof schema.chats.$inferSelect)[]).map((chat) => ({
+        ...chats.map((chat) => ({
           data: chat,
           type: 'createChat' as const
         }))
       ),
       logger.dispatch(
-        ...(userMetadata as (typeof schema.userMetadata.$inferSelect)[]).map((metadata) => ({
+        ...userMetadata.map((metadata) => ({
           data: metadata,
           type: 'setUserMetadata' as const
         }))
       ),
       logger.dispatch(
-        ...(chatPresets as (typeof schema.chatPresets.$inferSelect)[]).map((preset) => ({
+        ...chatPresets.map((preset) => ({
           data: preset,
           type: 'createPreset' as const
         }))

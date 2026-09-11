@@ -702,7 +702,7 @@ type CreateChatEvent struct {
 	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
 	Tags          []string               `protobuf:"bytes,3,rep,name=tags,proto3" json:"tags,omitempty"`
 	Finished      bool                   `protobuf:"varint,4,opt,name=finished,proto3" json:"finished,omitempty"`
-	Messages      *structpb.Struct       `protobuf:"bytes,5,opt,name=messages,proto3" json:"messages,omitempty"`
+	Messages      *FlatTree              `protobuf:"bytes,5,opt,name=messages,proto3" json:"messages,omitempty"`
 	Settings      *structpb.Struct       `protobuf:"bytes,6,opt,name=settings,proto3" json:"settings,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -766,7 +766,7 @@ func (x *CreateChatEvent) GetFinished() bool {
 	return false
 }
 
-func (x *CreateChatEvent) GetMessages() *structpb.Struct {
+func (x *CreateChatEvent) GetMessages() *FlatTree {
 	if x != nil {
 		return x.Messages
 	}
@@ -780,13 +780,117 @@ func (x *CreateChatEvent) GetSettings() *structpb.Struct {
 	return nil
 }
 
+type FlatTreeNode struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChildrenIds   []string               `protobuf:"bytes,1,rep,name=children_ids,json=childrenIds,proto3" json:"children_ids,omitempty"`
+	Value         *structpb.Struct       `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FlatTreeNode) Reset() {
+	*x = FlatTreeNode{}
+	mi := &file_events_v1_event_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FlatTreeNode) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FlatTreeNode) ProtoMessage() {}
+
+func (x *FlatTreeNode) ProtoReflect() protoreflect.Message {
+	mi := &file_events_v1_event_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FlatTreeNode.ProtoReflect.Descriptor instead.
+func (*FlatTreeNode) Descriptor() ([]byte, []int) {
+	return file_events_v1_event_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *FlatTreeNode) GetChildrenIds() []string {
+	if x != nil {
+		return x.ChildrenIds
+	}
+	return nil
+}
+
+func (x *FlatTreeNode) GetValue() *structpb.Struct {
+	if x != nil {
+		return x.Value
+	}
+	return nil
+}
+
+type FlatTree struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	RootId        string                   `protobuf:"bytes,1,opt,name=root_id,json=rootId,proto3" json:"root_id,omitempty"`
+	Nodes         map[string]*FlatTreeNode `protobuf:"bytes,2,rep,name=nodes,proto3" json:"nodes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FlatTree) Reset() {
+	*x = FlatTree{}
+	mi := &file_events_v1_event_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FlatTree) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FlatTree) ProtoMessage() {}
+
+func (x *FlatTree) ProtoReflect() protoreflect.Message {
+	mi := &file_events_v1_event_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FlatTree.ProtoReflect.Descriptor instead.
+func (*FlatTree) Descriptor() ([]byte, []int) {
+	return file_events_v1_event_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *FlatTree) GetRootId() string {
+	if x != nil {
+		return x.RootId
+	}
+	return ""
+}
+
+func (x *FlatTree) GetNodes() map[string]*FlatTreeNode {
+	if x != nil {
+		return x.Nodes
+	}
+	return nil
+}
+
 type UpdateChatEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Title         *string                `protobuf:"bytes,2,opt,name=title,proto3,oneof" json:"title,omitempty"`
 	Tags          []string               `protobuf:"bytes,3,rep,name=tags,proto3" json:"tags,omitempty"`
 	Finished      *bool                  `protobuf:"varint,4,opt,name=finished,proto3,oneof" json:"finished,omitempty"`
-	Messages      *structpb.Struct       `protobuf:"bytes,5,opt,name=messages,proto3,oneof" json:"messages,omitempty"`
+	Messages      *FlatTree              `protobuf:"bytes,5,opt,name=messages,proto3,oneof" json:"messages,omitempty"`
 	Settings      *structpb.Struct       `protobuf:"bytes,6,opt,name=settings,proto3,oneof" json:"settings,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -794,7 +898,7 @@ type UpdateChatEvent struct {
 
 func (x *UpdateChatEvent) Reset() {
 	*x = UpdateChatEvent{}
-	mi := &file_events_v1_event_proto_msgTypes[8]
+	mi := &file_events_v1_event_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -806,7 +910,7 @@ func (x *UpdateChatEvent) String() string {
 func (*UpdateChatEvent) ProtoMessage() {}
 
 func (x *UpdateChatEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_events_v1_event_proto_msgTypes[8]
+	mi := &file_events_v1_event_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -819,7 +923,7 @@ func (x *UpdateChatEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateChatEvent.ProtoReflect.Descriptor instead.
 func (*UpdateChatEvent) Descriptor() ([]byte, []int) {
-	return file_events_v1_event_proto_rawDescGZIP(), []int{8}
+	return file_events_v1_event_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UpdateChatEvent) GetId() string {
@@ -850,7 +954,7 @@ func (x *UpdateChatEvent) GetFinished() bool {
 	return false
 }
 
-func (x *UpdateChatEvent) GetMessages() *structpb.Struct {
+func (x *UpdateChatEvent) GetMessages() *FlatTree {
 	if x != nil {
 		return x.Messages
 	}
@@ -875,7 +979,7 @@ type CreatePresetEvent struct {
 
 func (x *CreatePresetEvent) Reset() {
 	*x = CreatePresetEvent{}
-	mi := &file_events_v1_event_proto_msgTypes[9]
+	mi := &file_events_v1_event_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -887,7 +991,7 @@ func (x *CreatePresetEvent) String() string {
 func (*CreatePresetEvent) ProtoMessage() {}
 
 func (x *CreatePresetEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_events_v1_event_proto_msgTypes[9]
+	mi := &file_events_v1_event_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -900,7 +1004,7 @@ func (x *CreatePresetEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePresetEvent.ProtoReflect.Descriptor instead.
 func (*CreatePresetEvent) Descriptor() ([]byte, []int) {
-	return file_events_v1_event_proto_rawDescGZIP(), []int{9}
+	return file_events_v1_event_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CreatePresetEvent) GetId() string {
@@ -935,7 +1039,7 @@ type UpdatePresetEvent struct {
 
 func (x *UpdatePresetEvent) Reset() {
 	*x = UpdatePresetEvent{}
-	mi := &file_events_v1_event_proto_msgTypes[10]
+	mi := &file_events_v1_event_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -947,7 +1051,7 @@ func (x *UpdatePresetEvent) String() string {
 func (*UpdatePresetEvent) ProtoMessage() {}
 
 func (x *UpdatePresetEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_events_v1_event_proto_msgTypes[10]
+	mi := &file_events_v1_event_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -960,7 +1064,7 @@ func (x *UpdatePresetEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePresetEvent.ProtoReflect.Descriptor instead.
 func (*UpdatePresetEvent) Descriptor() ([]byte, []int) {
-	return file_events_v1_event_proto_rawDescGZIP(), []int{10}
+	return file_events_v1_event_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *UpdatePresetEvent) GetId() string {
@@ -993,7 +1097,7 @@ type DeletePresetEvent struct {
 
 func (x *DeletePresetEvent) Reset() {
 	*x = DeletePresetEvent{}
-	mi := &file_events_v1_event_proto_msgTypes[11]
+	mi := &file_events_v1_event_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1005,7 +1109,7 @@ func (x *DeletePresetEvent) String() string {
 func (*DeletePresetEvent) ProtoMessage() {}
 
 func (x *DeletePresetEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_events_v1_event_proto_msgTypes[11]
+	mi := &file_events_v1_event_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1018,7 +1122,7 @@ func (x *DeletePresetEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePresetEvent.ProtoReflect.Descriptor instead.
 func (*DeletePresetEvent) Descriptor() ([]byte, []int) {
-	return file_events_v1_event_proto_rawDescGZIP(), []int{11}
+	return file_events_v1_event_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *DeletePresetEvent) GetId() string {
@@ -1037,7 +1141,7 @@ type DeleteProviderEvent struct {
 
 func (x *DeleteProviderEvent) Reset() {
 	*x = DeleteProviderEvent{}
-	mi := &file_events_v1_event_proto_msgTypes[12]
+	mi := &file_events_v1_event_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1049,7 +1153,7 @@ func (x *DeleteProviderEvent) String() string {
 func (*DeleteProviderEvent) ProtoMessage() {}
 
 func (x *DeleteProviderEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_events_v1_event_proto_msgTypes[12]
+	mi := &file_events_v1_event_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1062,7 +1166,7 @@ func (x *DeleteProviderEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProviderEvent.ProtoReflect.Descriptor instead.
 func (*DeleteProviderEvent) Descriptor() ([]byte, []int) {
-	return file_events_v1_event_proto_rawDescGZIP(), []int{12}
+	return file_events_v1_event_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DeleteProviderEvent) GetId() string {
@@ -1081,7 +1185,7 @@ type DeleteMCPEvent struct {
 
 func (x *DeleteMCPEvent) Reset() {
 	*x = DeleteMCPEvent{}
-	mi := &file_events_v1_event_proto_msgTypes[13]
+	mi := &file_events_v1_event_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1093,7 +1197,7 @@ func (x *DeleteMCPEvent) String() string {
 func (*DeleteMCPEvent) ProtoMessage() {}
 
 func (x *DeleteMCPEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_events_v1_event_proto_msgTypes[13]
+	mi := &file_events_v1_event_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1106,7 +1210,7 @@ func (x *DeleteMCPEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMCPEvent.ProtoReflect.Descriptor instead.
 func (*DeleteMCPEvent) Descriptor() ([]byte, []int) {
-	return file_events_v1_event_proto_rawDescGZIP(), []int{13}
+	return file_events_v1_event_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *DeleteMCPEvent) GetId() string {
@@ -1125,7 +1229,7 @@ type DeleteChatEvent struct {
 
 func (x *DeleteChatEvent) Reset() {
 	*x = DeleteChatEvent{}
-	mi := &file_events_v1_event_proto_msgTypes[14]
+	mi := &file_events_v1_event_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1137,7 +1241,7 @@ func (x *DeleteChatEvent) String() string {
 func (*DeleteChatEvent) ProtoMessage() {}
 
 func (x *DeleteChatEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_events_v1_event_proto_msgTypes[14]
+	mi := &file_events_v1_event_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1150,7 +1254,7 @@ func (x *DeleteChatEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteChatEvent.ProtoReflect.Descriptor instead.
 func (*DeleteChatEvent) Descriptor() ([]byte, []int) {
-	return file_events_v1_event_proto_rawDescGZIP(), []int{14}
+	return file_events_v1_event_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *DeleteChatEvent) GetId() string {
@@ -1170,7 +1274,7 @@ type SetUserMetadataEvent struct {
 
 func (x *SetUserMetadataEvent) Reset() {
 	*x = SetUserMetadataEvent{}
-	mi := &file_events_v1_event_proto_msgTypes[15]
+	mi := &file_events_v1_event_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1182,7 +1286,7 @@ func (x *SetUserMetadataEvent) String() string {
 func (*SetUserMetadataEvent) ProtoMessage() {}
 
 func (x *SetUserMetadataEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_events_v1_event_proto_msgTypes[15]
+	mi := &file_events_v1_event_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1195,7 +1299,7 @@ func (x *SetUserMetadataEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetUserMetadataEvent.ProtoReflect.Descriptor instead.
 func (*SetUserMetadataEvent) Descriptor() ([]byte, []int) {
-	return file_events_v1_event_proto_rawDescGZIP(), []int{15}
+	return file_events_v1_event_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *SetUserMetadataEvent) GetId() string {
@@ -1221,7 +1325,7 @@ type DeleteUserMetadataEvent struct {
 
 func (x *DeleteUserMetadataEvent) Reset() {
 	*x = DeleteUserMetadataEvent{}
-	mi := &file_events_v1_event_proto_msgTypes[16]
+	mi := &file_events_v1_event_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1233,7 +1337,7 @@ func (x *DeleteUserMetadataEvent) String() string {
 func (*DeleteUserMetadataEvent) ProtoMessage() {}
 
 func (x *DeleteUserMetadataEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_events_v1_event_proto_msgTypes[16]
+	mi := &file_events_v1_event_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1246,7 +1350,7 @@ func (x *DeleteUserMetadataEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteUserMetadataEvent.ProtoReflect.Descriptor instead.
 func (*DeleteUserMetadataEvent) Descriptor() ([]byte, []int) {
-	return file_events_v1_event_proto_rawDescGZIP(), []int{16}
+	return file_events_v1_event_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *DeleteUserMetadataEvent) GetId() string {
@@ -1267,7 +1371,7 @@ type SyncServerGetEventsResponsePayload struct {
 
 func (x *SyncServerGetEventsResponsePayload) Reset() {
 	*x = SyncServerGetEventsResponsePayload{}
-	mi := &file_events_v1_event_proto_msgTypes[17]
+	mi := &file_events_v1_event_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1279,7 +1383,7 @@ func (x *SyncServerGetEventsResponsePayload) String() string {
 func (*SyncServerGetEventsResponsePayload) ProtoMessage() {}
 
 func (x *SyncServerGetEventsResponsePayload) ProtoReflect() protoreflect.Message {
-	mi := &file_events_v1_event_proto_msgTypes[17]
+	mi := &file_events_v1_event_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1292,7 +1396,7 @@ func (x *SyncServerGetEventsResponsePayload) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use SyncServerGetEventsResponsePayload.ProtoReflect.Descriptor instead.
 func (*SyncServerGetEventsResponsePayload) Descriptor() ([]byte, []int) {
-	return file_events_v1_event_proto_rawDescGZIP(), []int{17}
+	return file_events_v1_event_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *SyncServerGetEventsResponsePayload) GetData() []byte {
@@ -1328,7 +1432,7 @@ type SyncServerGetEventsResponse struct {
 
 func (x *SyncServerGetEventsResponse) Reset() {
 	*x = SyncServerGetEventsResponse{}
-	mi := &file_events_v1_event_proto_msgTypes[18]
+	mi := &file_events_v1_event_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1340,7 +1444,7 @@ func (x *SyncServerGetEventsResponse) String() string {
 func (*SyncServerGetEventsResponse) ProtoMessage() {}
 
 func (x *SyncServerGetEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_events_v1_event_proto_msgTypes[18]
+	mi := &file_events_v1_event_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1353,7 +1457,7 @@ func (x *SyncServerGetEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncServerGetEventsResponse.ProtoReflect.Descriptor instead.
 func (*SyncServerGetEventsResponse) Descriptor() ([]byte, []int) {
-	return file_events_v1_event_proto_rawDescGZIP(), []int{18}
+	return file_events_v1_event_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *SyncServerGetEventsResponse) GetHasMore() bool {
@@ -1446,20 +1550,30 @@ const file_events_v1_event_proto_rawDesc = "" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x15\n" +
 	"\x03url\x18\x03 \x01(\tH\x01R\x03url\x88\x01\x01B\a\n" +
 	"\x05_nameB\x06\n" +
-	"\x04_url\"\xd1\x01\n" +
+	"\x04_url\"\xcd\x01\n" +
 	"\x0fCreateChatEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x12\n" +
 	"\x04tags\x18\x03 \x03(\tR\x04tags\x12\x1a\n" +
-	"\bfinished\x18\x04 \x01(\bR\bfinished\x123\n" +
-	"\bmessages\x18\x05 \x01(\v2\x17.google.protobuf.StructR\bmessages\x123\n" +
-	"\bsettings\x18\x06 \x01(\v2\x17.google.protobuf.StructR\bsettings\"\x96\x02\n" +
+	"\bfinished\x18\x04 \x01(\bR\bfinished\x12/\n" +
+	"\bmessages\x18\x05 \x01(\v2\x13.events.v1.FlatTreeR\bmessages\x123\n" +
+	"\bsettings\x18\x06 \x01(\v2\x17.google.protobuf.StructR\bsettings\"`\n" +
+	"\fFlatTreeNode\x12!\n" +
+	"\fchildren_ids\x18\x01 \x03(\tR\vchildrenIds\x12-\n" +
+	"\x05value\x18\x02 \x01(\v2\x17.google.protobuf.StructR\x05value\"\xac\x01\n" +
+	"\bFlatTree\x12\x17\n" +
+	"\aroot_id\x18\x01 \x01(\tR\x06rootId\x124\n" +
+	"\x05nodes\x18\x02 \x03(\v2\x1e.events.v1.FlatTree.NodesEntryR\x05nodes\x1aQ\n" +
+	"\n" +
+	"NodesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12-\n" +
+	"\x05value\x18\x02 \x01(\v2\x17.events.v1.FlatTreeNodeR\x05value:\x028\x01\"\x92\x02\n" +
 	"\x0fUpdateChatEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\x05title\x18\x02 \x01(\tH\x00R\x05title\x88\x01\x01\x12\x12\n" +
 	"\x04tags\x18\x03 \x03(\tR\x04tags\x12\x1f\n" +
-	"\bfinished\x18\x04 \x01(\bH\x01R\bfinished\x88\x01\x01\x128\n" +
-	"\bmessages\x18\x05 \x01(\v2\x17.google.protobuf.StructH\x02R\bmessages\x88\x01\x01\x128\n" +
+	"\bfinished\x18\x04 \x01(\bH\x01R\bfinished\x88\x01\x01\x124\n" +
+	"\bmessages\x18\x05 \x01(\v2\x13.events.v1.FlatTreeH\x02R\bmessages\x88\x01\x01\x128\n" +
 	"\bsettings\x18\x06 \x01(\v2\x17.google.protobuf.StructH\x03R\bsettings\x88\x01\x01B\b\n" +
 	"\x06_titleB\v\n" +
 	"\t_finishedB\v\n" +
@@ -1512,7 +1626,7 @@ func file_events_v1_event_proto_rawDescGZIP() []byte {
 	return file_events_v1_event_proto_rawDescData
 }
 
-var file_events_v1_event_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_events_v1_event_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_events_v1_event_proto_goTypes = []any{
 	(*Event)(nil),                              // 0: events.v1.Event
 	(*EventData)(nil),                          // 1: events.v1.EventData
@@ -1522,18 +1636,21 @@ var file_events_v1_event_proto_goTypes = []any{
 	(*CreateMCPEvent)(nil),                     // 5: events.v1.CreateMCPEvent
 	(*UpdateMCPEvent)(nil),                     // 6: events.v1.UpdateMCPEvent
 	(*CreateChatEvent)(nil),                    // 7: events.v1.CreateChatEvent
-	(*UpdateChatEvent)(nil),                    // 8: events.v1.UpdateChatEvent
-	(*CreatePresetEvent)(nil),                  // 9: events.v1.CreatePresetEvent
-	(*UpdatePresetEvent)(nil),                  // 10: events.v1.UpdatePresetEvent
-	(*DeletePresetEvent)(nil),                  // 11: events.v1.DeletePresetEvent
-	(*DeleteProviderEvent)(nil),                // 12: events.v1.DeleteProviderEvent
-	(*DeleteMCPEvent)(nil),                     // 13: events.v1.DeleteMCPEvent
-	(*DeleteChatEvent)(nil),                    // 14: events.v1.DeleteChatEvent
-	(*SetUserMetadataEvent)(nil),               // 15: events.v1.SetUserMetadataEvent
-	(*DeleteUserMetadataEvent)(nil),            // 16: events.v1.DeleteUserMetadataEvent
-	(*SyncServerGetEventsResponsePayload)(nil), // 17: events.v1.SyncServerGetEventsResponsePayload
-	(*SyncServerGetEventsResponse)(nil),        // 18: events.v1.SyncServerGetEventsResponse
-	(*structpb.Struct)(nil),                    // 19: google.protobuf.Struct
+	(*FlatTreeNode)(nil),                       // 8: events.v1.FlatTreeNode
+	(*FlatTree)(nil),                           // 9: events.v1.FlatTree
+	(*UpdateChatEvent)(nil),                    // 10: events.v1.UpdateChatEvent
+	(*CreatePresetEvent)(nil),                  // 11: events.v1.CreatePresetEvent
+	(*UpdatePresetEvent)(nil),                  // 12: events.v1.UpdatePresetEvent
+	(*DeletePresetEvent)(nil),                  // 13: events.v1.DeletePresetEvent
+	(*DeleteProviderEvent)(nil),                // 14: events.v1.DeleteProviderEvent
+	(*DeleteMCPEvent)(nil),                     // 15: events.v1.DeleteMCPEvent
+	(*DeleteChatEvent)(nil),                    // 16: events.v1.DeleteChatEvent
+	(*SetUserMetadataEvent)(nil),               // 17: events.v1.SetUserMetadataEvent
+	(*DeleteUserMetadataEvent)(nil),            // 18: events.v1.DeleteUserMetadataEvent
+	(*SyncServerGetEventsResponsePayload)(nil), // 19: events.v1.SyncServerGetEventsResponsePayload
+	(*SyncServerGetEventsResponse)(nil),        // 20: events.v1.SyncServerGetEventsResponse
+	nil,                                        // 21: events.v1.FlatTree.NodesEntry
+	(*structpb.Struct)(nil),                    // 22: google.protobuf.Struct
 }
 var file_events_v1_event_proto_depIdxs = []int32{
 	1,  // 0: events.v1.Event.data:type_name -> events.v1.EventData
@@ -1542,28 +1659,31 @@ var file_events_v1_event_proto_depIdxs = []int32{
 	5,  // 3: events.v1.EventData.create_mcp:type_name -> events.v1.CreateMCPEvent
 	6,  // 4: events.v1.EventData.update_mcp:type_name -> events.v1.UpdateMCPEvent
 	7,  // 5: events.v1.EventData.create_chat:type_name -> events.v1.CreateChatEvent
-	8,  // 6: events.v1.EventData.update_chat:type_name -> events.v1.UpdateChatEvent
-	12, // 7: events.v1.EventData.delete_provider:type_name -> events.v1.DeleteProviderEvent
-	13, // 8: events.v1.EventData.delete_mcp:type_name -> events.v1.DeleteMCPEvent
-	14, // 9: events.v1.EventData.delete_chat:type_name -> events.v1.DeleteChatEvent
-	15, // 10: events.v1.EventData.set_user_metadata:type_name -> events.v1.SetUserMetadataEvent
-	9,  // 11: events.v1.EventData.create_preset:type_name -> events.v1.CreatePresetEvent
-	10, // 12: events.v1.EventData.update_preset:type_name -> events.v1.UpdatePresetEvent
-	11, // 13: events.v1.EventData.delete_preset:type_name -> events.v1.DeletePresetEvent
+	10, // 6: events.v1.EventData.update_chat:type_name -> events.v1.UpdateChatEvent
+	14, // 7: events.v1.EventData.delete_provider:type_name -> events.v1.DeleteProviderEvent
+	15, // 8: events.v1.EventData.delete_mcp:type_name -> events.v1.DeleteMCPEvent
+	16, // 9: events.v1.EventData.delete_chat:type_name -> events.v1.DeleteChatEvent
+	17, // 10: events.v1.EventData.set_user_metadata:type_name -> events.v1.SetUserMetadataEvent
+	11, // 11: events.v1.EventData.create_preset:type_name -> events.v1.CreatePresetEvent
+	12, // 12: events.v1.EventData.update_preset:type_name -> events.v1.UpdatePresetEvent
+	13, // 13: events.v1.EventData.delete_preset:type_name -> events.v1.DeletePresetEvent
 	2,  // 14: events.v1.EventData.increment_chat_access_count:type_name -> events.v1.IncrementChatAccessCountEvent
-	16, // 15: events.v1.EventData.delete_user_metadata:type_name -> events.v1.DeleteUserMetadataEvent
-	19, // 16: events.v1.CreateChatEvent.messages:type_name -> google.protobuf.Struct
-	19, // 17: events.v1.CreateChatEvent.settings:type_name -> google.protobuf.Struct
-	19, // 18: events.v1.UpdateChatEvent.messages:type_name -> google.protobuf.Struct
-	19, // 19: events.v1.UpdateChatEvent.settings:type_name -> google.protobuf.Struct
-	19, // 20: events.v1.CreatePresetEvent.settings:type_name -> google.protobuf.Struct
-	19, // 21: events.v1.UpdatePresetEvent.settings:type_name -> google.protobuf.Struct
-	17, // 22: events.v1.SyncServerGetEventsResponse.events:type_name -> events.v1.SyncServerGetEventsResponsePayload
-	23, // [23:23] is the sub-list for method output_type
-	23, // [23:23] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	18, // 15: events.v1.EventData.delete_user_metadata:type_name -> events.v1.DeleteUserMetadataEvent
+	9,  // 16: events.v1.CreateChatEvent.messages:type_name -> events.v1.FlatTree
+	22, // 17: events.v1.CreateChatEvent.settings:type_name -> google.protobuf.Struct
+	22, // 18: events.v1.FlatTreeNode.value:type_name -> google.protobuf.Struct
+	21, // 19: events.v1.FlatTree.nodes:type_name -> events.v1.FlatTree.NodesEntry
+	9,  // 20: events.v1.UpdateChatEvent.messages:type_name -> events.v1.FlatTree
+	22, // 21: events.v1.UpdateChatEvent.settings:type_name -> google.protobuf.Struct
+	22, // 22: events.v1.CreatePresetEvent.settings:type_name -> google.protobuf.Struct
+	22, // 23: events.v1.UpdatePresetEvent.settings:type_name -> google.protobuf.Struct
+	19, // 24: events.v1.SyncServerGetEventsResponse.events:type_name -> events.v1.SyncServerGetEventsResponsePayload
+	8,  // 25: events.v1.FlatTree.NodesEntry.value:type_name -> events.v1.FlatTreeNode
+	26, // [26:26] is the sub-list for method output_type
+	26, // [26:26] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_events_v1_event_proto_init() }
@@ -1590,16 +1710,16 @@ func file_events_v1_event_proto_init() {
 	}
 	file_events_v1_event_proto_msgTypes[4].OneofWrappers = []any{}
 	file_events_v1_event_proto_msgTypes[6].OneofWrappers = []any{}
-	file_events_v1_event_proto_msgTypes[8].OneofWrappers = []any{}
 	file_events_v1_event_proto_msgTypes[10].OneofWrappers = []any{}
-	file_events_v1_event_proto_msgTypes[18].OneofWrappers = []any{}
+	file_events_v1_event_proto_msgTypes[12].OneofWrappers = []any{}
+	file_events_v1_event_proto_msgTypes[20].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_events_v1_event_proto_rawDesc), len(file_events_v1_event_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

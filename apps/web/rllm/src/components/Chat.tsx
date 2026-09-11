@@ -45,6 +45,7 @@ import type { TLLMMessageChunk, TMessage, TUserMessageChunk } from '~/types/chat
 import { formatToPercentage, formatToTokens } from '~/utils/number';
 import { formatAsKeyValuePair } from '~/utils/object';
 import { createDerivedStore } from '~/utils/stores';
+import { toNestedJsonTree } from '~/utils/tree';
 import { lowlightWorkerPool } from '~/workers/lowlight';
 
 import Markdown from './markdown/Markdown';
@@ -83,7 +84,7 @@ export function Chat(props: Props): JSXElement {
   const nodes = createDerivedStore(
     () => {
       const result = [];
-      let parent = structuredClone(props.chat.messages);
+      let parent = toNestedJsonTree(structuredClone(props.chat.messages));
       for (let index = 0; index < props.path.length; index++) {
         const pathIndex = props.path[index];
         const node = parent.children[pathIndex];

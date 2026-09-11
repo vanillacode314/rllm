@@ -1,7 +1,23 @@
 import { Option } from 'ts-result-option';
 
+type JsonTree<T> = {
+  /** Nodes keyed by their id (the `.`-joined path from the root). */
+  nodes: Record<string, JsonTreeNode<T>>;
+  rootId: string;
+};
+
 type JsonTreeNode<T> = {
-  children: JsonTreeNode<T>[];
+  childrenIds: string[];
+  value: T | undefined;
+};
+
+/**
+ * Nested shape of {@link JsonTree}, matching the pre-flattening layout.
+ * Consumers that walk the tree positionally (following a path of child indexes,
+ * e.g. the chat renderer) can expand a flat tree with {@link toNestedJsonTree}.
+ */
+type NestedJsonTreeNode<T> = {
+  children: NestedJsonTreeNode<T>[];
   value: null | T;
 };
 
@@ -17,7 +33,7 @@ interface TTreeNode<T> {
   setChildren(children: TTreeNode<T>[]): TTreeNode<T>;
   setParent(parent: TTreeNode<T>): TTreeNode<T>;
   setValue(value: Option<T>): TTreeNode<T>;
-  toJSON(): JsonTreeNode<T>;
+  toJSON(): JsonTree<T>;
   traverse(path: number[]): Option<TTreeNode<T>>;
   get value(): Option<T>;
   walk(path?: number[]): IteratorObject<{ node: TTreeNode<T>; path: number[] }>;
@@ -42,15 +58,18 @@ class TreeNode<T> implements TTreeNode<T> {
     }
   }
 
-  static fromJSON<T>(json: JsonTreeNode<T>): TreeNode<T> {
-    const children = json.children.map((child) => TreeNode.fromJSON(child));
-    const tree = new TreeNode<T>();
-    tree._value = Option.fromNull(json.value);
-    for (const child of children) {
-      child._parent = Option.Some(tree);
+  static fromJSON<T>(json: JsonTree<T>): TreeNode<T> {
+    const nodes = new Map<string, TreeNode<T>>();
+    for (const [id, node] of Object.entries(json.nodes)) {
+      nodes.set(id, new TreeNode<T>(node.value));
     }
-    tree.children = children;
-    return tree;
+    for (const [id, node] of Object.entries(json.nodes)) {
+      const treeNode = nodes.get(id)!;
+      for (const childId of node.childrenIds) {
+        treeNode.addChild(nodes.get(childId)!);
+      }
+    }
+    return nodes.get(json.rootId)!;
   }
 
   addChild(child: TTreeNode<T>): this {
@@ -118,7 +137,7 @@ class TreeNode<T> implements TTreeNode<T> {
     return this;
   }
 
-  toJSON(): JsonTreeNode<T> {
+  toJSON(): JsonTree<T> {
     return nodeToJSON(this);
   }
 
@@ -151,11 +170,44 @@ function* iterPath<T>(
   }
 }
 
-function nodeToJSON<T>(node: TTreeNode<T>): JsonTreeNode<T> {
-  return {
-    children: node.children.map((child) => nodeToJSON(child)),
-    value: node.value.toNull()
+function nodeToJSON<T>(node: TTreeNode<T>): JsonTree<T> {
+  const nodes: Record<string, JsonTreeNode<T>> = {};
+  for (const { node: n, path } of node.walk()) {
+    nodes[path.join('.')] = {
+      childrenIds: n.children.map((_, i) => [...path, i].join('.')),
+      value: n.value.toUndefined()
+    };
+  }
+  return { nodes, rootId: '' };
+}
+
+/**
+ * Inverse of {@link toNestedJsonTree}: flattens a legacy nested tree into the
+ * current {@link JsonTree} shape. Used to migrate persisted/exported data that
+ * was written before the flat format was introduced.
+ */
+function toFlatJsonTree<T>(node: NestedJsonTreeNode<T>): JsonTree<T> {
+  const nodes: Record<string, JsonTreeNode<T>> = {};
+  const build = (current: NestedJsonTreeNode<T>, path: number[]): void => {
+    nodes[path.join('.')] = {
+      childrenIds: current.children.map((_, index) => [...path, index].join('.')),
+      value: current.value ?? undefined
+    };
+    current.children.forEach((child, index) => build(child, [...path, index]));
   };
+  build(node, []);
+  return { nodes, rootId: '' };
+}
+
+function toNestedJsonTree<T>(json: JsonTree<T>): NestedJsonTreeNode<T> {
+  const build = (id: string): NestedJsonTreeNode<T> => {
+    const node = json.nodes[id]!;
+    return {
+      children: node.childrenIds.map((childId) => build(childId)),
+      value: node.value ?? null
+    };
+  };
+  return build(json.rootId);
 }
 
 function traversePath<T>(node: TTreeNode<T>, path: number[]): Option<TTreeNode<T>> {
@@ -173,15 +225,17 @@ function* walkTree<T>(
   node: TTreeNode<T>,
   path: number[] = []
 ): Generator<{ node: TTreeNode<T>; path: number[] }> {
+  yield { node, path };
   for (let i = 0; i < node.children.length; i++) {
     yield* walkTree(node.children[i]!, [...path, i]);
   }
-  yield { node, path };
 }
 
 export {
-  type JsonTreeNode as JsonTree,
-  type JsonTreeNode,
+  type JsonTree,
+  type NestedJsonTreeNode,
+  toFlatJsonTree,
+  toNestedJsonTree,
   TreeNode as Tree,
   TreeNode,
   type TTreeNode as TTree,

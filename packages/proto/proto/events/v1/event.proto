@@ -70,8 +70,18 @@ message CreateChatEvent {
   string title = 2;
   repeated string tags = 3;
   bool finished = 4;
-  google.protobuf.Struct messages = 5;
+  FlatTree messages = 5;
   google.protobuf.Struct settings = 6;
+}
+
+message FlatTreeNode {
+  repeated string children_ids = 1;
+  google.protobuf.Struct value = 2;
+}
+
+message FlatTree {
+  string root_id = 1;
+  map<string, FlatTreeNode> nodes = 2;
 }
 
 message UpdateChatEvent {
@@ -79,7 +89,7 @@ message UpdateChatEvent {
   optional string title = 2;
   repeated string tags = 3;
   optional bool finished = 4;
-  optional google.protobuf.Struct messages = 5;
+  optional FlatTree messages = 5;
   optional google.protobuf.Struct settings = 6;
 }
 
