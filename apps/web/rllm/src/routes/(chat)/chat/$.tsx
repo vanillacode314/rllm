@@ -14,7 +14,7 @@ import { queryClient } from '~/utils/query-client';
 import ChatAppDrawer from '../-ChatAppDrawer';
 import { INCREMENT_ACCESS_COUNT_THRESHOLD_MILLISECONDS } from '../-constants';
 import { useChatPage, useChatPageBeforeLoad, useChatPageLoader } from '../-layout';
-import { updateMessages } from '../-state';
+import { resetMessages, updateMessages } from '../-state';
 import { getLatestPath } from '../-utils';
 
 console.error('FIX OPTIMIZE STORAGE');
@@ -35,6 +35,7 @@ export const Route = createFileRoute('/(chat)/chat/$')({
     const { defaultChatSettingsPreset, providers } = await ensureQueryData();
 
     if (isNewChat) {
+      if (!preload) resetMessages();
       const chatSettings = FALLBACK_CHAT_SETTINGS(providers[0].defaultModelIds[0], providers[0].id);
       if (defaultChatSettingsPreset) {
         const preset = await queryClient.ensureQueryData(

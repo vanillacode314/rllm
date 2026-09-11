@@ -80,6 +80,15 @@ export function resetChatState() {
   localforage.removeItem(CHAT_STATE_LOCALFORAGE_KEY);
 }
 
+export function resetMessages() {
+  setChatState((state) =>
+    produce(state, (draft) => {
+      draft.messages = new Tree();
+      draft.path = [];
+    })
+  );
+}
+
 export function updateAttachmentById(id: string, data: Partial<TAttachment>) {
   setChatState((state) =>
     produce(state, (draft) => {
