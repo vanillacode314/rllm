@@ -14,6 +14,7 @@ export default defineConfig({
   plugins: ['import', 'promise'],
   rules: {
     ...perfectionist.configs['recommended-natural'].rules,
+    'perfectionist/sort-imports': 'off',
     'no-shadow': 'allow',
     'no-underscore-dangle': 'allow'
   }

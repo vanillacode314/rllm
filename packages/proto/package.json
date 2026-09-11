@@ -20,13 +20,14 @@
     "format": "buf format --write"
   },
   "devDependencies": {
-    "@types/bun": "^1.3.14",
-    "oxfmt": "^0.55.0",
-    "oxlint": "^1.70.0",
-    "tsdown": "^0.22.14"
+    "@rthings/config": "workspace:*",
+    "@types/bun": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "tsdown": "catalog:"
   },
   "peerDependencies": {
-    "typescript": "^6.0.3"
+    "typescript": "catalog:"
   },
   "dependencies": {
     "@bufbuild/buf": "^1.70.0",

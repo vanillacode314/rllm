@@ -38,12 +38,16 @@
   },
   "devDependencies": {
     "@capacitor-community/sqlite": "^8.1.0",
+    "@rthings/config": "workspace:*",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
     "sqlocal": "^0.18.0",
-    "tsdown": "^0.22.14"
+    "tsdown": "catalog:",
+    "typescript": "catalog:"
   },
   "peerDependencies": {
-    "sqlocal": "^0.18.0",
-    "@capacitor-community/sqlite": "^8.1.0"
+    "@capacitor-community/sqlite": "^8.1.0",
+    "sqlocal": "^0.18.0"
   },
   "peerDependenciesMeta": {
     "sqlocal": {

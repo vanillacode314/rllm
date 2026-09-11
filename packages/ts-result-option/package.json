@@ -35,10 +35,10 @@
   },
   "devDependencies": {
     "@rthings/config": "workspace:*",
-    "@types/node": "^25.9.3",
-    "oxfmt": "^0.55.0",
-    "oxlint": "^1.70.0",
-    "tsdown": "^0.22.14",
-    "typescript": "^6.0.3"
+    "@types/node": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:"
   }
 }
