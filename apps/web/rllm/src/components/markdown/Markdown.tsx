@@ -136,7 +136,7 @@ function Markdown(props: TProps) {
     async (content) => {
       const file = new VFile();
       file.value = content;
-      const tree = processor.runSync(processor.parse(file), file);
+      const tree = await processor.run(processor.parse(file), file);
       return tree;
     }
   );
