@@ -1,6 +1,5 @@
 import * as z from 'zod/mini';
 
-import { chatSettingsSchema } from '~/lib/chat/settings';
 import { Tree, type TTree } from '~/utils/tree';
 
 export const llmMessageChunkSchema = z.discriminatedUnion('type', [
@@ -71,6 +70,21 @@ export const messageSchema = z.discriminatedUnion('type', [
   })
 ]);
 export type TMessage = z.infer<typeof messageSchema>;
+
+export const chatSettingsSchema = z.object({
+  includeDateTimeInSystemPrompt: z._default(z.boolean(), true),
+  modelId: z.string(),
+  providerId: z.string(),
+  reasoning: z._default(z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh']), 'medium'),
+  systemPrompt: z._default(z.string(), '')
+  // 'temperature?': 'number'
+  // "topP?": "number",
+  // "frequencyPenalty?": "number",
+  // "presencePenalty?": "number",
+  // "maxTokens?": "number",
+  // "stop?": "string[]",
+});
+export type TChatSettings = z.infer<typeof chatSettingsSchema>;
 
 export const chatSchema = z.object({
   finished: z.boolean(),

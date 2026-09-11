@@ -5,8 +5,13 @@ import { Option } from 'ts-result-option';
 import { safeParseJson } from 'ts-result-option/utils';
 import * as z from 'zod/mini';
 
-import { chatSettingsSchema, type TChatSettings } from '~/lib/chat/settings';
-import { attachmentsSchema, type TAttachment, type TMessage } from '~/types/chat';
+import {
+  chatSettingsSchema,
+  type TChatSettings,
+  attachmentsSchema,
+  type TAttachment,
+  type TMessage
+} from '~/types/chat';
 import { produce } from '~/utils/immer';
 import { Tree, type TTree } from '~/utils/tree';
 

@@ -1,29 +1,13 @@
-import type { ParsedLocation } from '@tanstack/solid-router';
 import { Option } from 'ts-result-option';
 import { safeParseJson } from 'ts-result-option/utils';
-import * as z from 'zod/mini';
 
 import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { chatsSchema } from '~/db/app-schema';
 import { logger } from '~/db/client';
 import { fetchers } from '~/queries';
 import { chatState, setChatState } from '~/routes/(chat)/-state';
+import type { TChatSettings } from '~/types/chat';
 import { produce } from '~/utils/immer';
-
-export const chatSettingsSchema = z.object({
-  includeDateTimeInSystemPrompt: z._default(z.boolean(), true),
-  modelId: z.string(),
-  providerId: z.string(),
-  reasoning: z._default(z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh']), 'medium'),
-  systemPrompt: z._default(z.string(), '')
-  // 'temperature?': 'number'
-  // "topP?": "number",
-  // "frequencyPenalty?": "number",
-  // "presencePenalty?": "number",
-  // "maxTokens?": "number",
-  // "stop?": "string[]",
-});
-export type TChatSettings = z.infer<typeof chatSettingsSchema>;
 
 export async function initChatSettings() {
   const [titleGenerationProviderId, titleGenerationModelId, providers] = await Promise.all([
