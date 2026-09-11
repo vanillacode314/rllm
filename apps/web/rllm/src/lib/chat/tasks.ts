@@ -6,8 +6,8 @@ import { createTask, type TTask } from '../background-task-manager/tasks';
 
 export async function retryFailedTitleAndTags() {
   const controller = new AbortController();
-  const chats = parseDbRowsInPlace(
-    await logger.db.query<Pick<TChat, 'id' | 'settings'>>(
+  const chats = await parseDbRowsInPlace(
+    logger.db.query<Pick<TChat, 'id' | 'settings'>>(
       logger.sql`SELECT "id", "settings" FROM "chats" WHERE "title" = 'Untitled Chat' OR "title" = 'Untitled New Chat'`
     ),
     { jsonKeys: ['settings'] }

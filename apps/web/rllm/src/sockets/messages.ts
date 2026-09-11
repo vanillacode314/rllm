@@ -9,6 +9,7 @@ import * as z from 'zod/mini';
 import { logger } from '~/db/client';
 import { type TValidEvent, validEventSchema } from '~/queries/mutations';
 import { account } from '~/signals/account';
+import { parseDbRowsInPlace } from '~/utils/db';
 import { decrypt, encrypt } from '~/workers/encryption';
 
 import type { TTransport } from './transports';
@@ -161,7 +162,10 @@ export class ConnectionManager {
     const unique = [...new Set(timestamps)];
     if (unique.length === 0) return;
     const sql = `SELECT "data", "timestamp", "type", "version" FROM "events" WHERE "timestamp" IN (${unique.map(() => '?').join(',')})`;
-    const events = await logger.db.query<EventRow>({ params: unique, sql });
+
+    const events = await parseDbRowsInPlace(logger.db.query<EventRow>({ params: unique, sql }), {
+      jsonKeys: ['data']
+    });
     await this.flushSendEvents(events);
   }
 
