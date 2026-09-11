@@ -4,7 +4,15 @@ import { debounce } from '@tanstack/solid-pacer';
 import { QueryClientProvider } from '@tanstack/solid-query';
 // import { SolidQueryDevtools } from '@tanstack/solid-query-devtools';
 import { createRootRouteWithContext, Outlet } from '@tanstack/solid-router';
-import { createSignal, For, type JSXElement, onMount, Suspense } from 'solid-js';
+import {
+  type Component,
+  createSignal,
+  For,
+  type JSXElement,
+  lazy,
+  onMount,
+  Suspense
+} from 'solid-js';
 import { Option } from 'ts-result-option';
 import { Button } from 'ui/button';
 import { SidebarProvider } from 'ui/sidebar';
@@ -86,18 +94,21 @@ export const Route = createRootRouteWithContext()({
 });
 
 function AutoImportModals() {
-  const modals = import.meta.glob('~/components/modals/auto-import/*.tsx', {
-    eager: true,
-    import: 'default'
-  }) as Record<string, () => JSXElement>;
+  const modals = import.meta.glob('~/components/modals/auto-import/*.tsx') as Record<
+    string,
+    () => Promise<{ default: Component }>
+  >;
 
   return (
     <For each={Object.values(modals)}>
-      {(Modal) => (
-        <Suspense>
-          <Modal />
-        </Suspense>
-      )}
+      {(getModule) => {
+        const Modal = lazy(() => getModule());
+        return (
+          <Suspense>
+            <Modal />
+          </Suspense>
+        );
+      }}
     </For>
   );
 }
