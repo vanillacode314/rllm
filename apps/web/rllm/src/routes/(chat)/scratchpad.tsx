@@ -15,7 +15,8 @@ import { chatsSchema } from '~/db/app-schema';
 import { logger } from '~/db/client';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { createTask } from '~/lib/background-task-manager/tasks';
-import { fetchers } from '~/queries';
+import { queries } from '~/queries';
+import { queryClient } from '~/utils/query-client';
 import { slugify } from '~/utils/string';
 import { Tree } from '~/utils/tree';
 
@@ -48,7 +49,9 @@ export const Route = createFileRoute('/(chat)/scratchpad')({
           providers[0].id
         );
         if (defaultChatSettingsPreset) {
-          const preset = await fetchers.chatPresets.byId(defaultChatSettingsPreset);
+          const preset = await queryClient.ensureQueryData(
+            queries.chatPresets.byId(defaultChatSettingsPreset)
+          );
           Object.assign(chatSettings, preset.settings);
         }
         const clientId = await logger.getClientId();

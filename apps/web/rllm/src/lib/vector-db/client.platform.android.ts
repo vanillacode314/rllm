@@ -1,3 +1,5 @@
+import type { TVectorDB } from 'vector-db';
+
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 import { createVectorDB } from 'vector-db';
 import { fromCapacitorSqlite } from 'vector-db/capacitorjs';
@@ -5,6 +7,7 @@ import { fromCapacitorSqlite } from 'vector-db/capacitorjs';
 import * as rag from '~/workers/rag';
 
 import { VECTOR_DATABASE_PATH } from './client.constants';
+import { createVectorDbProxy } from './proxy';
 
 const sqlite = new SQLiteConnection(CapacitorSQLite);
 async function getDb() {
@@ -18,7 +21,12 @@ async function getDb() {
   return db;
 }
 
-export const vectorDb = await createVectorDB({
-  db: fromCapacitorSqlite('permanent', getDb),
-  embedder: { generateEmbeddings: (text) => rag.getEmbedding(text) }
-});
+let dbPromise: null | Promise<TVectorDB> = null;
+function loadVectorDb() {
+  return (dbPromise ??= createVectorDB({
+    db: fromCapacitorSqlite('permanent', getDb),
+    embedder: { generateEmbeddings: (text) => rag.getEmbedding(text) }
+  }));
+}
+
+export const vectorDb = createVectorDbProxy(loadVectorDb);

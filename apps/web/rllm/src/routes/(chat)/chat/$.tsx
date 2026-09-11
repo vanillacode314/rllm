@@ -8,7 +8,7 @@ import { useAppDrawer } from '~/components/AppDrawer';
 import { FALLBACK_CHAT_SETTINGS } from '~/constants/chat-settings';
 import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { logger } from '~/db/client';
-import { fetchers, queries } from '~/queries';
+import { queries } from '~/queries';
 import { queryClient } from '~/utils/query-client';
 
 import ChatAppDrawer from '../-ChatAppDrawer';
@@ -37,7 +37,9 @@ export const Route = createFileRoute('/(chat)/chat/$')({
     if (isNewChat) {
       const chatSettings = FALLBACK_CHAT_SETTINGS(providers[0].defaultModelIds[0], providers[0].id);
       if (defaultChatSettingsPreset) {
-        const preset = await fetchers.chatPresets.byId(defaultChatSettingsPreset);
+        const preset = await queryClient.ensureQueryData(
+          queries.chatPresets.byId(defaultChatSettingsPreset)
+        );
         if (!preset) {
           await logger.dispatch({
             data: {

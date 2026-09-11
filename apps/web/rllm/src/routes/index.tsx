@@ -4,16 +4,21 @@ import { safeParseJson } from 'ts-result-option/utils';
 
 import { lastOpenedPageSchema } from '~/constants/settings';
 import { USER_METADATA_KEYS } from '~/constants/user-metadata';
-import { fetchers } from '~/queries';
+import { queries } from '~/queries';
+import { queryClient } from '~/utils/query-client';
 import { slugify } from '~/utils/string';
 
 export const Route = createFileRoute('/')({
   beforeLoad: async () => {
-    const startupPage = await fetchers.userMetadata.byId(USER_METADATA_KEYS.STARTUP_PAGE);
+    const startupPage = await queryClient.ensureQueryData(
+      queries.userMetadata.byId(USER_METADATA_KEYS.STARTUP_PAGE)
+    );
 
     if (startupPage === 'last-chat') {
       const lastOpenedPage = Option.from(
-        await fetchers.userMetadata.byId(USER_METADATA_KEYS.LAST_OPENED_PAGE)
+        await queryClient.ensureQueryData(
+          queries.userMetadata.byId(USER_METADATA_KEYS.LAST_OPENED_PAGE)
+        )
       );
       const parsed = lastOpenedPage
         .andThen((value) => safeParseJson(value, { validate: lastOpenedPageSchema.parse }).ok())

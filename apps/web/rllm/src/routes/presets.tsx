@@ -23,14 +23,14 @@ import {
   setDefaultPresetId,
   type TChatPreset
 } from '~/lib/chat/presets';
-import { fetchers, queries } from '~/queries';
+import { queries } from '~/queries';
 import { account } from '~/signals/account';
 import { env } from '~/utils/env';
 import { queryClient } from '~/utils/query-client';
 
 export const Route = createFileRoute('/presets')({
   beforeLoad: async () => {
-    const numberOfProviders = await fetchers.providers.countProviders();
+    const numberOfProviders = await queryClient.ensureQueryData(queries.providers.all()._ctx.count);
     if (numberOfProviders > 0) return;
     if (env.VITE_SYNC_SERVER_BASE_URL && untrack(account) === null)
       throw redirect({ to: '/settings/account' });

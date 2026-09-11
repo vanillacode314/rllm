@@ -699,7 +699,7 @@ export function useChatPage(
 }
 
 export async function useChatPageBeforeLoad() {
-  const numberOfProviders = await fetchers.providers.countProviders();
+  const numberOfProviders = await queryClient.ensureQueryData(queries.providers.all()._ctx.count);
   if (numberOfProviders > 0) return;
   if (env.VITE_SYNC_SERVER_BASE_URL && untrack(account) === null)
     throw redirect({ to: '/settings/account' });

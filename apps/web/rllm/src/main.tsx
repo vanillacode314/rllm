@@ -12,6 +12,10 @@ import { toast } from 'solid-sonner';
 import { Button } from 'ui/button';
 import { Callout, CalloutContent, CalloutTitle } from 'ui/callout';
 
+import { getLogger } from '~/db/client';
+import { QueryCacheManager } from '~/lib/query-cache';
+import { queryClient } from '~/utils/query-client';
+
 import { routeTree } from './routeTree.gen';
 
 const router = createRouter({
@@ -72,7 +76,35 @@ function ErrorComponent(props: ErrorComponentProps) {
 
 const rootElement = document.getElementById('app')!;
 if (!rootElement.innerHTML) {
+  void bootstrap();
+}
+
+// SQLite boot is deliberately off the critical path; invalidation is the convergence step.
+async function bootDatabase() {
+  try {
+    await getLogger();
+    await queryClient.invalidateQueries();
+    await router.invalidate();
+    QueryCacheManager.start();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// The restored cache must be in place before the first render: route loaders resolve
+// against its `staleTime: Infinity` entries.
+async function bootstrap() {
+  await QueryCacheManager.restore();
   render(() => <App />, rootElement);
+  scheduleDatabaseBoot();
+}
+
+function scheduleDatabaseBoot() {
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(() => void bootDatabase(), { timeout: 1000 });
+  } else {
+    setTimeout(() => void bootDatabase(), 0);
+  }
 }
 
 async function setupServiceWorker() {

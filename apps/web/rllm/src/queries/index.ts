@@ -4,6 +4,7 @@ import type { TChat, TChatPreset, TDocument, TMCP, TProvider } from '~/db/app-sc
 
 import { logger } from '~/db/client';
 import { MCPClient } from '~/lib/mcp/client';
+import { QueryCacheManager } from '~/lib/query-cache';
 import { parseDbRowsInPlace } from '~/utils/db';
 
 const FIVE_MINUTES_IN_MILLISECONDS = 5 * 60 * 1000;
@@ -19,10 +20,11 @@ const userMetadata = {
     staleTime: Infinity
   },
   queries: {
+    base: () => ['db', 'userMetadata'],
     byId: (id: string) =>
       queryOptions({
         queryFn: () => userMetadata.fetchers.byId(id),
-        queryKey: ['db', 'userMetadata', 'byId', id],
+        queryKey: [...userMetadata.queries.base(), 'byId', id],
         staleTime: Infinity
       })
   }
@@ -98,15 +100,13 @@ const models = {
 const chats = {
   fetchers: {
     byId: (id: string) =>
-      logger.db
-        .query<TChat>(logger.sql`SELECT * FROM chats WHERE id = ${id}`)
-        .then((rows) => {
-          parseDbRowsInPlace(rows, {
-            booleanKeys: ['finished'],
-            jsonKeys: ['messages', 'settings', 'tags']
-          });
-          return rows[0] ?? null;
-        }),
+      logger.db.query<TChat>(logger.sql`SELECT * FROM chats WHERE id = ${id}`).then((rows) => {
+        parseDbRowsInPlace(rows, {
+          booleanKeys: ['finished'],
+          jsonKeys: ['messages', 'settings', 'tags']
+        });
+        return rows[0] ?? null;
+      }),
     countChats: () =>
       logger.db
         .query<{ count: number }>(logger.sql`SELECT count(*) as count FROM chats`)
@@ -145,7 +145,10 @@ const chats = {
           logger.sql`SELECT "accessCount", "createdAt", "finished", "id", "lastAccessedAt", "messages", "settings", "tags", "title" FROM chats ORDER BY "createdAt" DESC`
         )
         .then((rows) => {
-          parseDbRowsInPlace(rows, { booleanKeys: ['finished'], jsonKeys: ['messages', 'settings', 'tags'] });
+          parseDbRowsInPlace(rows, {
+            booleanKeys: ['finished'],
+            jsonKeys: ['messages', 'settings', 'tags']
+          });
           return rows;
         }),
     getChatTags: () =>
@@ -200,7 +203,10 @@ const chats = {
           logger.sql`SELECT "accessCount", "createdAt", "finished", "id", "lastAccessedAt", "messages", "settings", "tags", "title" FROM chats ORDER BY "lastAccessedAt" DESC LIMIT ${String(limit)}`
         )
         .then((rows) => {
-          parseDbRowsInPlace(rows, { booleanKeys: ['finished'], jsonKeys: ['messages', 'settings', 'tags'] });
+          parseDbRowsInPlace(rows, {
+            booleanKeys: ['finished'],
+            jsonKeys: ['messages', 'settings', 'tags']
+          });
           return rows;
         })
   },
@@ -393,7 +399,9 @@ const chatPresets = {
 const documents = {
   fetchers: {
     all: () =>
-      logger.db.query<TDocument>(logger.sql`SELECT "id", "name" FROM documents ORDER BY "createdAt" DESC`),
+      logger.db.query<TDocument>(
+        logger.sql`SELECT "id", "name" FROM documents ORDER BY "createdAt" DESC`
+      ),
     byId: (id: string) =>
       logger.db
         .query<TDocument>(logger.sql`SELECT * FROM documents WHERE id = ${id}`)
@@ -436,3 +444,18 @@ export const fetchers = {
   providers: providers.fetchers,
   userMetadata: userMetadata.fetchers
 };
+
+// Registered here rather than in the route modules that consume these keys: this module is always
+// evaluated, so a registration in a lazily loaded route would only cover keys once visited.
+QueryCacheManager.register(
+  { queryKey: userMetadata.queries.base() },
+  { queryKey: providers.queries.base() },
+  { maxEntries: 3, queryKey: [...chats.queries.base(), 'byId'] },
+  { queryKey: [...chats.queries.base(), 'all', 'minimal', 'paged'] },
+  { queryKey: chatPresets.queries.base() },
+  { queryKey: documents.queries.base() },
+  {
+    exclude: [[...mcps.queries.base(), 'all', 'clients']],
+    queryKey: mcps.queries.base()
+  }
+);
