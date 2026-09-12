@@ -1,6 +1,5 @@
 import { createActiveElement } from '@solid-primitives/active-element';
 import { createEventListenerMap } from '@solid-primitives/event-listener';
-import { createWritableMemo } from '@solid-primitives/memo';
 import { createElementSize } from '@solid-primitives/resize-observer';
 import { createHotkey } from '@tanstack/solid-hotkeys';
 import { useMutation, useQuery } from '@tanstack/solid-query';
@@ -10,11 +9,11 @@ import { animate } from 'motion';
 import { nanoid } from 'nanoid';
 import {
   type Accessor,
-  batch,
   createMemo,
   createRenderEffect,
   createSignal,
   For,
+  on,
   onCleanup,
   onMount,
   Show,
@@ -39,7 +38,7 @@ import { logger } from '~/db/client';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { createTask } from '~/lib/background-task-manager/tasks';
 import { ChatGenerationManager } from '~/lib/chat/generation';
-import { saveChatSettings, type TChatSettings } from '~/lib/chat/settings';
+import { saveChatSettings } from '~/lib/chat/settings';
 import { epubRAGAdapter } from '~/lib/rag/epub';
 import { pdfRAGAdapter } from '~/lib/rag/pdf';
 import { splitter } from '~/lib/rag/utils';
@@ -47,7 +46,7 @@ import { transientDb } from '~/lib/vector-db/transient';
 import { fetchers, queries } from '~/queries';
 import { isMobile } from '~/signals';
 import { account } from '~/signals/account';
-import type { TAttachment, TChat, TMessage, TUserMessageChunk } from '~/types/chat';
+import type { TAttachment, TMessage, TUserMessageChunk } from '~/types/chat';
 import { env } from '~/utils/env';
 import { formatError } from '~/utils/errors';
 import { compressImageFile, fileToBase64 } from '~/utils/files';
@@ -62,6 +61,7 @@ import {
   removeAttachmentById,
   setChatState,
   updateAttachmentById,
+  updateChat,
   updateChatSettings,
   updateFeedbackEnabled,
   updateMessages,
@@ -71,10 +71,8 @@ import { getLatestPath } from './-utils';
 
 export function useChatPage(
   opts: Accessor<{
-    chatSettings: TChatSettings;
     id: string;
     isNewChat: boolean;
-    loaderChat: null | TDBChat;
     navigate: NavigateFn;
     scratchpad?: boolean;
   }>
@@ -83,16 +81,8 @@ export function useChatPage(
 
   const router = useRouter();
 
-  const [chat, setChat] = createWritableMemo<Omit<TChat, 'messages' | 'settings'>>(() => {
-    if (!opts().isNewChat) return opts().loaderChat;
-    return {
-      finished: true,
-      id: opts().id,
-      settings: untrack(() => opts().chatSettings),
-      tags: [],
-      title: 'Untitled New Chat'
-    };
-  });
+  const chat = () =>
+    chatState.chat.expect('if we are called we expect caller to have already set the chat');
   const isPending = ChatGenerationManager.createIsPending(() => opts().id);
 
   const [, { createNotification, removeNotification }] = useNotifications();
@@ -101,7 +91,6 @@ export function useChatPage(
     enableBeforeUnload: () => ChatGenerationManager.isPending(opts().id),
     shouldBlockFn: () => false
   });
-  onMount(() => updateChatSettings(opts().chatSettings));
   onMount(() => {
     void logger.dispatch({
       data: {
@@ -117,30 +106,30 @@ export function useChatPage(
     });
   });
 
-  createRenderEffect(() =>
-    onCleanup(
-      ChatGenerationManager.subscribe(opts().id, ($chat, newPath) => {
-        batch(() => {
-          setChat({ ...$chat });
-          const $currentPath = chatState.path;
-          const newPathFollowsCurrentPath =
-            newPath.length >= $currentPath.length &&
-            newPath.slice(0, $currentPath.length).every((v, i) => v === $currentPath[i]);
-          if (newPathFollowsCurrentPath)
-            startTransition(() => {
+  createRenderEffect(
+    on(
+      () => opts().id,
+      (id) => {
+        const unsubscribe = ChatGenerationManager.subscribe(id, ($chat, newPath) => {
+          startTransition(() => {
+            updateChat($chat);
+            const $currentPath = chatState.path;
+            const newPathFollowsCurrentPath =
+              newPath.length >= $currentPath.length &&
+              newPath.slice(0, $currentPath.length).every((v, i) => v === $currentPath[i]);
+            if (newPathFollowsCurrentPath)
               updateMessages({
                 messages: $chat.messages,
                 path: newPath
               });
-            });
-          else
-            startTransition(() => {
+            else
               updateMessages({
                 messages: $chat.messages
               });
-            });
+          });
         });
-      })
+        onCleanup(() => unsubscribe());
+      }
     )
   );
 
@@ -329,8 +318,14 @@ export function useChatPage(
   }
 
   function onRegenerate(path: number[]) {
-    updateMessages({ path: path.slice(0, -1) });
-    sendPrompt.mutate({ id: chat().id, path: chatState.path });
+    const parentPath = path.slice(0, -1);
+    const parentNodeIsUserNode = chatState.messages
+      .traverse(parentPath)
+      .andThen((node) => node.value)
+      .isSomeAnd((message) => message.type === 'user');
+    if (!parentNodeIsUserNode) throw new Error('can only regenerate assistant messages');
+    updateMessages({ path: parentPath });
+    sendPrompt.mutate({ id: chat().id, path: parentPath });
   }
 
   async function onTraversal(path: number[], direction: -1 | 1) {
@@ -690,8 +685,7 @@ export function useChatPage(
     onEdit,
     onRegenerate,
     onTraversal,
-    sendPrompt,
-    setChat
+    sendPrompt
   };
 }
 
@@ -758,7 +752,8 @@ export function useChatPageLoader(opts: { preload?: boolean; scratchpad?: boolea
     const tree = Tree.fromJSON(messages);
     purgeOnlyErrorResponses(tree);
     flushOldToolCalls(tree);
-    startTransition(() => updateMessages({ messages: tree, path: getLatestPath(tree) }));
+    console.log('load');
+    updateMessages({ messages: tree, path: getLatestPath(tree) });
 
     function purgeOnlyErrorResponses(tree: TTree<TMessage>) {
       const pathsToRemove = [] as number[][];
@@ -797,9 +792,17 @@ export function useChatPageLoader(opts: { preload?: boolean; scratchpad?: boolea
     }
   }
 
+  function loadChat(chat: TDBChat) {
+    startTransition(() => {
+      updateChatSettings(chat.settings);
+      loadMessages(chat.messages);
+      updateChat(chat);
+    });
+  }
+
   return {
     ensureQueryData,
     ensureValidChatProvider,
-    loadMessages
+    loadChat
   };
 }

@@ -1,6 +1,7 @@
 import { createFileRoute, useRouter } from '@tanstack/solid-router';
 import { HLC } from 'hlc';
 import { nanoid } from 'nanoid';
+import { startTransition } from 'solid-js';
 import { Option } from 'ts-result-option';
 import { safeParseJson } from 'ts-result-option/utils';
 import { z } from 'zod/mini';
@@ -21,8 +22,7 @@ import { Tree } from '~/utils/tree';
 
 import ChatAppDrawer from './-ChatAppDrawer';
 import { useChatPage, useChatPageBeforeLoad, useChatPageLoader } from './-layout';
-import { updateMessages } from './-state';
-import { getLatestPath } from './-utils';
+import { updateChat, updateChatSettings, updateMessages } from './-state';
 
 console.error('FIX OPTIMIZE STORAGE');
 
@@ -31,7 +31,7 @@ export const Route = createFileRoute('/(chat)/scratchpad')({
   component: ScratchpadPageComponent,
   // oxlint-disable-next-line perfectionist/sort-objects
   loader: async ({ preload }) => {
-    const { ensureQueryData, ensureValidChatProvider, loadMessages } = useChatPageLoader({
+    const { ensureQueryData, ensureValidChatProvider, loadChat } = useChatPageLoader({
       preload,
       scratchpad: true
     });
@@ -70,12 +70,10 @@ export const Route = createFileRoute('/(chat)/scratchpad')({
       });
 
     chat = await ensureValidChatProvider(chat);
-    loadMessages(chat.messages);
+    loadChat(chat);
 
     return {
       chat,
-      chatSettings: chat.settings,
-      id: chat.id,
       isNewChat
     };
   },
@@ -90,10 +88,8 @@ function ScratchpadPageComponent() {
   const navigate = Route.useNavigate();
 
   const { chat, ChatPage } = useChatPage(() => ({
-    chatSettings: loaderData().chatSettings,
-    id: loaderData().id,
+    id: loaderData().chat.id,
     isNewChat: loaderData().isNewChat,
-    loaderChat: loaderData().chat,
     navigate,
     scratchpad: true
   }));

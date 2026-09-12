@@ -6,12 +6,10 @@ import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import {
   createMemo,
-  createRenderEffect,
   createSignal,
   Index,
   type JSX,
   Match,
-  on,
   onCleanup,
   type ParentProps,
   Show,
@@ -142,7 +140,7 @@ export function MarkdownSkeleton(props: { content: string }) {
 }
 
 function Markdown(props: TProps) {
-  const [local, others] = splitProps(props, ['content', 'contentId', 'class', 'inProgress']);
+  const [local, others] = splitProps(props, ['content', 'contentId', 'inProgress']);
 
   const processor = createProcessor();
 
@@ -164,18 +162,8 @@ function Markdown(props: TProps) {
     return tree ? tree : { children: [], type: 'root' };
   });
 
-  createRenderEffect(
-    on(
-      () => parsedTree.latest,
-      () =>
-        document.dispatchEvent(
-          new CustomEvent('chat:updated', { detail: props.inProgress ? 'smooth' : 'instant' })
-        )
-    )
-  );
-
   return (
-    <div class={local.class} {...others}>
+    <div {...others}>
       <MarkdownRoot
         context={{
           listDepth: 0,

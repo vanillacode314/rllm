@@ -5,8 +5,11 @@ import { createEffect, type JSXElement, splitProps, untrack, type ValidComponent
 import { TextField, TextFieldTextArea } from 'ui/text-field';
 import { cn } from 'ui/utils/tailwind';
 
+import { combineRefs } from '~/utils/ref';
+
 type TextFieldTextAreaProps<T extends ValidComponent = 'textarea'> =
   TextFieldPrimitive.TextFieldTextAreaProps<T> & {
+    ref?: (el: HTMLTextAreaElement) => void;
     class?: string | undefined;
     onPaste: (event: ClipboardEvent) => void;
   };
@@ -65,10 +68,7 @@ export function ExpandableTextField<T extends ValidComponent = 'textarea'>(
     <TextField>
       <TextFieldTextArea
         class={cn('resize-none min-h-0', local.class)}
-        ref={(el) => {
-          ref = el;
-          if ('ref' in local) local.ref = el;
-        }}
+        ref={combineRefs(local.ref, (el) => (ref = el))}
         {...others}
       />
     </TextField>

@@ -23,8 +23,9 @@ export const Route = createFileRoute('/(chat)/chat/$')({
   beforeLoad: useChatPageBeforeLoad,
   component: ChatPageComponent,
   // oxlint-disable-next-line perfectionist/sort-objects
+  loaderDeps: ({ search: { id } }) => ({ id: id ?? nanoid(), isNewChat: id === undefined }),
   loader: async ({ deps, params, preload }) => {
-    const { ensureQueryData, ensureValidChatProvider, loadMessages } = useChatPageLoader({
+    const { ensureQueryData, ensureValidChatProvider, loadChat } = useChatPageLoader({
       preload
     });
     const { id, isNewChat } = deps;
@@ -57,16 +58,13 @@ export const Route = createFileRoute('/(chat)/chat/$')({
     let chat = await queryClient.fetchQuery(queries.chats.byId(id));
     if (chat === null) throw redirect({ params: { _splat: 'new' }, to: '/chat/$' });
     chat = await ensureValidChatProvider(chat);
-    loadMessages(chat.messages);
+    loadChat(chat);
 
     return {
       chat,
-      chatSettings: chat.settings,
-      id: chat.id,
       isNewChat
     };
   },
-  loaderDeps: ({ search: { id } }) => ({ id: id ?? nanoid(), isNewChat: id === undefined }),
   remountDeps: () => 'chat-page',
   validateSearch: z.object({ id: z.optional(z.string()) })
 });
@@ -79,10 +77,8 @@ function ChatPageComponent() {
   const loaderData = Route.useLoaderData();
   const navigate = Route.useNavigate();
   const { ChatPage } = useChatPage(() => ({
-    chatSettings: loaderData().chatSettings,
-    id: loaderData().id,
+    id: loaderData().chat?.id ?? '',
     isNewChat: loaderData().isNewChat,
-    loaderChat: loaderData().chat,
     navigate
   }));
 

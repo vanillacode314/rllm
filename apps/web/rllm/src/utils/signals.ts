@@ -8,6 +8,7 @@ import {
   createEffect,
   createMemo,
   createResource,
+  createSignal,
   type InitializedResource,
   on,
   onCleanup,
@@ -133,6 +134,28 @@ function syncToURLHash(signal: Signal<boolean>, key: string): Signal<boolean> {
   createEffect(updateURLHashOnSignalChange);
 
   return [s, set];
+}
+
+export function createFunctionWithPendingSignal<T extends (...args: any[]) => any>(
+  fn: T
+): T & { pending: boolean } {
+  const [pending, setPending] = createSignal(0);
+  const wrappedFn = (...args: Parameters<T>) => {
+    let isPromise = false;
+    setPending((v) => v + 1);
+    try {
+      const result = fn(...args);
+      isPromise = result instanceof Promise;
+      if (isPromise) {
+        return result.finally(() => setPending((v) => v - 1));
+      }
+      return result;
+    } finally {
+      if (!isPromise) setPending((v) => v - 1);
+    }
+  };
+  Object.defineProperty(wrappedFn, 'pending', { get: createMemo(() => pending() > 0) });
+  return wrappedFn as T & { pending: boolean };
 }
 
 export { createDebouncedMemo, createLatestAsync, isOnline, pageVisible, syncToURLHash };

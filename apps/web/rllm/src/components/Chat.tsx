@@ -1,10 +1,8 @@
 import { createActiveElement } from '@solid-primitives/active-element';
-import { createEventListener } from '@solid-primitives/event-listener';
 import { createWritableMemo } from '@solid-primitives/memo';
-import { createResizeObserver } from '@solid-primitives/resize-observer';
-import { createTimer } from '@solid-primitives/timer';
 import { createHotkey } from '@tanstack/solid-hotkeys';
 import { useQuery } from '@tanstack/solid-query';
+import { animate } from 'motion';
 import {
   createEffect,
   createMemo,
@@ -15,14 +13,19 @@ import {
   type JSX,
   type JSXElement,
   Match,
+  on,
+  onMount,
   type ParentProps,
   Show,
   splitProps,
+  startTransition,
   Suspense,
-  Switch
+  Switch,
+  untrack
 } from 'solid-js';
 import { Dynamic } from 'solid-js/web';
 import { toast } from 'solid-sonner';
+import { Transition } from 'solid-transition-group';
 import { Button } from 'ui/button';
 import { Callout, CalloutContent, CalloutTitle } from 'ui/callout';
 import { Card, CardContent, CardHeader, CardTitle } from 'ui/card';
@@ -39,20 +42,25 @@ import { cn } from 'ui/utils/tailwind';
 import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import type { TChat } from '~/db/app-schema';
 import { useAutoScroll } from '~/directives/auto-scroll';
+import { useSnapToElement } from '~/directives/use-snap-to-element';
 import { ChatGenerationManager } from '~/lib/chat/generation';
 import { queries } from '~/queries';
 import type { TLLMMessageChunk, TMessage, TUserMessageChunk } from '~/types/chat';
 import { formatToPercentage, formatToTokens } from '~/utils/number';
 import { formatAsKeyValuePair } from '~/utils/object';
+import { combineRefs } from '~/utils/ref';
+import { createFunctionWithPendingSignal } from '~/utils/signals';
 import { createDerivedStore } from '~/utils/stores';
-import { toNestedJsonTree } from '~/utils/tree';
 import { lowlightWorkerPool } from '~/workers/lowlight';
 
+import { LoadMoreContainer } from './LoadMoreContainer';
 import Markdown from './markdown/Markdown';
 import { useAlertDialog } from './modals/auto-import/AlertDialog';
 import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
+import { ScrollOffsetPadding } from './ScrollOffsetPadding';
 
-type Props = JSX.HTMLAttributes<HTMLDivElement> & {
+type Props = Omit<JSX.HTMLAttributes<HTMLDivElement>, 'ref'> & {
+  ref?: (el: HTMLDivElement) => void;
   chat: Omit<TChat, 'createdAt' | 'updatedAt'>;
   class?: string | undefined;
   onDelete: (path: number[], chunkIndex?: number) => void;
@@ -62,18 +70,22 @@ type Props = JSX.HTMLAttributes<HTMLDivElement> & {
   path: number[];
 };
 export function Chat(props: Props): JSXElement {
+  const id = createMemo(() => props.chat.id);
+  let scrollContainerRef!: HTMLDivElement;
+  let innerContainerRef!: HTMLDivElement;
+
   const [local, others] = splitProps(props, [
     'class',
+    'ref',
     'chat',
     'onDelete',
     'onEdit',
     'onRegenerate',
     'onTraversal',
-    'path',
-    'ref'
+    'path'
   ]);
 
-  const isPending = ChatGenerationManager.createIsPending(() => props.chat.id);
+  const isPending = ChatGenerationManager.createIsPending(() => local.chat.id);
 
   const [{ autoScroll, canScroll, shouldAutoScroll }, { scrollToBottom }] = useAutoScroll({
     enabled: () => false
@@ -84,17 +96,17 @@ export function Chat(props: Props): JSXElement {
   const nodes = createDerivedStore(
     () => {
       const result = [];
-      const { nodes } = structuredClone(props.chat.messages);
-      for (let index = 0; index < props.path.length; index++) {
-        const key = props.path.slice(0, index + 1).join('.');
+      const { nodes } = structuredClone(local.chat.messages);
+      for (let index = 0; index < local.path.length; index++) {
+        const key = local.path.slice(0, index + 1).join('.');
         const node = nodes[key];
-        const parentKey = props.path.slice(0, index).join('.');
+        const parentKey = local.path.slice(0, index).join('.');
         const parentNode = nodes[parentKey];
         result.push({
           id: index,
           node,
           numberOfSiblings: parentNode.childrenIds.length - 1,
-          pathIndex: props.path[index]
+          pathIndex: local.path[index]
         });
       }
       return result;
@@ -102,102 +114,148 @@ export function Chat(props: Props): JSXElement {
     { key: 'id', name: 'chat-nodes' }
   );
 
-  const [offsetBottomPixels, setOffsetBottomPixels] = createSignal(0);
-
   const displayName = useQuery(() => ({
     ...queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME),
     initialData: 'user'
   }));
 
-  return (
-    <div class="h-full relative overflow-hidden grid">
-      <div class={cn('overflow-auto', props.class)} use:autoScroll {...others}>
-        <div
-          class="flex flex-col gap-10"
-          ref={(el) => {
-            function updatePadding(scroll?: 'smooth' | 'instant') {
-              console.log('🪚 scroll:', scroll);
-              const index = nodes.findLastIndex((node) => node.node.value?.type === 'user');
-              if (index === -1) return;
-              const userChatBoxElement = el.querySelector(`#user-chat-${index}`) as HTMLElement;
-              if (!userChatBoxElement) return;
-              const scrollElement = el.parentElement;
-              if (!scrollElement) return;
-              const dh =
-                scrollElement.scrollHeight - offsetBottomPixels() - scrollElement.offsetTop;
-              const needsPadding =
-                scrollElement.scrollHeight > scrollElement.clientHeight &&
-                dh < scrollElement.clientHeight;
-              console.log('🪚 needsPadding:', needsPadding);
-              const gap = parseInt(getComputedStyle(scrollElement).paddingTop.slice(0, -2));
-              setOffsetBottomPixels(needsPadding ? scrollElement.clientHeight - dh - gap : 0);
-              if (scroll) {
-                el.parentElement?.scrollTo({
-                  behavior: scroll,
-                  top: userChatBoxElement.offsetTop - 24
-                });
-              }
-            }
-            createEventListener(document, 'chat:updated', (event: Event) =>
-              updatePadding(event.detail)
-            );
-            createResizeObserver(el, () => setTimeout(() => updatePadding()));
-          }}
-        >
-          <Suspense
-            fallback={
-              <div class="h-full grid place-content-center">
-                <span class="text-4xl icon-[svg-spinners--bars-scale]" />
-              </div>
-            }
-          >
-            <For each={nodes}>
-              {(data, index) => {
-                const message = () => data.node.value!;
-                const currentPath = createMemo(() => props.path.slice(0, index() + 1));
+  const [shouldLoad, setShouldLoad] = createWritableMemo(on(id, () => 3));
 
-                return (
-                  <Show
-                    fallback={
-                      <UserChat
-                        canDelete={
-                          message().chunks.length > 1 &&
-                          (index() !== 0 || data.numberOfSiblings > 0 || props.path[0] !== 0)
-                        }
-                        displayName={
-                          displayName.isSuccess && displayName.data ? displayName.data : 'user'
-                        }
-                        id={`user-chat-${index()}`}
-                        index={data.pathIndex}
-                        message={message() as TMessage & { type: 'user' }}
-                        numberOfSiblings={data.numberOfSiblings}
-                        onDelete={props.onDelete.bind(null, currentPath())}
-                        onEdit={props.onEdit.bind(null, currentPath())}
-                        onTraversal={props.onTraversal.bind(null, currentPath())}
-                      />
-                    }
-                    when={message().type === 'llm'}
-                  >
-                    <LLMChat
+  const cutoff = createMemo(() => {
+    let max = shouldLoad();
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      if (nodes[i].node.value!.type !== 'user') continue;
+      max--;
+      if (max === 0) {
+        return i;
+      }
+    }
+    return 0;
+  });
+
+  const loadMore = createFunctionWithPendingSignal(async () => {
+    // TODO: doesn't handle multiple promises in bound
+    if (!hasMore()) return;
+    const start = performance.now();
+    const el = scrollContainerRef;
+    const scrollBottom = el.scrollHeight - el.scrollTop;
+    await startTransition(() => {
+      setShouldLoad((prev) => prev + 3);
+    });
+    const newScrollBottom = el.scrollHeight - scrollBottom;
+    el.scrollTop = newScrollBottom;
+    const duration = performance.now() - start;
+    // NOTE: better UX to have it be a little slow rather than flash pending state for 10ms
+    if (duration < 1000) await new Promise((resolve) => setTimeout(resolve, 1000 - duration));
+  });
+
+  const hasMore = createMemo(() => cutoff() > 0);
+
+  const lastUserChatIndex = createMemo(() =>
+    nodes.findLastIndex((node) => node.node.value!.type === 'user')
+  );
+
+  const snap = useSnapToElement(
+    () => scrollContainerRef,
+    () => {
+      // void props.chat.id;
+      console.log('ran snap', id());
+      return untrack(() => `#user-chat-${lastUserChatIndex()}`);
+    },
+    { margin: 16 }
+  );
+
+  return (
+    <div class="h-full relative overflow-hidden grid isolate">
+      <Transition
+        onEnter={(el, done) => {
+          animate(
+            el,
+            { scale: [0, 1], opacity: [0, 1] },
+            { type: 'spring', bounce: 0.4, visualDuration: 0.4 }
+          ).finished.then(done);
+        }}
+        onExit={(el, done) => {
+          animate(
+            el,
+            { scale: [1, 0], opacity: [1, 0] },
+            { type: 'spring', bounce: 0.4, visualDuration: 0.4 }
+          ).finished.then(done);
+        }}
+      >
+        <Show when={loadMore.pending}>
+          <div class="grid place-content-center absolute top-8 left-1/2 -translate-x-1/2 z-10 bg-primary text-primary-foreground size-10 rounded-full text-2xl">
+            <span class="icon-[svg-spinners--180-ring-with-bg] shrink-0" />
+          </div>
+        </Show>
+      </Transition>
+      <LoadMoreContainer
+        hasMore={hasMore()}
+        onLoadMore={loadMore}
+        ref={combineRefs(local.ref, autoScroll, (el) => (scrollContainerRef = el))}
+        innerRef={(el) => (innerContainerRef = el)}
+        class="relative"
+        innerClass={cn('gap-10 flex flex-col', local.class)}
+        {...others}
+      >
+        <Suspense
+          fallback={
+            <div class="h-full grid place-content-center">
+              <span class="text-4xl icon-[svg-spinners--bars-scale]" />
+            </div>
+          }
+        >
+          <Effect callback={() => snap()} />
+          <For each={nodes.slice(cutoff())}>
+            {(data, i) => {
+              const index = () => i() + cutoff();
+              const message = () => data.node.value!;
+              const currentPath = createMemo(() => local.path.slice(0, index() + 1));
+
+              return (
+                <Show
+                  fallback={
+                    <UserChat
+                      canDelete={
+                        message().chunks.length > 1 &&
+                        (index() !== 0 || data.numberOfSiblings > 0 || local.path[0] !== 0)
+                      }
+                      displayName={
+                        displayName.isSuccess && displayName.data ? displayName.data : 'user'
+                      }
+                      id={`user-chat-${index()}`}
                       index={data.pathIndex}
-                      isPending={isPending() && index() === nodes.length - 1}
-                      message={message() as TMessage & { type: 'llm' }}
+                      message={message() as TMessage & { type: 'user' }}
                       numberOfSiblings={data.numberOfSiblings}
-                      onDelete={props.onDelete.bind(null, currentPath())}
-                      onRegenerate={props.onRegenerate.bind(null, currentPath())}
-                      onTraversal={props.onTraversal.bind(null, currentPath())}
+                      onDelete={local.onDelete.bind(null, currentPath())}
+                      onEdit={local.onEdit.bind(null, currentPath())}
+                      onTraversal={local.onTraversal.bind(null, currentPath())}
                     />
-                  </Show>
-                );
-              }}
-            </For>
-          </Suspense>
-        </div>
-        <div
-          class={cn('w-full shrink-0', offsetBottomPixels() <= 0 && 'hidden')}
-          style={{ height: `${Math.ceil(offsetBottomPixels())}px` }}
-        />
-      </div>
+                  }
+                  when={message().type === 'llm'}
+                >
+                  <LLMChat
+                    index={data.pathIndex}
+                    isPending={isPending() && index() === nodes.length - 1}
+                    message={message() as TMessage & { type: 'llm' }}
+                    numberOfSiblings={data.numberOfSiblings}
+                    onDelete={local.onDelete.bind(null, currentPath())}
+                    onRegenerate={local.onRegenerate.bind(null, currentPath())}
+                    onTraversal={local.onTraversal.bind(null, currentPath())}
+                  />
+                </Show>
+              );
+            }}
+          </For>
+          <ScrollOffsetPadding
+            margin={16}
+            class="shrink-0 -mt-4"
+            scrollRef={scrollContainerRef}
+            containerRef={innerContainerRef}
+            targetSelector={`#user-chat-${lastUserChatIndex()}`}
+          />
+        </Suspense>
+      </LoadMoreContainer>
       <Show when={!shouldAutoScroll() && canScroll()}>
         <Button
           class="absolute bottom-(--bottom-arrow,0) left-1/2 rounded-full size-8 text-secondary-foreground/50 hover:text-secondary-foreground bg-secondary/50 hover:bg-secondary border border-secondary-foreground/25 motion-preset-fade motion-duration-300 transition-colors backdrop-blur-xs will-change-transform"
@@ -903,3 +961,8 @@ function UserTextChunk(props: {
   );
 }
 export default Chat;
+
+function Effect(props: { callback: () => void }) {
+  onMount(props.callback);
+  return <></>;
+}

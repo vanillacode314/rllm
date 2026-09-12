@@ -15,7 +15,6 @@ import { Callout, CalloutContent, CalloutTitle } from 'ui/callout';
 
 import { getLogger } from '~/db/client';
 import { QueryCacheManager } from '~/lib/query-cache';
-import { queryClient } from '~/utils/query-client';
 
 import { routeTree } from './routeTree.gen';
 
@@ -29,9 +28,9 @@ const router = createRouter({
           <span class="icon-[svg-spinners--180-ring-with-bg]" />
         </div>
       ),
-  defaultViewTransition: true,
+  defaultViewTransition: false,
   routeTree,
-  scrollRestoration: true
+  scrollRestoration: false
 });
 
 declare module '@tanstack/solid-router' {

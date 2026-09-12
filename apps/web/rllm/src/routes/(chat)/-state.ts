@@ -1,5 +1,6 @@
 import { makePersisted } from '@solid-primitives/storage';
 import localforage from 'localforage';
+import { startTransition } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { Option } from 'ts-result-option';
 import { safeParseJson } from 'ts-result-option/utils';
@@ -9,6 +10,7 @@ import {
   attachmentsSchema,
   chatSettingsSchema,
   type TAttachment,
+  type TChat,
   type TChatSettings,
   type TMessage
 } from '~/types/chat';
@@ -18,6 +20,7 @@ import { Tree, type TTree } from '~/utils/tree';
 const CHAT_STATE_LOCALFORAGE_KEY = 'rllm:chat-state';
 
 type TChatState = {
+  chat: Option<Omit<TChat, 'messages' | 'settings'>>;
   attachments: TAttachment[];
   feedbackEnabled: boolean;
   messages: TTree<TMessage>;
@@ -27,6 +30,7 @@ type TChatState = {
 };
 
 const makeDefaultChatState: () => TChatState = () => ({
+  chat: Option.None(),
   attachments: [],
   feedbackEnabled: false,
   messages: new Tree(),
@@ -120,6 +124,16 @@ export function updateFeedbackEnabled(feedbackEnabled: boolean) {
   );
 }
 
+export function updateChat(chat: Omit<TChat, 'messages' | 'settings'>) {
+  startTransition(() => {
+    setChatState((state) =>
+      produce(state, (draft) => {
+        draft.chat = Option.Some(chat);
+      })
+    );
+  });
+}
+
 export function updateMessages(
   setter:
     | (({ messages, path }: { messages: TTree<TMessage>; path: number[] }) => {
@@ -131,20 +145,22 @@ export function updateMessages(
         path?: number[];
       }
 ) {
-  const { messages, path } =
-    typeof setter === 'function'
-      ? setter({ messages: chatState.messages, path: chatState.path })
-      : setter;
-  setChatState((state) =>
-    produce(state, (draft) => {
-      if (messages !== undefined) {
-        draft.messages = messages;
-      }
-      if (path !== undefined) {
-        draft.path = path;
-      }
-    })
-  );
+  startTransition(() => {
+    const { messages, path } =
+      typeof setter === 'function'
+        ? setter({ messages: chatState.messages, path: chatState.path })
+        : setter;
+    setChatState((state) =>
+      produce(state, (draft) => {
+        if (messages !== undefined) {
+          draft.messages = messages;
+        }
+        if (path !== undefined) {
+          draft.path = path;
+        }
+      })
+    );
+  });
 }
 
 export function updatePrompt(prompt: string) {
