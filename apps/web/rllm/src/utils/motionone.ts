@@ -14,6 +14,10 @@ export function createMotionValue(init: number, options?: MotionValueOptions) {
   }, init);
   return [
     s,
-    (to: number, options: ValueAnimationTransition<number>) => animate(value, to, options)
+    {
+      animate: (to: number, options: ValueAnimationTransition<number>) =>
+        animate(value, to, options),
+      set: (to: number) => value.set(to)
+    }
   ] as const;
 }

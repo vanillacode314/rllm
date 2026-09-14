@@ -51,6 +51,7 @@ import { env } from '~/utils/env';
 import { formatError } from '~/utils/errors';
 import { compressImageFile, fileToBase64 } from '~/utils/files';
 import { produce } from '~/utils/immer';
+import { createMotionValue } from '~/utils/motionone';
 import { queryClient } from '~/utils/query-client';
 import { slugify } from '~/utils/string';
 import { type JsonTree, Tree, TreeNode, type TTree } from '~/utils/tree';
@@ -490,7 +491,7 @@ export function useChatPage(
     // oxlint-disable-next-line no-unassigned-vars
     let promptBoxRef!: HTMLDivElement;
     const promptBoxSize = createElementSize(() => promptBoxRef);
-    const [promptBoxOffset, setPromptBoxOffset] = createSignal(0);
+    const [promptBoxOffset, { animate: animatePromptBoxOffset }] = createMotionValue(0);
     const recentChatsQuery = useQuery(() => queries.chats.all()._ctx.recent());
     const presetsQuery = useQuery(() => queries.chatPresets.all());
     const chatRouteState = useChatState();
@@ -589,9 +590,8 @@ export function useChatPage(
                 const update = () => {
                   if (Math.abs(my) < 30) return;
                   const target = my < 0 ? promptBoxRef.offsetWidth : 0;
-                  animate(promptBoxOffset(), target, {
+                  animatePromptBoxOffset(target, {
                     damping: 25,
-                    onUpdate: (offset) => setPromptBoxOffset(offset),
                     stiffness: 300,
                     type: 'spring'
                   });
@@ -632,9 +632,8 @@ export function useChatPage(
             class="absolute bottom-0 right-0 bg-transparent h-45 w-10 z-10"
             inert={promptBoxOffset() < (promptBoxSize.width ?? 0) * 0.9 || !isMobile()}
             onClick={() => {
-              animate(promptBoxOffset(), 0, {
+              animatePromptBoxOffset(0, {
                 damping: 20,
-                onUpdate: (offset) => setPromptBoxOffset(offset),
                 stiffness: 300,
                 type: 'spring'
               });
@@ -752,7 +751,6 @@ export function useChatPageLoader(opts: { preload?: boolean; scratchpad?: boolea
     const tree = Tree.fromJSON(messages);
     purgeOnlyErrorResponses(tree);
     flushOldToolCalls(tree);
-    console.log('load');
     updateMessages({ messages: tree, path: getLatestPath(tree) });
 
     function purgeOnlyErrorResponses(tree: TTree<TMessage>) {

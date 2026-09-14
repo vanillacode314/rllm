@@ -158,8 +158,7 @@ export function Chat(props: Props): JSXElement {
   const snap = useSnapToElement(
     () => scrollContainerRef,
     () => {
-      // void props.chat.id;
-      console.log('ran snap', id());
+      void id();
       return untrack(() => `#user-chat-${lastUserChatIndex()}`);
     },
     { margin: 16 }

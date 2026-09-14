@@ -1,3 +1,4 @@
+import { createEventListenerMap } from '@solid-primitives/event-listener';
 import { Gesture } from '@use-gesture/vanilla';
 import { createEffect, on, onCleanup, splitProps, type JSX, type ParentProps } from 'solid-js';
 
@@ -25,8 +26,9 @@ export function LoadMoreContainer(props: LoadMoreContainerProps) {
     'onLoadMore',
     'threshold'
   ]);
+
   let ref!: HTMLDivElement;
-  const [offset, animateOffset] = createMotionValue(0);
+  const [offset, { animate: animateOffset, set: setOffset }] = createMotionValue(0);
   const threshold = () => local.threshold ?? 80;
   let gestureInstance: Gesture | undefined;
 
@@ -38,68 +40,54 @@ export function LoadMoreContainer(props: LoadMoreContainerProps) {
     on(
       () => local.hasMore,
       (hasMore) => {
-        if (!hasMore) {
-          resetOffset();
-          gestureInstance?.destroy();
-          return;
-        }
+        gestureInstance?.destroy();
+        if (!hasMore) return;
+
         gestureInstance = new Gesture(
           ref,
           {
-            onWheel({ velocity: [, vy], delta: [, dy], movement: [, my], wheeling, memo }) {
-              // HACK: inertia animations aren't cancelled properly, waiting for upstream fix
-              if (memo) {
-                memo.stop();
-                memo.complete();
-              }
+            onWheel({ delta: [, dy], movement: [, my], wheeling }) {
               if (!wheeling) {
                 const shouldLoadMore = offset() > threshold();
                 resetOffset();
                 shouldLoadMore && local.onLoadMore();
                 return;
               }
-
-              // Only pull when we're pinned at the very top.
-              if (Math.floor(ref.scrollTop) !== 0) return;
-              // Ignore downward wheel — let the browser handle it.
-              if (dy >= 0 && my >= 0) return;
-
-              return animateOffset(-my, {
-                type: 'inertia',
-                velocity: vy,
-                power: 8
-              });
-            },
-            onDrag({ velocity: [, vy], delta: [, dy], movement: [, my], down, memo }) {
-              // HACK: inertia animations aren't cancelled properly, waiting for upstream fix
-              if (memo) {
-                memo.stop();
-                memo.complete();
-              }
-
-              if (!down) {
-                const shouldLoadMore = offset() > threshold();
-                resetOffset().then(() => shouldLoadMore && local.onLoadMore());
-                return;
-              }
-
-              // Only pull when we're pinned at the very top.
-              if (Math.floor(ref.scrollTop) !== 0) return;
-              // Ignore downward drag let the browser handle it.
-              if (dy >= 0 && my >= 0) return;
-
-              return animateOffset(-my, {
-                type: 'inertia',
-                velocity: vy,
-                power: 8
-              });
+              if (Math.floor(ref.scrollTop) > 0 || (dy >= 0 && my >= 0)) return;
+              setOffset(offset() - dy * 0.03);
             }
           },
-          { eventOptions: { passive: true } }
+          {
+            drag: { axis: 'y' },
+            wheel: { axis: 'y' }
+          }
         );
+
+        let down = false;
+        let startY = 0;
+        createEventListenerMap(ref, {
+          touchstart: (event) => {
+            down = true;
+            startY = event.touches[0].clientY;
+          },
+          touchmove: (event) => {
+            if (!down) return;
+            if (Math.floor(ref.scrollTop) > 0) return;
+            const dy = event.touches[0].clientY - startY;
+            if (dy < 0) return;
+            setOffset(dy * 0.3);
+          },
+          touchend: () => {
+            down = false;
+            const shouldLoadMore = offset() > threshold();
+            resetOffset();
+            shouldLoadMore && local.onLoadMore();
+          }
+        });
       }
     )
   );
+
   onCleanup(() => gestureInstance?.destroy());
 
   return (
@@ -108,7 +96,7 @@ export function LoadMoreContainer(props: LoadMoreContainerProps) {
         ref = el;
         local.ref?.(el);
       }}
-      class={cn('overflow-auto overscroll-y-none', local.class)}
+      class={cn('overflow-auto touch-none', local.class)}
       {...others}
     >
       <div
@@ -121,4 +109,5 @@ export function LoadMoreContainer(props: LoadMoreContainerProps) {
     </div>
   );
 }
+
 export default LoadMoreContainer;
