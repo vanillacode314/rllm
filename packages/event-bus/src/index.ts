@@ -24,11 +24,11 @@ export class Event<TPayload> {
 
   subscribe(subscriber: (payload: TPayload) => void) {
     this.#subscribers.add(subscriber);
-    return () => this.#subscribers.delete(subscriber);
+    return () => void this.#subscribers.delete(subscriber);
   }
 }
 
 export function makeEvent<T>(options: EventConstructorOptions = {}) {
   const event = new Event<T>(options);
-  return [event.subscribe.bind(event), event.emit.bind(event)];
+  return [event.subscribe.bind(event), event.emit.bind(event)] as const;
 }

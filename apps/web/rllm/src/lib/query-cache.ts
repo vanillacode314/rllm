@@ -88,12 +88,9 @@ export class QueryCacheManager {
   }
 
   static async restore(): Promise<void> {
-    const controller = new AbortController();
-
     try {
-      await withTimeout(this.#readAndHydrate(controller.signal), RESTORE_TIMEOUT_MILLISECONDS);
+      await withTimeout((signal) => this.#readAndHydrate(signal), RESTORE_TIMEOUT_MILLISECONDS);
     } catch (error) {
-      controller.abort();
       if (!(error instanceof TimeoutError)) {
         console.debug('[Query Cache] Failed to restore query cache', error);
       }
@@ -146,6 +143,14 @@ export class QueryCacheManager {
   static #handleVisibilityChange = (): void => {
     if (document.visibilityState === 'hidden') this.#writeNow();
   };
+
+  static #invalidate() {
+    return Promise.all(
+      this.#registrations
+        .values()
+        .map(({ queryKey }) => queryClient.invalidateQueries({ queryKey, refetchType: 'all' }))
+    );
+  }
 
   static async #persist(): Promise<void> {
     try {
@@ -227,14 +232,6 @@ export class QueryCacheManager {
     }
 
     return selected;
-  }
-
-  static #invalidate() {
-    return Promise.all(
-      this.#registrations
-        .values()
-        .map(({ queryKey }) => queryClient.invalidateQueries({ queryKey, refetchType: 'all' }))
-    );
   }
 
   static #writeNow(): void {

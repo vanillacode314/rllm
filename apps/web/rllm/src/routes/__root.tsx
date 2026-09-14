@@ -4,15 +4,7 @@ import { debounce } from '@tanstack/solid-pacer';
 import { QueryClientProvider } from '@tanstack/solid-query';
 // import { SolidQueryDevtools } from '@tanstack/solid-query-devtools';
 import { createRootRouteWithContext, Outlet } from '@tanstack/solid-router';
-import {
-  type Component,
-  createSignal,
-  For,
-  type JSXElement,
-  lazy,
-  onMount,
-  Suspense
-} from 'solid-js';
+import { type Component, createSignal, For, lazy, onMount, Suspense } from 'solid-js';
 import { Option } from 'ts-result-option';
 import { Button } from 'ui/button';
 import { SidebarProvider } from 'ui/sidebar';
@@ -27,7 +19,7 @@ import { logger } from '~/db/client';
 import { dbStorage, scratchpadStorage } from '~/lib/chat/generation/storages';
 import { retryFailedTitleAndTags } from '~/lib/chat/tasks';
 import { MCPManager } from '~/lib/mcp/manager';
-import { ProxyManager } from '~/lib/proxy';
+import { parseProxyUrls, ProxyManager } from '~/lib/proxy';
 import { fetchers } from '~/queries';
 import { account } from '~/signals/account';
 import { PeerManager } from '~/sockets/transports';
@@ -47,7 +39,7 @@ export const Route = createRootRouteWithContext()({
 
     async function initProxyManager() {
       const proxyUrl = await fetchers.userMetadata.byId(USER_METADATA_KEYS.CORS_PROXY_URL);
-      await ProxyManager.initialize(proxyUrl);
+      await ProxyManager.initialize(parseProxyUrls(proxyUrl));
     }
     void initProxyManager().finally(() => ProxyManager.subscribe(() => MCPManager.initialize()));
     void import('~/lib/background-task-manager').then(({ BackgroundTaskManager }) =>

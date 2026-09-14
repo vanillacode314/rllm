@@ -2,7 +2,6 @@ import { infiniteQueryOptions, queryOptions } from '@tanstack/solid-query';
 
 import type { TChat, TChatPreset, TDocument, TMCP, TProvider } from '~/db/app-schema';
 import { logger } from '~/db/client';
-import { MCPClient } from '~/lib/mcp/client';
 import { QueryCacheManager } from '~/lib/query-cache';
 import { parseDbRowsInPlace } from '~/utils/db';
 
@@ -280,36 +279,18 @@ const mcps = {
     getAllMcps: () =>
       logger.db.query<Pick<TMCP, 'createdAt' | 'id' | 'name' | 'url'>>(
         logger.sql`SELECT "createdAt", "id", "name", "url" FROM mcps ORDER BY "name"`
-      ),
-    getClients: (proxy?: null | string | undefined) =>
-      mcps.fetchers
-        .getAllMcps()
-        .then((mcps) =>
-          mcps.map((mcp) => new MCPClient(mcp.name, proxy ? proxy.replace('%s', mcp.url) : mcp.url))
-        )
+      )
   },
   queries: {
     all: () =>
-      Object.assign(
-        queryOptions({
-          queryFn: () =>
-            logger.db.query<Pick<TMCP, 'createdAt' | 'id' | 'name' | 'url'>>(
-              logger.sql`SELECT "createdAt", "id", "name", "url" FROM mcps ORDER BY "createdAt" DESC`
-            ),
-          queryKey: [...mcps.queries.base(), 'all'],
-          staleTime: Infinity
-        }),
-        {
-          _ctx: {
-            clients: (proxy?: null | string | undefined) =>
-              queryOptions({
-                queryFn: () => mcps.fetchers.getClients(proxy),
-                queryKey: [...mcps.queries.base(), 'all', 'clients', { proxy }],
-                staleTime: Infinity
-              })
-          }
-        }
-      ),
+      queryOptions({
+        queryFn: () =>
+          logger.db.query<Pick<TMCP, 'createdAt' | 'id' | 'name' | 'url'>>(
+            logger.sql`SELECT "createdAt", "id", "name", "url" FROM mcps ORDER BY "createdAt" DESC`
+          ),
+        queryKey: [...mcps.queries.base(), 'all'],
+        staleTime: Infinity
+      }),
     base: () => ['db', 'mcps'],
     byId: (id: string) =>
       queryOptions({

@@ -306,7 +306,7 @@
   a {
     cursor: default;
   }
-  *::backdrop {
+  dialog::backdrop {
     backdrop-filter: blur(6px);
   }
 

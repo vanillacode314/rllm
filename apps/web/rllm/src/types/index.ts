@@ -28,5 +28,11 @@ const modelSchema = z.object({
 });
 type TModel = z.infer<typeof modelSchema>;
 
-export { modelSchema, providerSchema, toolSchema };
+const proxyUrlSchema = z.url().check(
+  z.refine((value) => value.includes('%s'), {
+    error: 'must be a valid url containing a %s placeholder'
+  })
+);
+
+export { modelSchema, providerSchema, proxyUrlSchema, toolSchema };
 export type { TModel, TProvider, TTool };
