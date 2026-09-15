@@ -5,7 +5,7 @@ import 'katex/dist/katex.css';
 import './styles.css';
 // import './styles/starry-night/vscode-dark.css';
 import 'highlight.js/styles/dark.css';
-import { onMount } from 'solid-js';
+import { createEffect, onMount } from 'solid-js';
 import { render } from 'solid-js/web';
 
 import 'virtual:uno.css';
@@ -17,6 +17,7 @@ import { getLogger } from '~/db/client';
 import { QueryCacheManager } from '~/lib/query-cache';
 
 import { routeTree } from './routeTree.gen';
+import { formatError } from './utils/errors';
 
 const router = createRouter({
   defaultErrorComponent: ErrorComponent,
@@ -61,13 +62,13 @@ function App() {
 }
 
 function ErrorComponent(props: ErrorComponentProps) {
-  onMount(() => console.error(props.error));
+  createEffect(() => props.error && console.error(props.error));
 
   return (
     <div class="grid place-content-center h-full w-full gap-4 p-4">
       <Callout class="min-w-75" variant="error">
         <CalloutTitle>An Error Occurred</CalloutTitle>
-        <CalloutContent>{props.error.message.trim() || 'Unknown error'}</CalloutContent>
+        <CalloutContent>{formatError(props.error)}</CalloutContent>
       </Callout>
       <Button onClick={() => location.reload()}>Refresh</Button>
     </div>

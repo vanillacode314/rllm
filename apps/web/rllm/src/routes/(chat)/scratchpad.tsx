@@ -1,7 +1,6 @@
 import { createFileRoute, useRouter } from '@tanstack/solid-router';
 import { HLC } from 'hlc';
 import { nanoid } from 'nanoid';
-import { startTransition } from 'solid-js';
 import { Option } from 'ts-result-option';
 import { safeParseJson } from 'ts-result-option/utils';
 import { z } from 'zod/mini';
@@ -22,7 +21,7 @@ import { Tree } from '~/utils/tree';
 
 import ChatAppDrawer from './-ChatAppDrawer';
 import { useChatPage, useChatPageBeforeLoad, useChatPageLoader } from './-layout';
-import { updateChat, updateChatSettings, updateMessages } from './-state';
+import { updateMessages } from './-state';
 
 console.error('FIX OPTIMIZE STORAGE');
 
@@ -51,7 +50,16 @@ export const Route = createFileRoute('/(chat)/scratchpad')({
           const preset = await queryClient.ensureQueryData(
             queries.chatPresets.byId(defaultChatSettingsPreset)
           );
-          Object.assign(chatSettings, preset.settings);
+          if (!preset) {
+            await logger.dispatch({
+              type: 'deleteUserMetadata',
+              data: {
+                id: USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET
+              }
+            });
+          } else {
+            Object.assign(chatSettings, preset.settings);
+          }
         }
         const clientId = await logger.getClientId();
         const now = HLC.generate(clientId);
