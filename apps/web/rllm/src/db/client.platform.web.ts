@@ -9,9 +9,10 @@ import { processMessage, type TValidEvent, validEventSchema } from '~/queries/mu
 import { queryClient } from '~/utils/query-client';
 
 import { MAIN_DATABASE_PATH } from './client.constants';
-import { createLoggerProxy, setupDb } from './client.platform.common';
+import { setupDb } from './client.platform.common';
 import type { DrizzleDB, LoggerInstance } from './client.types';
 import { tables } from './schema';
+import { createDbApi, createLoggerProxy } from './utils';
 
 let loggerPromise: null | Promise<LoggerInstance> = null;
 let loggerInstance: LoggerInstance | null = null;
@@ -78,5 +79,6 @@ async function getLogger(): Promise<LoggerInstance> {
 }
 
 export const logger = createLoggerProxy(getLogger);
+export const db = createDbApi(logger);
 
 export { getDb, getLogger };

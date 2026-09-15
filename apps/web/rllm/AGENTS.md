@@ -142,6 +142,7 @@ src/
 │   ├── schema.ts     # Combined tables export
 │   ├── app-schema.ts # App tables (mcps, chats, providers, userMetadata, chatPresets)
 │   ├── events-schema.ts # Event log tables (metadata, events)
+│   ├── utils.ts      # createDbApi / createLoggerProxy / parseDbRowsInPlace
 │   └── client.ts     # Database client + logger setup
 ├── directives/       # SolidJS custom directives
 ├── lib/              # Core business logic
@@ -152,7 +153,7 @@ src/
 │   ├── rag/          # RAG for PDF/EPUB with embeddings
 │   ├── proxy/        # CORS proxy support
 │   └── background-task-manager/ # Background task orchestration
-├── queries/          # Data fetching layer (`fetchers` object)
+├── queries/          # TanStack Query options (`queries` object)
 ├── routes/           # TanStack Router file-based routes
 │   ├── __root.tsx    # Root layout
 │   ├── index.tsx     # Home
@@ -186,13 +187,14 @@ src/
 | `lib/adapters/openai/` | OpenAI-compatible API adapter |
 | `lib/mcp/manager.ts` | MCPManager — tool registration and discovery |
 | `lib/rag/` | PDF/EPUB text extraction + embedding-based retrieval |
-| `db/client.ts` | Database client with event-sourcing logger |
+| `db/client.ts` | Platform database client: SQLite adapter, event-sourcing logger, and the `db` API |
+| `db/utils.ts` | `createDbApi(logger)` — the `db.<table>.<method>()` read/write API (including one typed accessor pair per `USER_METADATA_KEYS` entry), plus `createLoggerProxy` and `parseDbRowsInPlace` |
 
 ## Database & Sync
 
 - **Engine**: SQLite via `sqlocal` (in-browser OPFS)
 - **ORM**: Drizzle ORM with schemas split into `app-schema.ts` (domain tables) and `events-schema.ts` (event log)
-- **Pattern**: Event-sourcing — all DB mutations go through `logger.dispatch(event)` which writes events and applies changes
+- **Pattern**: Event-sourcing — every DB mutation is an event. Call `db.<table>.create/update/upsert/delete(...)` (or a typed `db.userMetadata.set…` accessor); those wrap `logger.dispatch(event)`, which is called nowhere else. Reads are `db.<table>.get/all/…`
 - **Tables**:
   - `mcps` — MCP server configurations
   - `chats` — Chat conversations (messages stored as JSON)
@@ -206,12 +208,12 @@ src/
 ## Data Flow
 
 ```
-User action → Component → logger.dispatch(event) → Event log → DB update
+User action → Component → db.<table>.create/update/upsert/delete() → logger.dispatch(event) → Event log → DB update
                                               ↓
-Data re-fetch ← fetchers.byId() ← Query cache ← Solid Query
+Data re-fetch ← db.<table>.get() ← Query cache ← Solid Query
 ```
 
-The `fetchers` object in `src/queries/` provides the data access layer. Components call fetchers and receive reactive data through TanStack Solid Query.
+`db` (exported from `src/db/client`, built by `createDbApi` in `src/db/utils.ts`) is the data-access layer: `db.<table>.get(id)` / `all()` / `paginated(…)` for reads, `create` / `update` / `upsert` / `delete` for writes, plus per-key `db.userMetadata.<key>()` / `setX()` accessors that own each metadata value's encoding. `src/queries/index.ts` mirrors the same table and method names as TanStack Query options, and components normally consume those.
 
 ## Adding a new sync-able event
 
@@ -233,10 +235,10 @@ When adding a user-state mutation that should be synced across all clients, it m
    - Run `buf generate` (or `bun run proto:generate`) in `packages/proto/` to regenerate TypeScript bindings.
 
 5. **Wire the component** — wherever the user action originates
-   Call `logger.dispatch({ type: 'myNewEvent', data: { id, ...fields } })`. The event flows through `processMessage` → DB update → query cache invalidation → WebSocket sync. No additional sync wiring is needed.
+   Add a `db` method in `src/db/utils.ts` that dispatches the event (`db.<table>.<verb>(...)`) and call that. The event flows through `processMessage` → DB update → query cache invalidation → WebSocket sync. No additional sync wiring is needed.
 
-6. **Add queries/fetchers (optional)** — `src/queries/index.ts`
-   If the new table needs client-facing reads, add `fetchers` and `queries` objects matching the invalidation keys from step 3.
+6. **Add the db methods and queries (optional)** — `src/db/utils.ts`, `src/queries/index.ts`
+   If the new table needs client-facing access, add the reads/writes to `db` in `src/db/utils.ts`, then mirror each read as a `queries` option under the same name, keyed by the invalidation keys from step 3.
 
 **Constraints**: Use this system only for state that must survive page reload and sync between devices. Local UI ephemera (scroll position, collapse state, etc.) should use SolidJS signals or local storage. Never remove or rename an event `type` — adding is safe and backward-compatible. Protobuf oneof field numbers must never be reused. All event data must be JSON-serializable.
 

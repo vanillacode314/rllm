@@ -14,7 +14,7 @@ import { setAddMCPModalOpen } from '~/components/modals/auto-import/AddMCPModal'
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
 import { setEditMCPModalOpen } from '~/components/modals/auto-import/EditMCPModal';
 import type { TMCP } from '~/db/app-schema';
-import { logger } from '~/db/client';
+import { db } from '~/db/client';
 import { queries } from '~/queries';
 import { queryClient } from '~/utils/query-client';
 
@@ -81,13 +81,6 @@ function MCPCard(props: { mcp: TMCP; onDelete: (id: string) => void }) {
 function SettingsMCPComponent() {
   const mcps = useQuery(queries.mcps.all);
 
-  function deleteMCP(id: string) {
-    return logger.dispatch({
-      data: { id },
-      type: 'deleteMcp'
-    });
-  }
-
   return (
     <div class="grid grid-rows-[auto_1fr] gap-8">
       <Show
@@ -104,7 +97,9 @@ function SettingsMCPComponent() {
           <Button onClick={() => setAddMCPModalOpen(true)}>Add MCP</Button>
         </div>
         <div class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4 self-start">
-          <For each={mcps.data}>{(mcp) => <MCPCard mcp={mcp} onDelete={deleteMCP} />}</For>
+          <For each={mcps.data}>
+            {(mcp) => <MCPCard mcp={mcp} onDelete={(id) => db.mcps.delete(id)} />}
+          </For>
         </div>
       </Show>
     </div>

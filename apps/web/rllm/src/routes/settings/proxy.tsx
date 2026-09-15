@@ -18,9 +18,8 @@ import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog'
 import { setProxyUrlToEdit } from '~/components/modals/auto-import/EditProxyModal';
 import { ProxyStatusBadge } from '~/components/ProxyStatusBadge';
 import { TransitionSlide } from '~/components/transitions/TransitionSlide';
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
-import { logger } from '~/db/client';
-import { parseProxyUrls, ProxyManager, type TProxyHealthStatus } from '~/lib/proxy';
+import { db } from '~/db/client';
+import { ProxyManager, type TProxyHealthStatus } from '~/lib/proxy';
 import { queries } from '~/queries';
 import { moveInPlace } from '~/utils/array';
 import { produce } from '~/utils/immer';
@@ -31,7 +30,7 @@ import { cn } from '~/utils/tailwind';
 export const Route = createFileRoute('/settings/proxy')({
   component: SettingsProxyComponent,
   loader: async () => {
-    await queryClient.ensureQueryData(queries.userMetadata.byId(USER_METADATA_KEYS.CORS_PROXY_URL));
+    await queryClient.ensureQueryData(queries.userMetadata.corsProxyUrls());
   }
 });
 
@@ -107,11 +106,9 @@ function ProxyItem(props: {
 }
 
 function SettingsProxyComponent() {
-  const proxyUrl = useQuery(() => queries.userMetadata.byId(USER_METADATA_KEYS.CORS_PROXY_URL));
+  const proxyUrl = useQuery(queries.userMetadata.corsProxyUrls);
   const dbEntries = createMemo(() =>
-    proxyUrl.isSuccess && proxyUrl.data
-      ? parseProxyUrls(proxyUrl.data).map((url) => ({ id: url, url }))
-      : []
+    proxyUrl.isSuccess && proxyUrl.data ? proxyUrl.data.map((url) => ({ id: url, url })) : []
   );
   const [entries, setEntries] = createDerivedWritableStore<TProxyEntry[]>(() => [...dbEntries()], {
     key: 'id'
@@ -134,13 +131,7 @@ function SettingsProxyComponent() {
     const next = produce(dbEntries(), (draft) => moveInPlace(draft, from, to)).map(
       (entry) => entry.url
     );
-    await logger.dispatch({
-      data: {
-        id: USER_METADATA_KEYS.CORS_PROXY_URL,
-        value: next.join('\n')
-      },
-      type: 'setUserMetadata'
-    });
+    await db.userMetadata.setCorsProxyUrls(next);
     await ProxyManager.updateProxyUrls(next);
   }
 
@@ -156,13 +147,7 @@ function SettingsProxyComponent() {
     const next = produce(entries, (draft) => {
       draft.splice(index, 1);
     }).map((entry) => entry.url);
-    await logger.dispatch({
-      data: {
-        id: USER_METADATA_KEYS.CORS_PROXY_URL,
-        value: next.join('\n')
-      },
-      type: 'setUserMetadata'
-    });
+    await db.userMetadata.setCorsProxyUrls(next);
     await ProxyManager.updateProxyUrls(next);
   }
 

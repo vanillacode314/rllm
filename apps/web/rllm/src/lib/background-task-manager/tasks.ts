@@ -1,16 +1,12 @@
 import { nanoid } from 'nanoid';
 import { Option } from 'ts-result-option';
-import { safeParseJson } from 'ts-result-option/utils';
 import { z } from 'zod/mini';
 
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
-import { chatsSchema } from '~/db/app-schema';
-import { logger } from '~/db/client';
+import { db } from '~/db/client';
 import { ChatGenerationManager } from '~/lib/chat/generation';
 import { generateTitleAndTags } from '~/lib/chat/utils';
 import { indexFile } from '~/lib/vector-db/client.platform.common';
 import { removeIndexingProgress, updateIndexingProgress } from '~/lib/vector-db/progress';
-import { fetchers } from '~/queries';
 import { attachmentsSchema } from '~/types/chat';
 import { getMessagesForPath } from '~/utils/chat';
 import { Tree } from '~/utils/tree';
@@ -68,14 +64,14 @@ export function createTask(task: TValidTask, priority: TTaskPriority = 'idle', i
       return {
         async handler(signal) {
           const [chat, tags] = await Promise.all([
-            fetchers.chats.byId(task.arguments.chatId).then((chat) => {
+            db.chats.get(task.arguments.chatId).then((chat) => {
               if (!chat) throw new Error('Chat not found');
               return {
                 ...chat,
                 messages: Tree.fromJSON(chat.messages)
               };
             }),
-            fetchers.chats.getChatTags()
+            db.chats.tags()
           ]);
           const chunks = getMessagesForPath(task.arguments.path, chat.messages).expect(
             'Could not find messages for path'
@@ -90,10 +86,7 @@ export function createTask(task: TValidTask, priority: TTaskPriority = 'idle', i
             .inspectErr((e) => console.log(e))
             .unwrapOr({ tags: [], title: 'Untitled Chat' });
 
-          await logger.dispatch({
-            data: { id: chat.id, tags: generated.tags, title: generated.title },
-            type: 'updateChat'
-          });
+          await db.chats.update(chat.id, { tags: generated.tags, title: generated.title });
         },
         id,
         priority,
@@ -119,20 +112,9 @@ export function createTask(task: TValidTask, priority: TTaskPriority = 'idle', i
     case 'saveScratchpadChat':
       return {
         async handler() {
-          const chat = Option.from(
-            await fetchers.userMetadata.byId(USER_METADATA_KEYS.SCRATCHPAD_CHAT)
-          ).andThen((chat) => safeParseJson(chat, { validate: chatsSchema.parse }).ok());
+          const chat = Option.from(await db.userMetadata.scratchpadChat());
           if (chat.isNone()) return;
-          await logger.dispatch(
-            {
-              data: chat.unwrap(),
-              type: 'createChat'
-            },
-            {
-              data: { id: USER_METADATA_KEYS.SCRATCHPAD_CHAT },
-              type: 'deleteUserMetadata'
-            }
-          );
+          await db.createChatFromScratchpad(chat.unwrap());
           BackgroundTaskManager.scheduleTask(
             createTask({
               arguments: chat
@@ -166,20 +148,10 @@ export function createTask(task: TValidTask, priority: TTaskPriority = 'idle', i
           await promise;
 
           if (task.arguments.scratchpad) {
-            await logger.dispatch({
-              data: {
-                id: USER_METADATA_KEYS.SCRATCHPAD_CHAT,
-                value: JSON.stringify(chat)
-              },
-              dontLog: true,
-              type: 'setUserMetadata'
-            });
+            await db.userMetadata.setScratchpadChat(chat);
             return;
           }
-          await logger.dispatch({
-            data: { finished: true, id: chat.id, messages: chat.messages.toJSON() },
-            type: 'updateChat'
-          });
+          await db.chats.update(chat.id, { finished: true, messages: chat.messages.toJSON() });
           if (chat.title === 'Untitled New Chat' && !ChatGenerationManager.isAborted(chat.id)) {
             BackgroundTaskManager.scheduleTask(
               createTask({

@@ -1,7 +1,7 @@
 import { ReactiveMap } from '@solid-primitives/map';
 
+import { db } from '~/db/client';
 import { ProxyManager } from '~/lib/proxy';
-import { fetchers } from '~/queries';
 import type { TTool } from '~/types';
 
 import type { TMCPClient } from './client';
@@ -40,7 +40,7 @@ export class MCPManager {
    * Creates new clients only if they don't exist or URL changed
    */
   static async initialize(): Promise<void> {
-    const mcps = await fetchers.mcps.getAllMcps();
+    const mcps = await db.mcps.all();
     this.#removeInvalidClients(new Set(mcps.map((m) => m.id)));
     for (const mcp of mcps) {
       const url = ProxyManager.proxifyUrl(mcp.url);

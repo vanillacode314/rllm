@@ -16,8 +16,7 @@ import { useAlertDialog } from '~/components/modals/auto-import/AlertDialog';
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
 import { usePromptDialog } from '~/components/modals/auto-import/PromptDialog';
 import { setSaveMnemonicModalOpen } from '~/components/modals/auto-import/SaveMnemonicModal';
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
-import { logger } from '~/db/client';
+import { db, logger } from '~/db/client';
 import { queries } from '~/queries';
 import { account, setAccount } from '~/signals/account';
 import { withTransaction } from '~/utils/db';
@@ -32,9 +31,7 @@ import {
 export const Route = createFileRoute('/settings/account')({
   component: SettingsAccountComponent,
   async loader() {
-    await queryClient.ensureQueryData(
-      queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME)
-    );
+    await queryClient.ensureQueryData(queries.userMetadata.userDisplayName());
   }
 });
 
@@ -53,9 +50,7 @@ function SettingsAccountComponent() {
     shouldBlockFn: () => false
   });
 
-  const displayName = useQuery(() =>
-    queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME)
-  );
+  const displayName = useQuery(queries.userMetadata.userDisplayName);
 
   async function createNewAccount() {
     const wallet = ethers.Wallet.createRandom();
@@ -256,13 +251,7 @@ function SettingsAccountComponent() {
                 toast.info('No changes made');
                 return;
               }
-              await logger.dispatch({
-                data: {
-                  id: USER_METADATA_KEYS.USER_DISPLAY_NAME,
-                  value: formData.displayName
-                },
-                type: 'setUserMetadata'
-              });
+              await db.userMetadata.setUserDisplayName(formData.displayName);
               toast.success('Display name updated');
             }}
           >

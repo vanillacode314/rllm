@@ -12,7 +12,7 @@ import { cn } from 'ui/utils/tailwind';
 
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
 import { usePromptDialog } from '~/components/modals/auto-import/PromptDialog';
-import { logger } from '~/db/client';
+import { db } from '~/db/client';
 import { queries } from '~/queries';
 import { isChatOpen } from '~/utils/chat';
 import { produce } from '~/utils/immer';
@@ -43,9 +43,7 @@ export function ChatListSection(props: ChatListSectionProps) {
     { wait: 100 }
   );
   const chatsQuery = useInfiniteQuery(() =>
-    queries.chats
-      .all()
-      ._ctx.pagedMinimal({ query: filterState.query, tags: Array.from(filterState.tags) })
+    queries.chats.pagedMinimal({ query: filterState.query, tags: Array.from(filterState.tags) })
   );
   const chats = createDerivedStore<(typeof chatsQuery.data.pages)[number]>(
     (prev) => {
@@ -60,9 +58,7 @@ export function ChatListSection(props: ChatListSectionProps) {
     { key: 'id', name: 'chat-list-chats' }
   );
   const totalCountQuery = useQuery(() =>
-    queries.chats
-      .all()
-      ._ctx.filteredCount({ query: filterState.query, tags: Array.from(filterState.tags) })
+    queries.chats.countFiltered({ query: filterState.query, tags: Array.from(filterState.tags) })
   );
   const loadedCount = () => chats.length;
   const totalCount = () => (totalCountQuery.isSuccess ? totalCountQuery.data : 0);
@@ -95,10 +91,7 @@ export function ChatListSection(props: ChatListSectionProps) {
       title: 'Rename Chat'
     });
     if (!title) return;
-    await logger.dispatch({
-      data: { id, title },
-      type: 'updateChat'
-    });
+    await db.chats.update(id, { title });
   }
 
   async function deleteChat(id: string, shouldConfirm: boolean = true) {
@@ -109,7 +102,7 @@ export function ChatListSection(props: ChatListSectionProps) {
       (await confirmDialog.confirm({
         confirmText: 'Delete',
         description: `Are you sure you want to delete this chat? "${chat()?.title}"`,
-        onConfirm: () => logger.dispatch({ data: { id }, type: 'deleteChat' }),
+        onConfirm: () => db.chats.delete(id),
         title: 'Delete Chat',
         variant: 'destructive'
       }));

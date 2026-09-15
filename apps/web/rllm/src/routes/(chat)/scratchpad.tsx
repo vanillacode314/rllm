@@ -2,15 +2,12 @@ import { createFileRoute, useRouter } from '@tanstack/solid-router';
 import { HLC } from 'hlc';
 import { nanoid } from 'nanoid';
 import { Option } from 'ts-result-option';
-import { safeParseJson } from 'ts-result-option/utils';
 import { z } from 'zod/mini';
 
 import { useAppDrawer } from '~/components/AppDrawer';
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
 import { FALLBACK_CHAT_SETTINGS } from '~/constants/chat-settings';
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
-import { chatsSchema } from '~/db/app-schema';
-import { logger } from '~/db/client';
+import { db, logger } from '~/db/client';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { createTask } from '~/lib/background-task-manager/tasks';
 import { queries } from '~/queries';
@@ -39,7 +36,6 @@ export const Route = createFileRoute('/(chat)/scratchpad')({
     const isNewChat = jsonChat.isNone();
     let chat = await jsonChat
       .okOrElse(() => new Error('No chat found'))
-      .andThen((value) => safeParseJson(value, { validate: chatsSchema.parse }))
       .toAsync()
       .unwrapOrElse(async () => {
         const chatSettings = FALLBACK_CHAT_SETTINGS(
@@ -48,15 +44,10 @@ export const Route = createFileRoute('/(chat)/scratchpad')({
         );
         if (defaultChatSettingsPreset) {
           const preset = await queryClient.ensureQueryData(
-            queries.chatPresets.byId(defaultChatSettingsPreset)
+            queries.chatPresets.get(defaultChatSettingsPreset)
           );
           if (!preset) {
-            await logger.dispatch({
-              type: 'deleteUserMetadata',
-              data: {
-                id: USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET
-              }
-            });
+            await db.userMetadata.deleteDefaultChatSettingsPresetId();
           } else {
             Object.assign(chatSettings, preset.settings);
           }
@@ -112,11 +103,7 @@ function ScratchpadPageComponent() {
     });
     if (!yes) return;
     updateMessages({ messages: new Tree(), path: [] });
-    await logger.dispatch({
-      data: { id: USER_METADATA_KEYS.SCRATCHPAD_CHAT },
-      dontLog: true,
-      type: 'deleteUserMetadata'
-    });
+    await db.userMetadata.deleteScratchpadChat();
     await router.invalidate();
   }
 

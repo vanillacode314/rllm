@@ -1,5 +1,7 @@
 import type { TChatSettings } from '~/lib/chat/settings';
 
+export const CURRENT_MODEL_ID = 'current-model';
+
 export const REASONING_VALUE_TO_LABEL_MAP = Object.freeze({
   high: 'High',
   low: 'Low',

@@ -16,7 +16,6 @@ import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog'
 import { setEditPresetModalOpen } from '~/components/modals/auto-import/EditPresetModal';
 import { setChatSettingsDrawerOpen } from '~/components/TheChatSettingsDrawer';
 import { REASONING_VALUE_TO_LABEL_MAP } from '~/constants/chat-settings';
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import {
   deletePreset,
   duplicatePreset,
@@ -30,7 +29,7 @@ import { queryClient } from '~/utils/query-client';
 
 export const Route = createFileRoute('/presets')({
   beforeLoad: async () => {
-    const numberOfProviders = await queryClient.ensureQueryData(queries.providers.all()._ctx.count);
+    const numberOfProviders = await queryClient.ensureQueryData(queries.providers.count());
     if (numberOfProviders > 0) return;
     if (env.VITE_SYNC_SERVER_BASE_URL && untrack(account) === null)
       throw redirect({ to: '/settings/account' });
@@ -41,17 +40,13 @@ export const Route = createFileRoute('/presets')({
     await Promise.all([
       queryClient.ensureQueryData(queries.providers.all()),
       queryClient.ensureQueryData(queries.chatPresets.all()),
-      queryClient.ensureQueryData(
-        queries.userMetadata.byId(USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET)
-      )
+      queryClient.ensureQueryData(queries.userMetadata.defaultChatSettingsPresetId())
     ]);
   }
 });
 
 export function PresetCardDropdownMenu(props: { preset: TChatPreset }) {
-  const defaultPresetId = useQuery(() =>
-    queries.userMetadata.byId(USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET)
-  );
+  const defaultPresetId = useQuery(() => queries.userMetadata.defaultChatSettingsPresetId());
   const confirmDialog = useConfirmDialog();
   return (
     <div class="flex-col">
@@ -96,9 +91,7 @@ export function PresetCardDropdownMenu(props: { preset: TChatPreset }) {
 }
 
 function PresetCard(props: { preset: TChatPreset }) {
-  const defaultPresetId = useQuery(() =>
-    queries.userMetadata.byId(USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET)
-  );
+  const defaultPresetId = useQuery(() => queries.userMetadata.defaultChatSettingsPresetId());
   const providers = useQuery(() => queries.providers.all());
 
   function getProviderNameById(id: string) {

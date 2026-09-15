@@ -3,9 +3,8 @@ import { AsyncResult, Option } from 'ts-result-option';
 import { tryBlock } from 'ts-result-option/utils';
 import * as z from 'zod/mini';
 
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
+import { db } from '~/db/client';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
-import { fetchers } from '~/queries';
 import { type TTool } from '~/types';
 import type { TMessage } from '~/types/chat';
 import { produce } from '~/utils/immer';
@@ -24,16 +23,12 @@ export const generateTitleAndTags = (config: {
     async function* () {
       const { signal } = config;
       const [{ provider, providerId }, model] = await Promise.all([
-        fetchers.userMetadata
-          .byId(USER_METADATA_KEYS.TITLE_GENERATION_PROVIDER_ID)
-          .then(async (titleGenerationProviderId) => {
-            if (!titleGenerationProviderId) titleGenerationProviderId = config.providerId;
-            const provider = await fetchers.providers.byId(titleGenerationProviderId);
-            return { provider, providerId: titleGenerationProviderId };
-          }),
-        fetchers.userMetadata
-          .byId(USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID)
-          .then((id) => id ?? config.model)
+        db.userMetadata.titleGenerationProviderId().then(async (titleGenerationProviderId) => {
+          if (!titleGenerationProviderId) titleGenerationProviderId = config.providerId;
+          const provider = await db.providers.get(titleGenerationProviderId);
+          return { provider, providerId: titleGenerationProviderId };
+        }),
+        db.userMetadata.titleGenerationModelId().then((id) => id ?? config.model)
       ]);
       if (!provider) throw new Error(`Provider ${providerId} not found`);
       if (!model) throw new Error(`Model ${model} not found`);
@@ -119,7 +114,7 @@ export const summarizeChat = (config: {
   tryBlock<string, Error>(
     async function* () {
       const { model, providerId, signal } = config;
-      const provider = await fetchers.providers.byId(providerId);
+      const provider = await db.providers.get(providerId);
       if (!provider) throw new Error(`Provider ${providerId} not found`);
       const adapter = new OpenAIAdapter(provider.baseUrl, provider.token);
       const prompt = dedent`

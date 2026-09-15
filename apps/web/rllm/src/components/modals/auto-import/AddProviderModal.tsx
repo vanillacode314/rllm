@@ -15,7 +15,7 @@ import * as z from 'zod/mini';
 
 import ValidationErrors from '~/components/form/ValidationErrors';
 import ProviderTestResult from '~/components/ProviderTestResult';
-import { logger } from '~/db/client';
+import { db } from '~/db/client';
 import { testProvider, type TestProviderResult } from '~/lib/providers/utils';
 import { createForm, parseFormErrors } from '~/utils/form';
 
@@ -70,10 +70,7 @@ export function AddProviderModal() {
       return;
     }
 
-    logger.dispatch({
-      data: { id: nanoid(), ...parsedForm.data },
-      type: 'createProvider'
-    });
+    void db.providers.create({ id: nanoid(), ...parsedForm.data });
     setOpen(false);
   }
 

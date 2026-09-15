@@ -7,8 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'u
 import { Switch, SwitchControl, SwitchLabel, SwitchThumb } from 'ui/switch';
 
 import { STARTUP_PAGE_OPTIONS, type TStartupPage } from '~/constants/settings';
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
-import { logger } from '~/db/client';
+import { db } from '~/db/client';
 import { queries } from '~/queries';
 import { queryClient } from '~/utils/query-client';
 
@@ -16,54 +15,32 @@ export const Route = createFileRoute('/settings/general')({
   component: SettingsGeneralComponent,
   loader: async () => {
     await Promise.all([
-      queryClient.ensureQueryData(queries.userMetadata.byId(USER_METADATA_KEYS.STARTUP_PAGE)),
-      queryClient.ensureQueryData(
-        queries.userMetadata.byId(USER_METADATA_KEYS.HIDE_REASONING_DURING_GENERATION)
-      ),
-      queryClient.ensureQueryData(queries.userMetadata.byId(USER_METADATA_KEYS.WEB_SEARCH_MCP_ID)),
+      queryClient.ensureQueryData(queries.userMetadata.startupPage()),
+      queryClient.ensureQueryData(queries.userMetadata.hideReasoningDuringGeneration()),
+      queryClient.ensureQueryData(queries.userMetadata.webSearchMcpId()),
       queryClient.ensureQueryData(queries.mcps.all())
     ]);
   }
 });
 
 function SettingsGeneralComponent() {
-  const startupPage = useQuery(() => queries.userMetadata.byId(USER_METADATA_KEYS.STARTUP_PAGE));
-  const hideReasoningDuringGeneration = useQuery(() =>
-    queries.userMetadata.byId(USER_METADATA_KEYS.HIDE_REASONING_DURING_GENERATION)
+  const startupPage = useQuery(queries.userMetadata.startupPage);
+  const hideReasoningDuringGeneration = useQuery(
+    queries.userMetadata.hideReasoningDuringGeneration
   );
-  const webSearchMcpId = useQuery(() =>
-    queries.userMetadata.byId(USER_METADATA_KEYS.WEB_SEARCH_MCP_ID)
-  );
+  const webSearchMcpId = useQuery(queries.userMetadata.webSearchMcpId);
   const mcps = useQuery(queries.mcps.all);
 
   async function updateStartupPage(value: TStartupPage) {
-    await logger.dispatch({
-      data: {
-        id: USER_METADATA_KEYS.STARTUP_PAGE,
-        value
-      },
-      type: 'setUserMetadata'
-    });
+    await db.userMetadata.setStartupPage(value);
   }
 
   async function updateHideReasoningDuringGeneration(checked: boolean) {
-    await logger.dispatch({
-      data: {
-        id: USER_METADATA_KEYS.HIDE_REASONING_DURING_GENERATION,
-        value: String(checked)
-      },
-      type: 'setUserMetadata'
-    });
+    await db.userMetadata.setHideReasoningDuringGeneration(checked);
   }
 
   async function updateWebSearchMcp(value: string) {
-    await logger.dispatch({
-      data: {
-        id: USER_METADATA_KEYS.WEB_SEARCH_MCP_ID,
-        value
-      },
-      type: 'setUserMetadata'
-    });
+    await db.userMetadata.setWebSearchMcpId(value);
   }
 
   const webSearchMcpOptions = createMemo(
@@ -152,7 +129,7 @@ function SettingsGeneralComponent() {
         </CardHeader>
         <CardContent>
           <Switch
-            checked={hideReasoningDuringGeneration.data !== 'false'}
+            checked={hideReasoningDuringGeneration.isSuccess && hideReasoningDuringGeneration.data}
             class="flex items-center space-x-2"
             id="hideReasoningDuringGeneration"
             onChange={(checked) => updateHideReasoningDuringGeneration(checked)}

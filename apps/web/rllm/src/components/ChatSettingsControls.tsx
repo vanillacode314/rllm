@@ -34,7 +34,7 @@ export type ChatSettingsControlsProps = {
 
 export function ChatSettingsControls(props: ChatSettingsControlsProps) {
   const providers = useQuery(() => queries.providers.all());
-  const selectedProvider = useQuery(() => queries.providers.byId(props.settings.providerId));
+  const selectedProvider = useQuery(() => queries.providers.get(props.settings.providerId));
 
   const adapter = createMemo(() => {
     const token =

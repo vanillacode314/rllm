@@ -1,6 +1,6 @@
 import type { TChat } from '~/db/app-schema';
 import { logger } from '~/db/client';
-import { parseDbRowsInPlace } from '~/utils/db';
+import { parseDbRowsInPlace } from '~/db/utils';
 
 import { createTask, type TTask } from '../background-task-manager/tasks';
 

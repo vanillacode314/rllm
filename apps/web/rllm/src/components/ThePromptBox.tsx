@@ -10,7 +10,7 @@ import {
 } from 'ui/dropdown-menu';
 import { cn } from 'ui/utils/tailwind';
 
-import { logger } from '~/db/client';
+import { db } from '~/db/client';
 import { MCPManager } from '~/lib/mcp/manager';
 import { chatState } from '~/routes/(chat)/-state';
 import type { TAttachment } from '~/types/chat';
@@ -188,10 +188,7 @@ function Toolbar(props: {
       }))
     )
       return;
-    await logger.dispatch({
-      data: { id: props.chatId! },
-      type: 'deleteChat'
-    });
+    await db.chats.delete(props.chatId!);
   }
 
   async function onLoadAttachment(accept: string) {

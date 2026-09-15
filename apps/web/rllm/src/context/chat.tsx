@@ -23,7 +23,7 @@ export function useChatState() {
   const currentChat = useQuery(() => {
     const id = location().search.id as string;
     return {
-      ...queries.chats.byId(id || ''),
+      ...queries.chats.get(id || ''),
       enabled: !!isChatRoute() && !isNewChatRoute() && id !== undefined
     };
   });

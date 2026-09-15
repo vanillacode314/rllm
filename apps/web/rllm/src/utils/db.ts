@@ -55,28 +55,4 @@ const withTransaction: WithTransactionFn = (fn) =>
     (e) => new Error('Failed to run transaction', { cause: e })
   );
 
-export async function parseDbRowsInPlace<TRow extends Record<string, unknown>>(
-  rowsPromise: Promise<TRow[]> | TRow[],
-  opts: Partial<{
-    booleanKeys: (keyof TRow)[];
-    jsonKeys: (keyof TRow)[];
-  }> = {}
-): Promise<TRow[]> {
-  const rows = await rowsPromise;
-  const { booleanKeys = [], jsonKeys = [] } = opts;
-  for (const row of rows) {
-    for (const key of jsonKeys) {
-      if (key in row) {
-        row[key] = JSON.parse(row[key] as string);
-      }
-    }
-    for (const key of booleanKeys) {
-      if (key in row) {
-        row[key] = Boolean(row[key]) as never;
-      }
-    }
-  }
-  return rows;
-}
-
 export { buildConflictUpdateColumns, tableToObject, withTransaction };

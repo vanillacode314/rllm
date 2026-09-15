@@ -14,7 +14,7 @@ import * as z from 'zod/mini';
 
 import ValidationErrors from '~/components/form/ValidationErrors';
 import MCPTestResult from '~/components/MCPTestResult';
-import { logger } from '~/db/client';
+import { db } from '~/db/client';
 import { testMCPServer, type TestMCPServerResult } from '~/lib/mcp/utils';
 import { createForm, parseFormErrors } from '~/utils/form';
 
@@ -61,10 +61,7 @@ export function AddMCPModal() {
       return;
     }
 
-    logger.dispatch({
-      data: { id: nanoid(), ...parsedForm.data },
-      type: 'createMcp'
-    });
+    void db.mcps.create({ id: nanoid(), ...parsedForm.data });
     setOpen(false);
   }
 

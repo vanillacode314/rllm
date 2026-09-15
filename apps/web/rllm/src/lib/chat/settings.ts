@@ -1,19 +1,15 @@
 import { Option } from 'ts-result-option';
-import { safeParseJson } from 'ts-result-option/utils';
 
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
-import { chatsSchema } from '~/db/app-schema';
-import { logger } from '~/db/client';
-import { fetchers } from '~/queries';
+import { db } from '~/db/client';
 import { chatState, setChatState } from '~/routes/(chat)/-state';
 import type { TChatSettings } from '~/types/chat';
 import { produce } from '~/utils/immer';
 
 export async function initChatSettings() {
   const [titleGenerationProviderId, titleGenerationModelId, providers] = await Promise.all([
-    fetchers.userMetadata.byId(USER_METADATA_KEYS.TITLE_GENERATION_PROVIDER_ID),
-    fetchers.userMetadata.byId(USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID),
-    fetchers.providers.getAllProviders()
+    db.userMetadata.titleGenerationProviderId(),
+    db.userMetadata.titleGenerationModelId(),
+    db.providers.all()
   ]);
   if (providers.length === 0) {
     console.debug(`[Initializing Chat Settings] No providers found, skipping initialization`);
@@ -24,52 +20,19 @@ export async function initChatSettings() {
     console.debug(
       `[Initializing Chat Settings] titleGenerationProviderId is null, setting to ${providers[0].id}`
     );
-    tasks.push(() =>
-      logger.dispatch({
-        data: {
-          id: USER_METADATA_KEYS.TITLE_GENERATION_PROVIDER_ID,
-          value: providers[0].id
-        },
-        type: 'setUserMetadata'
-      })
-    );
+    tasks.push(() => db.userMetadata.setTitleGenerationProviderId(providers[0].id));
   } else if (!providers.some((provider) => provider.id !== titleGenerationProviderId)) {
     console.debug(
       `[Initializing Chat Settings] titleGenerationProviderId ${titleGenerationProviderId} not found, setting to ${providers[0].id}`
     );
-    tasks.push(() =>
-      logger.dispatch(
-        {
-          data: {
-            id: USER_METADATA_KEYS.TITLE_GENERATION_PROVIDER_ID,
-            value: providers[0].id
-          },
-          type: 'setUserMetadata'
-        },
-        {
-          data: {
-            id: USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID,
-            value: providers[0].defaultModelIds[0]
-          },
-          type: 'setUserMetadata'
-        }
-      )
-    );
+    tasks.push(() => db.userMetadata.setTitleGeneration(providers[0].id));
   } else if (titleGenerationModelId === null) {
     console.debug(
       `[Initializing Chat Settings] titleGenerationModelId is null, setting to ${providers[0].defaultModelIds[0]}`
     );
-    const provider = await fetchers.providers.byId(titleGenerationProviderId);
+    const provider = await db.providers.get(titleGenerationProviderId);
     if (!provider) throw new Error('Provider not found');
-    tasks.push(() =>
-      logger.dispatch({
-        data: {
-          id: USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID,
-          value: provider.defaultModelIds[0]
-        },
-        type: 'setUserMetadata'
-      })
-    );
+    tasks.push(() => db.userMetadata.setTitleGenerationModelId(provider.defaultModelIds[0]));
   }
   await Promise.all(tasks.map((task) => task()));
   setChatState((state) =>
@@ -99,29 +62,13 @@ export async function saveChatSettings(
   );
 
   if (scratchpad) {
-    const jsonChat = Option.from(
-      await fetchers.userMetadata.byId(USER_METADATA_KEYS.SCRATCHPAD_CHAT)
-    );
-    if (jsonChat.isNone()) return;
-    const chat = safeParseJson(jsonChat.unwrap(), { validate: chatsSchema.parse }).unwrap();
-    await logger.dispatch({
-      data: {
-        id: USER_METADATA_KEYS.SCRATCHPAD_CHAT,
-        value: JSON.stringify({
-          ...chat,
-          settings: updatedSettings
-        })
-      },
-      dontLog: true,
-      type: 'setUserMetadata'
-    });
+    const chat = await db.userMetadata.scratchpadChat();
+    if (!chat) return;
+    await db.userMetadata.setScratchpadChat({ ...chat, settings: updatedSettings });
     return;
   }
 
   if (chatId) {
-    await logger.dispatch({
-      data: { id: chatId, settings: updatedSettings },
-      type: 'updateChat'
-    });
+    await db.chats.update(chatId, { settings: updatedSettings });
   }
 }

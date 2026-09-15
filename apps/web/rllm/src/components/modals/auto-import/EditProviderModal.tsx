@@ -15,7 +15,7 @@ import * as z from 'zod/mini';
 
 import ValidationErrors from '~/components/form/ValidationErrors';
 import ProviderTestResult from '~/components/ProviderTestResult';
-import { logger } from '~/db/client';
+import { db } from '~/db/client';
 import { testProvider, type TestProviderResult } from '~/lib/providers/utils';
 import { queries } from '~/queries';
 import { createForm, parseFormErrors } from '~/utils/form';
@@ -38,7 +38,7 @@ const formSchema = z.object({
 export function EditProviderModal() {
   const providerQuery = useQuery(() => ({
     enabled: !!providerIdToEdit(),
-    ...queries.providers.byId(providerIdToEdit() || '')
+    ...queries.providers.get(providerIdToEdit() || '')
   }));
 
   const [{ form, formErrors }, { resetForm, resetFormErrors, setForm, setFormErrors }] = createForm(
@@ -79,10 +79,8 @@ export function EditProviderModal() {
       return;
     }
 
-    logger.dispatch({
-      data: parsedForm.data,
-      type: 'updateProvider'
-    });
+    const { id, ...data } = parsedForm.data;
+    void db.providers.update(id, data);
     setProviderIdToEdit(false);
   }
 

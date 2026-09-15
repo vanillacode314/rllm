@@ -14,7 +14,7 @@ import { setAddProviderModalOpen } from '~/components/modals/auto-import/AddProv
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
 import { setEditProviderModalOpen } from '~/components/modals/auto-import/EditProviderModal';
 import type { TProvider } from '~/db/app-schema';
-import { logger } from '~/db/client';
+import { db } from '~/db/client';
 import { queries } from '~/queries';
 import { queryClient } from '~/utils/query-client';
 
@@ -88,13 +88,6 @@ function ProviderCard(props: { onDelete: (id: string) => void; provider: TProvid
 function SettingsProviderComponent() {
   const providers = useQuery(queries.providers.all);
 
-  function deleteProvider(id: string) {
-    return logger.dispatch({
-      data: { id },
-      type: 'deleteProvider'
-    });
-  }
-
   return (
     <div class="grid grid-rows-[auto_1fr] gap-8">
       <Show
@@ -112,7 +105,9 @@ function SettingsProviderComponent() {
         </div>
         <div class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4 self-start">
           <For each={providers.data}>
-            {(provider) => <ProviderCard onDelete={deleteProvider} provider={provider} />}
+            {(provider) => (
+              <ProviderCard onDelete={(id) => db.providers.delete(id)} provider={provider} />
+            )}
           </For>
         </div>
       </Show>

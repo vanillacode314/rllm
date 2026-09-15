@@ -1,4 +1,4 @@
 import type { SqliteAdapter } from './client.types';
 
-declare const { getDb, getLogger, logger }: SqliteAdapter;
-export { getDb, getLogger, logger };
+declare const { db, getDb, getLogger, logger }: SqliteAdapter;
+export { db, getDb, getLogger, logger };

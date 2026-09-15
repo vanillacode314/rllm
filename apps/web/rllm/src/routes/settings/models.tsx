@@ -6,8 +6,8 @@ import { Label } from 'ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'ui/select';
 
 import ModelSelector from '~/components/ModelSelector';
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
-import { logger } from '~/db/client';
+import { CURRENT_MODEL_ID } from '~/constants/chat-settings';
+import { db } from '~/db/client';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { queries } from '~/queries';
 import { queryClient } from '~/utils/query-client';
@@ -20,74 +20,44 @@ export const Route = createFileRoute('/settings/models')({
   component: SettingsModelComponent,
   loader: async () => {
     await Promise.all([
-      queryClient.ensureQueryData(
-        queries.userMetadata.byId(USER_METADATA_KEYS.TITLE_GENERATION_PROVIDER_ID)
-      ),
-      queryClient.ensureQueryData(
-        queries.userMetadata.byId(USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID)
-      )
+      queryClient.ensureQueryData(queries.userMetadata.titleGenerationProviderId()),
+      queryClient.ensureQueryData(queries.userMetadata.titleGenerationModelId())
     ]);
   }
 });
 
 function SettingsModelComponent() {
   const providers = useQuery(queries.providers.all);
-  const titleGenerationProviderId = useQuery(() =>
-    queries.userMetadata.byId(USER_METADATA_KEYS.TITLE_GENERATION_PROVIDER_ID)
-  );
+  const titleGenerationProviderId = useQuery(queries.userMetadata.titleGenerationProviderId);
   const provider = useQuery(() => ({
     enabled:
-      titleGenerationProviderId.isSuccess && titleGenerationProviderId.data !== 'current-model',
-    ...queries.providers.byId(titleGenerationProviderId.data ?? '')
+      titleGenerationProviderId.isSuccess && titleGenerationProviderId.data !== CURRENT_MODEL_ID,
+    ...queries.providers.get(titleGenerationProviderId.data ?? '')
   }));
 
   const adapter = createMemo(() => {
-    const token = provider.isSuccess ? provider.data.token : undefined;
+    const token = provider.isSuccess ? provider.data?.token : undefined;
     if (!token) return null;
-    const url = provider.isSuccess ? provider.data!.baseUrl : undefined;
+    const url = provider.isSuccess ? provider.data?.baseUrl : undefined;
     if (!url) return null;
     return new OpenAIAdapter(url, token);
   });
 
-  const titleGenerationModelId = useQuery(() =>
-    queries.userMetadata.byId(USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID)
-  );
+  const titleGenerationModelId = useQuery(queries.userMetadata.titleGenerationModelId);
 
   const options = createMemo(() => {
-    const opts = [{ label: 'Current Model', value: 'current-model' }];
+    const opts = [{ label: 'Current Model', value: CURRENT_MODEL_ID }];
     for (const provider of providers.data ?? [])
       opts.push({ label: provider.name, value: provider.id });
     return opts;
   });
 
   async function updateTitleGenerationProvider(providerId: string) {
-    const provider = providers.data?.find((p) => p.id === providerId);
-    await logger.dispatch(
-      {
-        data: {
-          id: USER_METADATA_KEYS.TITLE_GENERATION_PROVIDER_ID,
-          value: providerId
-        },
-        type: 'setUserMetadata'
-      },
-      {
-        data: {
-          id: USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID,
-          value: provider?.defaultModelIds[0] ?? 'current-model'
-        },
-        type: 'setUserMetadata'
-      }
-    );
+    await db.userMetadata.setTitleGeneration(providerId);
   }
 
   async function updateTitleGenerationModel(modelId: string) {
-    await logger.dispatch({
-      data: {
-        id: USER_METADATA_KEYS.TITLE_GENERATION_MODEL_ID,
-        value: modelId
-      },
-      type: 'setUserMetadata'
-    });
+    await db.userMetadata.setTitleGenerationModelId(modelId);
   }
 
   return (

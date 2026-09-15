@@ -41,7 +41,7 @@ export function EditPresetModal() {
 
   const presetQuery = useQuery(() => ({
     enabled: editPresetModalOpen() !== false,
-    ...queries.chatPresets.byId(presetId())
+    ...queries.chatPresets.get(presetId())
   }));
 
   const providers = useQuery(() => queries.providers.all());
@@ -70,7 +70,7 @@ export function EditPresetModal() {
 
   const selectedProviderQuery = useQuery(() => ({
     enabled: form.providerId !== '',
-    ...queries.providers.byId(form.providerId)
+    ...queries.providers.get(form.providerId)
   }));
 
   const adapter = createMemo(() => {

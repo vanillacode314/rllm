@@ -30,11 +30,10 @@ import { SidebarTrigger, useSidebar } from 'ui/sidebar';
 import { Chat } from '~/components/Chat';
 import { PresetSelector } from '~/components/PresetSelector';
 import ThePromptBox from '~/components/ThePromptBox';
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { useChatState } from '~/context/chat';
 import { useNotifications } from '~/context/notifications';
 import { chatsSchema, type TChat as TDBChat } from '~/db/app-schema';
-import { logger } from '~/db/client';
+import { db, logger } from '~/db/client';
 import { useSnapToElement } from '~/directives/use-snap-to-element';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { createTask } from '~/lib/background-task-manager/tasks';
@@ -44,7 +43,7 @@ import { epubRAGAdapter } from '~/lib/rag/epub';
 import { pdfRAGAdapter } from '~/lib/rag/pdf';
 import { splitter } from '~/lib/rag/utils';
 import { transientDb } from '~/lib/vector-db/transient';
-import { fetchers, queries } from '~/queries';
+import { queries } from '~/queries';
 import { isMobile } from '~/signals';
 import { account } from '~/signals/account';
 import type { TAttachment, TMessage, TUserMessageChunk } from '~/types/chat';
@@ -95,18 +94,13 @@ export function useChatPage(
     shouldBlockFn: () => false
   });
   onMount(() => {
-    void logger.dispatch({
-      data: {
-        id: USER_METADATA_KEYS.LAST_OPENED_PAGE,
-        value: opts().scratchpad
-          ? JSON.stringify({ type: 'scratchpad' })
-          : opts().isNewChat
-            ? JSON.stringify({ type: 'new-chat' })
-            : JSON.stringify({ id: opts().id, title: chat().title, type: 'chat' })
-      },
-      dontLog: true,
-      type: 'setUserMetadata'
-    });
+    void db.userMetadata.setLastOpenedPage(
+      opts().scratchpad
+        ? { type: 'scratchpad' }
+        : opts().isNewChat
+          ? { type: 'new-chat' }
+          : { id: opts().id, title: chat().title, type: 'chat' }
+    );
   });
 
   createRenderEffect(
@@ -220,37 +214,27 @@ export function useChatPage(
     const $chat = chat();
     const clientId = await logger.getClientId();
     if (opts().scratchpad) {
-      await logger.dispatch({
-        data: {
-          id: USER_METADATA_KEYS.SCRATCHPAD_CHAT,
-          value: JSON.stringify(
-            chatsSchema.parse(
-              produce($chat as TDBChat, (draft) => {
-                draft.messages = chatState.messages.toJSON();
-                draft.settings = chatState.settings.unwrap();
-                if (opts().isNewChat) {
-                  const hlc = HLC.generate(clientId);
-                  draft.createdAt = hlc.toString();
-                  draft.accessCount = 0;
-                  draft.lastAccessedAt = null;
-                }
-              })
-            )
-          )
-        },
-        dontLog: true,
-        type: 'setUserMetadata'
-      });
+      await db.userMetadata.setScratchpadChat(
+        chatsSchema.parse(
+          produce($chat as TDBChat, (draft) => {
+            draft.messages = chatState.messages.toJSON();
+            draft.settings = chatState.settings.unwrap();
+            if (opts().isNewChat) {
+              const hlc = HLC.generate(clientId);
+              draft.createdAt = hlc.toString();
+              draft.accessCount = 0;
+              draft.lastAccessedAt = null;
+            }
+          })
+        )
+      );
       await router.invalidate();
     } else {
       if (opts().isNewChat) {
-        await logger.dispatch({
-          data: {
-            ...$chat,
-            messages: chatState.messages.toJSON(),
-            settings: chatState.settings.unwrap()
-          },
-          type: 'createChat'
+        await db.chats.create({
+          ...$chat,
+          messages: chatState.messages.toJSON(),
+          settings: chatState.settings.unwrap()
         });
         await navigate({
           params: { _splat: slugify($chat.title) },
@@ -259,10 +243,7 @@ export function useChatPage(
           to: '/chat/$'
         });
       } else {
-        await logger.dispatch({
-          data: { id: $chat.id, messages: chatState.messages.toJSON() },
-          type: 'updateChat'
-        });
+        await db.chats.update($chat.id, { messages: chatState.messages.toJSON() });
       }
     }
     sendPrompt.mutate({
@@ -296,25 +277,12 @@ export function useChatPage(
       })
     );
     if (opts().scratchpad) {
-      await logger.dispatch({
-        data: {
-          id: USER_METADATA_KEYS.SCRATCHPAD_CHAT,
-          value: JSON.stringify({
-            ...chat(),
-            messages: $messages.toJSON()
-          })
-        },
-        dontLog: true,
-        type: 'setUserMetadata'
+      await db.userMetadata.setScratchpadChat({
+        ...chat(),
+        messages: $messages.toJSON()
       });
     } else {
-      await logger.dispatch({
-        data: {
-          id: chat().id,
-          messages: $messages.toJSON()
-        },
-        type: 'updateChat'
-      });
+      await db.chats.update(chat().id, { messages: $messages.toJSON() });
     }
     updateMessages({ path: path.slice(0, -1).concat(parentNode.children.length - 1) });
     sendPrompt.mutate({
@@ -364,22 +332,12 @@ export function useChatPage(
       updateMessages({ path: path.concat(getLatestPath(parentNode.children[path.at(-1)!])) });
     }
     if (opts().scratchpad) {
-      await logger.dispatch({
-        data: {
-          id: USER_METADATA_KEYS.SCRATCHPAD_CHAT,
-          value: JSON.stringify({
-            ...chat(),
-            messages: chatState.messages.toJSON()
-          })
-        },
-        dontLog: true,
-        type: 'setUserMetadata'
+      await db.userMetadata.setScratchpadChat({
+        ...chat(),
+        messages: chatState.messages.toJSON()
       });
     } else {
-      await logger.dispatch({
-        data: { id: chat().id, messages: chatState.messages.toJSON() },
-        type: 'updateChat'
-      });
+      await db.chats.update(chat().id, { messages: chatState.messages.toJSON() });
     }
   }
 
@@ -497,7 +455,7 @@ export function useChatPage(
     let promptBoxRef!: HTMLDivElement;
     const promptBoxSize = createElementSize(() => promptBoxRef);
     const [promptBoxOffset, { animate: animatePromptBoxOffset }] = createMotionValue(0);
-    const recentChatsQuery = useQuery(() => queries.chats.all()._ctx.recent());
+    const recentChatsQuery = useQuery(() => queries.chats.recent());
     const presetsQuery = useQuery(() => queries.chatPresets.all());
     const chatRouteState = useChatState();
 
@@ -694,7 +652,7 @@ export function useChatPage(
 }
 
 export async function useChatPageBeforeLoad() {
-  const numberOfProviders = await queryClient.ensureQueryData(queries.providers.all()._ctx.count);
+  const numberOfProviders = await queryClient.ensureQueryData(queries.providers.count());
   if (numberOfProviders > 0) return;
   if (env.VITE_SYNC_SERVER_BASE_URL && untrack(account) === null)
     throw redirect({ to: '/settings/account' });
@@ -703,20 +661,17 @@ export async function useChatPageBeforeLoad() {
 export function useChatPageLoader(opts: { preload?: boolean; scratchpad?: boolean }) {
   async function ensureValidChatProvider(chat: TDBChat) {
     const provider = await queryClient.ensureQueryData(
-      queries.providers.byId(chat.settings.providerId)
+      queries.providers.get(chat.settings.providerId)
     );
 
     if (provider === null) {
-      const providers = await fetchers.providers.getAllProviders();
+      const providers = await db.providers.all();
       Object.assign(chat.settings, {
         model: providers[0].defaultModelIds[0],
         providerId: providers[0].id
       });
       if (!opts.scratchpad) {
-        await logger.dispatch({
-          data: { id: chat.id, settings: chat.settings },
-          type: 'updateChat'
-        });
+        await db.chats.update(chat.id, { settings: chat.settings });
       }
     }
     return chat;
@@ -724,22 +679,18 @@ export function useChatPageLoader(opts: { preload?: boolean; scratchpad?: boolea
 
   async function ensureQueryData() {
     const promises = [
-      queryClient.ensureQueryData(queries.userMetadata.byId(USER_METADATA_KEYS.SELECTED_MODEL_ID)),
-      queryClient.ensureQueryData(queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME)),
-      queryClient.ensureQueryData(
-        queries.userMetadata.byId(USER_METADATA_KEYS.HIDE_REASONING_DURING_GENERATION)
-      ),
-      queryClient.ensureQueryData(queries.chats.all()._ctx.recent())
+      queryClient.ensureQueryData(queries.userMetadata.selectedModelId()),
+      queryClient.ensureQueryData(queries.userMetadata.userDisplayName()),
+      queryClient.ensureQueryData(queries.userMetadata.hideReasoningDuringGeneration()),
+      queryClient.ensureQueryData(queries.chats.recent())
     ] as Promise<unknown>[];
     let scratchpadPromise;
     if (opts.scratchpad) {
-      scratchpadPromise = queryClient.fetchQuery(
-        queries.userMetadata.byId(USER_METADATA_KEYS.SCRATCHPAD_CHAT)
-      );
+      scratchpadPromise = queryClient.fetchQuery(queries.userMetadata.scratchpadChat());
       promises.push(scratchpadPromise);
     }
     const defaultChatSettingsPresetPromise = queryClient.ensureQueryData(
-      queries.userMetadata.byId(USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET)
+      queries.userMetadata.defaultChatSettingsPresetId()
     );
     const providersPromise = queryClient.ensureQueryData(queries.providers.all());
     promises.push(defaultChatSettingsPresetPromise, providersPromise);

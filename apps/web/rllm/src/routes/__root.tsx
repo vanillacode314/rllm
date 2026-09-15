@@ -14,13 +14,11 @@ import AppDrawer from '~/components/AppDrawer';
 import TheChatSettingsDrawer from '~/components/TheChatSettingsDrawer';
 import TheCommandPrompt from '~/components/TheCommandPrompt';
 import TheSidebar from '~/components/TheSidebar';
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
-import { logger } from '~/db/client';
+import { db, logger } from '~/db/client';
 import { dbStorage, scratchpadStorage } from '~/lib/chat/generation/storages';
 import { retryFailedTitleAndTags } from '~/lib/chat/tasks';
 import { MCPManager } from '~/lib/mcp/manager';
-import { parseProxyUrls, ProxyManager } from '~/lib/proxy';
-import { fetchers } from '~/queries';
+import { ProxyManager } from '~/lib/proxy';
 import { account } from '~/signals/account';
 import { PeerManager } from '~/sockets/transports';
 import { syncColorMode } from '~/utils/color-mode';
@@ -38,8 +36,7 @@ export const Route = createRootRouteWithContext()({
     void import('~/lib/chat/settings').then(({ initChatSettings }) => initChatSettings());
 
     async function initProxyManager() {
-      const proxyUrl = await fetchers.userMetadata.byId(USER_METADATA_KEYS.CORS_PROXY_URL);
-      await ProxyManager.initialize(parseProxyUrls(proxyUrl));
+      await ProxyManager.initialize(await db.userMetadata.corsProxyUrls());
     }
     void initProxyManager().finally(() => ProxyManager.subscribe(() => MCPManager.initialize()));
     void import('~/lib/background-task-manager').then(({ BackgroundTaskManager }) =>

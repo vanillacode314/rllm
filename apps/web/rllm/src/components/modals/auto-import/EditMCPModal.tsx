@@ -14,7 +14,7 @@ import * as z from 'zod/mini';
 
 import ValidationErrors from '~/components/form/ValidationErrors';
 import MCPTestResult from '~/components/MCPTestResult';
-import { logger } from '~/db/client';
+import { db } from '~/db/client';
 import { testMCPServer, type TestMCPServerResult } from '~/lib/mcp/utils';
 import { queries } from '~/queries';
 import { createForm, parseFormErrors } from '~/utils/form';
@@ -32,7 +32,7 @@ const formSchema = z.object({
 export function EditMCPModal() {
   const mcpQuery = useQuery(() => ({
     enabled: !!mcpIdToEdit(),
-    ...queries.mcps.byId(mcpIdToEdit() || '')
+    ...queries.mcps.get(mcpIdToEdit() || '')
   }));
 
   const [{ form, formErrors }, { resetForm, resetFormErrors, setForm, setFormErrors }] = createForm(
@@ -70,10 +70,8 @@ export function EditMCPModal() {
       return;
     }
 
-    logger.dispatch({
-      data: parsedForm.data,
-      type: 'updateMcp'
-    });
+    const { id, ...data } = parsedForm.data;
+    void db.mcps.update(id, data);
     setMcpIdToEdit(false);
   }
 

@@ -4,13 +4,11 @@ import { Button } from 'ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'ui/card';
 
 import { USER_METADATA_KEYS } from '~/constants/user-metadata';
-import type { TChat, TChatPreset, TMCP, TProvider, TUserMetadata } from '~/db/app-schema';
-import { logger } from '~/db/client';
+import { db } from '~/db/client';
 import { MAIN_DATABASE_NAME } from '~/db/client.constants';
 import { VECTOR_DATABASE_NAME } from '~/lib/vector-db/client.constants';
 import { TRANSIENT_VECTOR_DATABASE_NAME } from '~/lib/vector-db/transient.constants';
 import { setAccount } from '~/signals/account';
-import { parseDbRowsInPlace } from '~/utils/db';
 import { getFile } from '~/utils/files';
 import { round } from '~/utils/math';
 import { clearData, getDatabaseSize } from '~/utils/storage';
@@ -32,31 +30,7 @@ export const Route = createFileRoute('/settings/data')({
 });
 
 async function buildExportData(): Promise<TExportData> {
-  const [chats, mcps, providers, userMetadata, chatPresets] = await Promise.all([
-    parseDbRowsInPlace(
-      logger.db.query<TChat>(logger.sql`SELECT * FROM "chats" ORDER BY "chats"."createdAt"`),
-      { booleanKeys: ['finished'], jsonKeys: ['settings', 'messages', 'tags'] }
-    ),
-    parseDbRowsInPlace(
-      logger.db.query<TMCP>(logger.sql`SELECT * FROM "mcps" ORDER BY "mcps"."createdAt"`)
-    ),
-    parseDbRowsInPlace(
-      logger.db.query<TProvider>(
-        logger.sql`SELECT * FROM "providers" ORDER BY "providers"."createdAt"`
-      ),
-      { jsonKeys: ['defaultModelIds'] }
-    ),
-    logger.db.query<TUserMetadata>(
-      logger.sql`SELECT * FROM "userMetadata" ORDER BY "userMetadata"."createdAt"`
-    ),
-    parseDbRowsInPlace(
-      logger.db.query<TChatPreset>(
-        logger.sql`SELECT * FROM "chatPresets" ORDER BY "chatPresets"."createdAt"`
-      ),
-      { jsonKeys: ['settings'] }
-    )
-  ]);
-  return { chatPresets, chats, mcps, providers, userMetadata, version: EXPORT_VERSION };
+  return { ...(await db.exportData()), version: EXPORT_VERSION };
 }
 
 function downloadExport(data: TExportData): void {
@@ -110,41 +84,7 @@ function SettingsStorageComponent() {
       toast.error('No file selected');
       return;
     }
-    const { chatPresets, chats, mcps, providers, userMetadata } = migrateExport(
-      JSON.parse(await file.text()) as TExportData
-    );
-    await Promise.all([
-      logger.dispatch(
-        ...providers.map((provider) => ({
-          data: provider,
-          type: 'createProvider' as const
-        }))
-      ),
-      logger.dispatch(
-        ...mcps.map((mcp) => ({
-          data: mcp,
-          type: 'createMcp' as const
-        }))
-      ),
-      logger.dispatch(
-        ...chats.map((chat) => ({
-          data: chat,
-          type: 'createChat' as const
-        }))
-      ),
-      logger.dispatch(
-        ...userMetadata.map((metadata) => ({
-          data: metadata,
-          type: 'setUserMetadata' as const
-        }))
-      ),
-      logger.dispatch(
-        ...chatPresets.map((preset) => ({
-          data: preset,
-          type: 'createPreset' as const
-        }))
-      )
-    ]);
+    await db.importData(migrateExport(JSON.parse(await file.text()) as TExportData));
   }
 
   async function deleteAllData() {

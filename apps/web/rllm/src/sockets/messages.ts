@@ -7,9 +7,9 @@ import * as PeerPB from 'proto/peers/v1/peer_pb';
 import * as z from 'zod/mini';
 
 import { logger } from '~/db/client';
+import { parseDbRowsInPlace } from '~/db/utils';
 import { type TValidEvent, validEventSchema } from '~/queries/mutations';
 import { account } from '~/signals/account';
-import { parseDbRowsInPlace } from '~/utils/db';
 import { decrypt, encrypt } from '~/workers/encryption';
 
 import type { TTransport } from './transports';

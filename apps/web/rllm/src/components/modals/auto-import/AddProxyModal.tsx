@@ -12,10 +12,8 @@ import { TextField, TextFieldInput, TextFieldLabel } from 'ui/text-field';
 import * as z from 'zod/mini';
 
 import ValidationErrors from '~/components/form/ValidationErrors';
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
-import { logger } from '~/db/client';
-import { parseProxyUrls, ProxyManager } from '~/lib/proxy';
-import { fetchers } from '~/queries';
+import { db } from '~/db/client';
+import { ProxyManager } from '~/lib/proxy';
 import { proxyUrlSchema } from '~/types';
 import { createForm, parseFormErrors } from '~/utils/form';
 import { createFunctionWithPendingSignal } from '~/utils/signals';
@@ -42,22 +40,14 @@ function AddProxyModal() {
       return;
     }
 
-    const stored = parseProxyUrls(
-      await fetchers.userMetadata.byId(USER_METADATA_KEYS.CORS_PROXY_URL)
-    );
+    const stored = await db.userMetadata.corsProxyUrls();
     if (stored.includes(parsedForm.data.url)) {
       setFormErrors({ url: ['this proxy is already in the list'] });
       return;
     }
 
     const urls = [...stored, parsedForm.data.url];
-    await logger.dispatch({
-      data: {
-        id: USER_METADATA_KEYS.CORS_PROXY_URL,
-        value: urls.join('\n')
-      },
-      type: 'setUserMetadata'
-    });
+    await db.userMetadata.setCorsProxyUrls(urls);
     void ProxyManager.updateProxyUrls(urls);
     setOpen(false);
   });

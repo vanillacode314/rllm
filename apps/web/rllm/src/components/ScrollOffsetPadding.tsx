@@ -8,9 +8,11 @@ export function ScrollOffsetPadding(props: {
   targetSelector: string;
   class?: string;
 }) {
+  let n = 0;
   const [offsetHeight, setOffsetHeight] = createSignal(0);
 
   function updateOffset() {
+    if (n++ > 10) return;
     const scrollContainer = props.scrollRef;
     if (!scrollContainer) return;
 
@@ -28,6 +30,7 @@ export function ScrollOffsetPadding(props: {
       0,
       scrollContainer.clientHeight - targetEl.offsetHeight - contentBelowTarget - props.margin
     );
+    console.trace('🪚 requiredPadding:', requiredPadding);
 
     setOffsetHeight(requiredPadding);
   }

@@ -12,13 +12,12 @@ import {
   MATH_SYSTEM_PROMPT,
   WEB_SEARCH_SYSTEM_PROMPT
 } from '~/constants/prompts';
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import type { TProvider } from '~/db/app-schema';
+import { db } from '~/db/client';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { MCPManager } from '~/lib/mcp/manager';
 import { vectorDb } from '~/lib/vector-db/client';
 import { transientDb } from '~/lib/vector-db/transient';
-import { fetchers } from '~/queries';
 import { finalizeChat } from '~/routes/(chat)/-utils';
 import type { TAttachment, TChat, TMessage } from '~/types/chat';
 import { getMessagesForPath } from '~/utils/chat';
@@ -318,7 +317,7 @@ export class ChatGenerationManager {
     if (chat.settings.includeDateTimeInSystemPrompt)
       prompts.push(`Current date and time: ${this.formatCurrentDateTime()}`);
     if (chat.settings.systemPrompt) prompts.push(chat.settings.systemPrompt);
-    const webSearchMcpId = await fetchers.userMetadata.byId(USER_METADATA_KEYS.WEB_SEARCH_MCP_ID);
+    const webSearchMcpId = await db.userMetadata.webSearchMcpId();
     if (webSearchMcpId && MCPManager.getClient(webSearchMcpId)?.status === 'connected') {
       prompts.push(WEB_SEARCH_SYSTEM_PROMPT);
     }

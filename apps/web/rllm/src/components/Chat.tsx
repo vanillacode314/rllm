@@ -39,7 +39,6 @@ import {
 import { TextField, TextFieldTextArea } from 'ui/text-field';
 import { cn } from 'ui/utils/tailwind';
 
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import type { TChat } from '~/db/app-schema';
 import { useAutoScroll } from '~/directives/auto-scroll';
 import { useSnapToElement } from '~/directives/use-snap-to-element';
@@ -109,7 +108,7 @@ export function Chat(props: Props): JSXElement {
   );
 
   const displayName = useQuery(() => ({
-    ...queries.userMetadata.byId(USER_METADATA_KEYS.USER_DISPLAY_NAME),
+    ...queries.userMetadata.userDisplayName(),
     initialData: 'user'
   }));
 
@@ -501,16 +500,16 @@ function LLMReasoningChunk(props: {
   inProgress: boolean;
 }) {
   const hideReasoningDuringGeneration = useQuery(() =>
-    queries.userMetadata.byId(USER_METADATA_KEYS.HIDE_REASONING_DURING_GENERATION)
+    queries.userMetadata.hideReasoningDuringGeneration()
   );
   // HACK: upstream tanstack query has a bug where it triggers suspense even
   // if the data is already there if it's loaded by ensureQueryData()
   // we wrap it in a resource to bypass this
   const [hideReasoning, { mutate }] = createResource(
-    () => hideReasoningDuringGeneration.isSuccess && hideReasoningDuringGeneration.data === 'true'
+    () => hideReasoningDuringGeneration.isSuccess && hideReasoningDuringGeneration.data
   );
   createEffect(() =>
-    mutate(hideReasoningDuringGeneration.isSuccess && hideReasoningDuringGeneration.data === 'true')
+    mutate(hideReasoningDuringGeneration.isSuccess && hideReasoningDuringGeneration.data)
   );
   let openChangedByUser = false;
   const [open, setOpen] = createWritableMemo((prev: boolean | undefined) =>

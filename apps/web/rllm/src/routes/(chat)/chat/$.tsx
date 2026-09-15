@@ -6,8 +6,7 @@ import { z } from 'zod/mini';
 
 import { useAppDrawer } from '~/components/AppDrawer';
 import { FALLBACK_CHAT_SETTINGS } from '~/constants/chat-settings';
-import { USER_METADATA_KEYS } from '~/constants/user-metadata';
-import { logger } from '~/db/client';
+import { db, logger } from '~/db/client';
 import { queries } from '~/queries';
 import { queryClient } from '~/utils/query-client';
 
@@ -39,15 +38,10 @@ export const Route = createFileRoute('/(chat)/chat/$')({
       const chatSettings = FALLBACK_CHAT_SETTINGS(providers[0].defaultModelIds[0], providers[0].id);
       if (defaultChatSettingsPreset) {
         const preset = await queryClient.ensureQueryData(
-          queries.chatPresets.byId(defaultChatSettingsPreset)
+          queries.chatPresets.get(defaultChatSettingsPreset)
         );
         if (!preset) {
-          await logger.dispatch({
-            data: {
-              id: USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET
-            },
-            type: 'deleteUserMetadata'
-          });
+          await db.userMetadata.deleteDefaultChatSettingsPresetId();
         } else {
           Object.assign(chatSettings, preset.settings);
         }
@@ -55,7 +49,7 @@ export const Route = createFileRoute('/(chat)/chat/$')({
       return { chat: null, chatSettings, id, isNewChat };
     }
 
-    let chat = await queryClient.fetchQuery(queries.chats.byId(id));
+    let chat = await queryClient.fetchQuery(queries.chats.get(id));
     if (chat === null) throw redirect({ params: { _splat: 'new' }, to: '/chat/$' });
     chat = await ensureValidChatProvider(chat);
     loadChat(chat);
@@ -94,10 +88,7 @@ function ChatPageComponent() {
       Date.now() - lastAccessedAt < INCREMENT_ACCESS_COUNT_THRESHOLD_MILLISECONDS
     )
       return;
-    await logger.dispatch({
-      data: { id },
-      type: 'incrementChatAccessCount'
-    });
+    await db.chats.incrementAccessCount(id);
   });
   onMount(() => {
     onCleanup(

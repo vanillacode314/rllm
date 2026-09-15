@@ -15,7 +15,7 @@ import {
 
 import { SETTINGS_PAGES } from '~/constants/settings';
 import { useChatState } from '~/context/chat';
-import { logger } from '~/db/client';
+import { db } from '~/db/client';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { saveChatSettings } from '~/lib/chat/settings';
 import { queries } from '~/queries';
@@ -134,10 +134,13 @@ function TheCommandPrompt() {
             {
               condition: () => chatState.currentChatId !== undefined,
               handler: async () => {
-                if (chatState.currentChat.isSuccess) {
-                  await renameChat(chatState.currentChat.data.id);
-                  await router.invalidate();
-                } else toast.error('An Error Occured');
+                const chat = chatState.currentChat.isSuccess ? chatState.currentChat.data : null;
+                if (!chat) {
+                  toast.error('An Error Occured');
+                  return;
+                }
+                await renameChat(chat.id);
+                await router.invalidate();
               },
               icon: 'icon-[heroicons--pencil-square]',
               label:
@@ -207,10 +210,7 @@ function TheCommandPrompt() {
       title: 'Rename Chat'
     });
     if (!title) return;
-    await logger.dispatch({
-      data: { id, title },
-      type: 'updateChat'
-    });
+    await db.chats.update(id, { title });
     if (chatState.currentChatId === id) {
       await navigate({
         params: { _splat: slugify(title) },
@@ -231,10 +231,7 @@ function TheCommandPrompt() {
     if (chatState.currentChatId === id) {
       await navigate({ params: { _splat: 'new' }, to: '/chat/$' });
     }
-    await logger.dispatch({
-      data: { id },
-      type: 'deleteChat'
-    });
+    await db.chats.delete(id);
   }
 
   const filteredItems = createMemo(() =>
