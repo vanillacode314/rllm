@@ -26,14 +26,25 @@ export class ProxyManager {
     }
     const proxyUrls = this.#proxyUrls;
     const results = await Promise.all(
-      proxyUrls.map((url) => this.#testProxyHealth(url, controller.signal))
+      proxyUrls.map(async (url, index) => {
+        const result = await this.#testProxyHealth(url, controller.signal);
+        if (!result || controller.signal.aborted) return result;
+
+        const activeProxyUrlIndex = proxyUrls.findIndex(
+          (candidate) => candidate === this.#activeProxyUrl
+        );
+        if (activeProxyUrlIndex >= 0 && activeProxyUrlIndex < index) return result;
+
+        console.debug('[Proxy] Health check result:', url);
+        this.#setStatusAndActive('passing', url);
+        return result;
+      })
     );
     if (controller.signal.aborted) return;
 
     const healthyIndex = results.indexOf(true);
     const activeProxyUrl = healthyIndex === -1 ? null : proxyUrls[healthyIndex];
     console.debug('[Proxy] Health check result:', activeProxyUrl ?? 'none');
-
     this.#setStatusAndActive(activeProxyUrl ? 'passing' : 'failed', activeProxyUrl);
     this.#scheduleHealthRecheck();
   }
