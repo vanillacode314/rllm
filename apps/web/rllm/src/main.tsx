@@ -80,21 +80,22 @@ if (!rootElement.innerHTML) {
   void bootstrap();
 }
 
-// SQLite boot is deliberately off the critical path; invalidation is the convergence step.
+// SQLite boot is deliberately off the critical path: restored queries revalidate on their first
+// mount, and `router.invalidate` re-resolves the loaders that ran before the database was ready.
 async function bootDatabase() {
   try {
     await getLogger();
-    await QueryCacheManager.start();
     await router.invalidate();
   } catch (error) {
     console.error(error);
   }
 }
 
-// The restored cache must be in place before the first render: route loaders resolve
-// against its `staleTime: Infinity` entries.
+// The restored cache is served from the first render: route loaders resolve against its
+// `staleTime: Infinity` entries without waiting for SQLite to boot.
 async function bootstrap() {
   await QueryCacheManager.restore();
+  QueryCacheManager.start();
   render(() => <App />, rootElement);
   scheduleDatabaseBoot();
 }

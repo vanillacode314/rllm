@@ -6,6 +6,15 @@ import { QueryCacheManager } from '~/lib/query-cache';
 
 const FIVE_MINUTES_IN_MILLISECONDS = 5 * 60 * 1000;
 
+/**
+ * Caps a refetch at the first page: refetching every cached page costs one query per page, and the
+ * pages after the first are reloaded as the list grows. v5 declares `pages` on the fetch options,
+ * while `Query.fetch` reads it off the query's own options
+ * (`infiniteQueryBehavior(this.options.pages)`), so it has to be spread into the query options.
+ * A spread rather than a literal property: `infiniteQueryOptions` only type checks what it declares.
+ */
+const FIRST_PAGE_REFETCH: { pages: number } = { pages: 1 };
+
 const userMetadata = {
   base: () => ['db', 'userMetadata'],
   corsProxyUrls: () =>
@@ -157,6 +166,7 @@ const chats = {
     tags?: string[];
   } = {}) =>
     infiniteQueryOptions({
+      ...FIRST_PAGE_REFETCH,
       queryFn: ({ pageParam }) => db.chats.pagedMinimal(pageSize, pageParam, query, tags),
       // oxlint-disable-next-line perfectionist/sort-objects
       getNextPageParam: (lastPage, _allPages, lastPageParam) =>

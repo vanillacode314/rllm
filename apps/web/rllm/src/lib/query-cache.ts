@@ -1,5 +1,5 @@
 import { Debouncer } from '@tanstack/solid-pacer';
-import type { DehydratedState } from '@tanstack/solid-query';
+import type { DehydratedState, Query } from '@tanstack/solid-query';
 import {
   defaultShouldDehydrateQuery,
   dehydrate,
@@ -10,16 +10,20 @@ import {
 import localforage from 'localforage';
 import * as z from 'zod/mini';
 
-import { TimeoutError, withTimeout } from '~/utils/promises';
 import { queryClient } from '~/utils/query-client';
 
 const QUERY_CACHE_KEY = 'rllm:query-cache';
-const QUERY_CACHE_WRITTEN_AT_KEY = 'rllm:query-cache:writtenAt';
+const SNAPSHOT_LOCK_NAME = 'rllm:query-cache';
+const LEGACY_QUERY_CACHE_WRITTEN_AT_KEY = 'rllm:query-cache:writtenAt';
 const PERSISTENCE_VERSION = 1;
-const RESTORE_TIMEOUT_MILLISECONDS = 250;
 const WRITE_DEBOUNCE_MILLISECONDS = 2000;
 const MAX_SNAPSHOT_AGE_MILLISECONDS = 30 * 24 * 60 * 60 * 1000;
 const DEFAULT_MAX_BYTES = 512 * 1024;
+const MAX_SNAPSHOT_BYTES = 2 * 1024 * 1024;
+
+const textEncoder = new TextEncoder();
+
+const byteLength = (value: string): number => textEncoder.encode(value).byteLength;
 
 // Loose objects throughout: `hydrate` reads fields beyond the ones checked here (queryHash, status,
 // meta, ...), so validation must not strip them.
@@ -47,12 +51,16 @@ export type TQueryCacheRegistration = {
   queryKey: ReadonlyArray<unknown>;
 };
 
+type TDehydratedQuery = DehydratedState['queries'][number];
+
 type TPersistedQueryCache = {
   appVersion: string;
   persistenceVersion: number;
   state: DehydratedState;
   writtenAt: number;
 };
+
+type TSelectedQueries = Map<string, { bytes: number; dataUpdatedAt: number }>;
 
 const parsePersistedQueryCache = (value: unknown): null | TPersistedQueryCache => {
   const result = persistedQueryCacheSchema.safeParse(value);
@@ -61,8 +69,9 @@ const parsePersistedQueryCache = (value: unknown): null | TPersistedQueryCache =
 };
 
 export class QueryCacheManager {
+  static #dirty = false;
   static #registrations = new Map<string, TQueryCacheRegistration>();
-
+  static #revision = 0;
   static #unsubscribe: (() => void) | null = null;
 
   static #write = new Debouncer(() => this.#persist(), {
@@ -70,41 +79,43 @@ export class QueryCacheManager {
     trailing: true,
     wait: WRITE_DEBOUNCE_MILLISECONDS
   });
-  static async clear(): Promise<void> {
-    try {
-      await Promise.all([
-        localforage.removeItem(QUERY_CACHE_KEY),
-        localforage.removeItem(QUERY_CACHE_WRITTEN_AT_KEY)
-      ]);
-    } catch (error) {
-      console.debug('[Query Cache] Failed to clear persisted query cache', error);
-    }
+  static clear(): Promise<void> {
+    return this.#withSnapshotLock(async () => {
+      this.#dirty = false;
+
+      try {
+        await Promise.all([
+          localforage.removeItem(QUERY_CACHE_KEY),
+          localforage.removeItem(LEGACY_QUERY_CACHE_WRITTEN_AT_KEY)
+        ]);
+      } catch (error) {
+        console.debug('[Query Cache] Failed to clear persisted query cache', error);
+      }
+    });
   }
 
   static register(...registrations: TQueryCacheRegistration[]): void {
     for (const registration of registrations) {
       this.#registrations.set(hashKey(registration.queryKey), registration);
+      // Restored entries revalidate when they are first mounted; letting the default gcTime collect
+      // them before that would drop them from the next snapshot while still unobserved.
+      queryClient.setQueryDefaults(registration.queryKey, { gcTime: Infinity });
     }
   }
 
   static async restore(): Promise<void> {
     try {
-      await withTimeout((signal) => this.#readAndHydrate(signal), RESTORE_TIMEOUT_MILLISECONDS);
+      await this.#readAndHydrate();
     } catch (error) {
-      if (!(error instanceof TimeoutError)) {
-        console.debug('[Query Cache] Failed to restore query cache', error);
-      }
+      console.debug('[Query Cache] Failed to restore query cache', error);
+    } finally {
+      this.#subscribe();
     }
   }
 
-  static async start(): Promise<void> {
-    if (this.#unsubscribe) return;
-
-    this.#unsubscribe = queryClient.getQueryCache().subscribe(() => this.#write.maybeExecute());
-    await this.#invalidate();
+  static start(): void {
+    this.#subscribe();
     document.addEventListener('visibilitychange', this.#handleVisibilityChange);
-
-    this.#writeNow();
   }
 
   static stop(): void {
@@ -115,10 +126,6 @@ export class QueryCacheManager {
     this.#write.cancel();
   }
 
-  /**
-   * Stops persisting queries matching `queryKey`. Remaining registrations drop those keys on the
-   * next write; removing the last one clears the snapshot, since nothing could restore it anyway.
-   */
   static unregister(queryKey: ReadonlyArray<unknown>): void {
     if (!this.#registrations.delete(hashKey(queryKey))) return;
 
@@ -127,62 +134,110 @@ export class QueryCacheManager {
       return;
     }
 
-    if (this.#unsubscribe) this.#write.maybeExecute();
+    if (this.#unsubscribe) this.#markDirty();
   }
 
-  static async #areWeStale(state: DehydratedState) {
-    const freshness = state.queries.reduce(
-      (latest, query) => Math.max(latest, query.state.dataUpdatedAt),
-      Number.NEGATIVE_INFINITY
-    );
-    if (!Number.isFinite(freshness)) return null;
-    const writtenAt = await this.#readWrittenAt();
-    return writtenAt !== null && writtenAt >= freshness;
+  /**
+   * Stored rows whose live query is registered but cannot be dehydrated right now, so a transient
+   * failure does not evict data that a later boot could still serve. Read from storage rather than
+   * from this tab's last write, so rows another tab stored are carried over too.
+   */
+  static async #carriedOverQueries(selected: TSelectedQueries): Promise<TDehydratedQuery[]> {
+    const unavailable = this.#unavailableRegisteredQueries(selected);
+    if (unavailable.size === 0) return [];
+
+    const value = await localforage.getItem<unknown>(QUERY_CACHE_KEY);
+    const stored = parsePersistedQueryCache(value)?.state.queries;
+    if (stored === undefined) return [];
+
+    return stored.filter(({ queryHash }) => unavailable.has(queryHash));
+  }
+
+  static #enforceTotalBudget(selected: TSelectedQueries): TSelectedQueries {
+    let total = 0;
+    for (const { bytes } of selected.values()) total += bytes;
+    if (total <= MAX_SNAPSHOT_BYTES) return selected;
+
+    const oldestFirst = [...selected].sort(([, a], [, b]) => a.dataUpdatedAt - b.dataUpdatedAt);
+
+    for (const [queryHash, { bytes }] of oldestFirst) {
+      if (total <= MAX_SNAPSHOT_BYTES) break;
+
+      selected.delete(queryHash);
+      total -= bytes;
+    }
+
+    return selected;
   }
 
   static #handleVisibilityChange = (): void => {
     if (document.visibilityState === 'hidden') this.#writeNow();
   };
 
-  static #invalidate() {
-    return Promise.all(
-      this.#registrations
-        .values()
-        .map(({ queryKey }) => queryClient.invalidateQueries({ queryKey, refetchType: 'all' }))
-    );
-  }
-
-  static async #persist(): Promise<void> {
-    try {
-      const selected = this.#selectQueries();
-      // Never clobber an existing snapshot with an empty one.
-      if (selected.size === 0) return;
-
-      const state = dehydrate(queryClient, {
-        shouldDehydrateQuery: (query) => selected.has(query.queryHash)
-      });
-
-      const staleness = await this.#areWeStale(state);
-      if (staleness === null || staleness) return;
-
-      const envelope: TPersistedQueryCache = {
-        appVersion: __VERSION__,
-        persistenceVersion: PERSISTENCE_VERSION,
-        state,
-        writtenAt: Date.now()
-      };
-
-      await localforage.setItem(QUERY_CACHE_KEY, envelope);
-      await localforage.setItem(QUERY_CACHE_WRITTEN_AT_KEY, envelope.writtenAt);
-    } catch (error) {
-      console.debug('[Query Cache] Failed to persist query cache', error);
+  static #isRegistered(query: Query): boolean {
+    for (const registration of this.#registrations.values()) {
+      if (this.#matches(query, registration)) return true;
     }
+
+    return false;
   }
 
-  static async #readAndHydrate(signal: AbortSignal): Promise<void> {
-    const value = await localforage.getItem<unknown>(QUERY_CACHE_KEY);
-    if (signal.aborted) return;
+  static #markDirty(): void {
+    this.#revision++;
+    this.#dirty = true;
+    this.#write.maybeExecute();
+  }
 
+  static #matches(query: Query, registration: TQueryCacheRegistration): boolean {
+    if (!matchQuery({ queryKey: registration.queryKey }, query)) return false;
+
+    return !registration.exclude?.some((prefix) => matchQuery({ queryKey: prefix }, query));
+  }
+
+  static #persist(): Promise<void> {
+    return this.#withSnapshotLock(async () => {
+      if (!this.#dirty) return;
+
+      const revision = this.#revision;
+
+      try {
+        const selected = this.#selectQueries();
+        // Never clobber an existing snapshot with an empty one.
+        if (selected.size === 0) return;
+
+        const state = dehydrate(queryClient, {
+          shouldDehydrateQuery: (query) => selected.has(query.queryHash)
+        });
+
+        // A query that fails a refetch stops being dehydratable while still holding the best data we
+        // have; carry the stored row over instead of dropping it from the snapshot.
+        const carriedOver = await this.#carriedOverQueries(selected);
+        if (carriedOver.length > 0) state.queries.push(...carriedOver);
+
+        const envelope: TPersistedQueryCache = {
+          appVersion: __VERSION__,
+          persistenceVersion: PERSISTENCE_VERSION,
+          state,
+          writtenAt: Date.now()
+        };
+
+        await localforage.setItem(QUERY_CACHE_KEY, envelope);
+      } catch (error) {
+        console.debug('[Query Cache] Failed to persist query cache', error);
+        return;
+      }
+
+      if (this.#revision === revision) {
+        this.#dirty = false;
+        return;
+      }
+
+      this.#write.maybeExecute();
+    });
+  }
+
+  static async #readAndHydrate(): Promise<void> {
+    const value = await localforage.getItem<unknown>(QUERY_CACHE_KEY);
     const persisted = parsePersistedQueryCache(value);
     const isUsable =
       persisted !== null && Date.now() - persisted.writtenAt <= MAX_SNAPSHOT_AGE_MILLISECONDS;
@@ -192,29 +247,22 @@ export class QueryCacheManager {
       return;
     }
 
-    if (signal.aborted) return;
-
     hydrate(queryClient, persisted.state);
+
+    for (const { queryHash } of persisted.state.queries) {
+      queryClient.getQueryCache().get(queryHash)?.invalidate();
+    }
   }
 
-  static async #readWrittenAt(): Promise<null | number> {
-    const writtenAt = await localforage.getItem<unknown>(QUERY_CACHE_WRITTEN_AT_KEY);
-
-    return typeof writtenAt === 'number' && Number.isFinite(writtenAt) ? writtenAt : null;
-  }
-
-  static #selectQueries(): Set<string> {
-    const selected = new Set<string>();
+  static #selectQueries(): TSelectedQueries {
+    const selected: TSelectedQueries = new Map();
 
     for (const registration of this.#registrations.values()) {
       let matches = queryClient
         .getQueryCache()
         .findAll({ queryKey: registration.queryKey })
         .filter((query) => defaultShouldDehydrateQuery(query))
-        .filter(
-          (query) =>
-            !registration.exclude?.some((prefix) => matchQuery({ queryKey: prefix }, query))
-        );
+        .filter((query) => this.#matches(query, registration));
 
       if (registration.maxEntries !== undefined) {
         matches = matches
@@ -225,13 +273,36 @@ export class QueryCacheManager {
       const maxBytes = registration.maxBytes ?? DEFAULT_MAX_BYTES;
       for (const query of matches) {
         const serialized = JSON.stringify(query.state.data);
-        if (serialized === undefined || serialized.length > maxBytes) continue;
+        if (serialized === undefined) continue;
 
-        selected.add(query.queryHash);
+        const bytes = byteLength(serialized);
+        if (bytes > maxBytes) continue;
+
+        selected.set(query.queryHash, { bytes, dataUpdatedAt: query.state.dataUpdatedAt });
       }
     }
 
-    return selected;
+    return this.#enforceTotalBudget(selected);
+  }
+
+  static #subscribe(): void {
+    this.#unsubscribe ??= queryClient.getQueryCache().subscribe(() => this.#markDirty());
+  }
+
+  /** Hashes of registered queries that cannot be dehydrated right now, so they never get selected. */
+  static #unavailableRegisteredQueries(selected: TSelectedQueries): Set<string> {
+    const unavailable = new Set<string>();
+
+    for (const query of queryClient.getQueryCache().getAll()) {
+      if (selected.has(query.queryHash) || defaultShouldDehydrateQuery(query)) continue;
+      if (this.#isRegistered(query)) unavailable.add(query.queryHash);
+    }
+
+    return unavailable;
+  }
+
+  static #withSnapshotLock<T>(task: () => Promise<T>): Promise<T> {
+    return navigator.locks.request(SNAPSHOT_LOCK_NAME, () => task());
   }
 
   static #writeNow(): void {
