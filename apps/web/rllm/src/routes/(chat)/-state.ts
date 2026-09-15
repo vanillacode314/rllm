@@ -39,33 +39,29 @@ const makeDefaultChatState: () => TChatState = () => ({
   settings: Option.None()
 });
 
-export const [chatState, setChatState] = makePersisted(
-  // oxlint-disable-next-line solid/reactivity
-  createStore(makeDefaultChatState()),
-  {
-    deserialize: (data) => {
-      const result = safeParseJson(data, {
-        validate: z.object({
-          attachments: z.array(attachmentsSchema),
-          feedbackEnabled: z.boolean(),
-          prompt: z.string()
-        }).parse
-      });
-      if (result.isErr()) {
-        return makeDefaultChatState();
-      }
-      return Object.assign(makeDefaultChatState(), result.unwrap());
-    },
-    name: CHAT_STATE_LOCALFORAGE_KEY,
-    serialize: (data) =>
-      JSON.stringify({
-        attachments: data.attachments,
-        feedbackEnabled: data.feedbackEnabled,
-        prompt: data.prompt
-      }),
-    storage: localforage
-  }
-);
+export const [chatState, setChatState] = makePersisted(createStore(makeDefaultChatState()), {
+  deserialize: (data) => {
+    const result = safeParseJson(data, {
+      validate: z.object({
+        attachments: z.array(attachmentsSchema),
+        feedbackEnabled: z.boolean(),
+        prompt: z.string()
+      }).parse
+    });
+    if (result.isErr()) {
+      return makeDefaultChatState();
+    }
+    return Object.assign(makeDefaultChatState(), result.unwrap());
+  },
+  name: CHAT_STATE_LOCALFORAGE_KEY,
+  serialize: (data) =>
+    JSON.stringify({
+      attachments: data.attachments,
+      feedbackEnabled: data.feedbackEnabled,
+      prompt: data.prompt
+    }),
+  storage: localforage
+});
 
 export function addAttachment(attachment: TAttachment) {
   setChatState((state) =>

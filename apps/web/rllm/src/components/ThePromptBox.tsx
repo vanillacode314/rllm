@@ -167,6 +167,7 @@ function Toolbar(props: {
   scratchpad?: boolean;
 }) {
   const mcpClients = () => MCPManager.getAllClients();
+
   const modelId = () =>
     chatState.settings.mapOr('Invalid Settings', (settings) => settings.modelId);
 
