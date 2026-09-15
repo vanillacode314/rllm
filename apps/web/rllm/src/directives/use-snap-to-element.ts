@@ -1,5 +1,7 @@
 import { createEffect, createSignal, on, type Accessor } from 'solid-js';
 
+import { withTimeout } from '~/utils/promises';
+
 type TSnapOptions = { behavior?: ScrollBehavior; margin?: number };
 export function useSnapToElement(
   selector: Accessor<string | null | undefined>,
@@ -7,7 +9,7 @@ export function useSnapToElement(
 ) {
   const [ref, setRef] = createSignal<HTMLElement | null>(null);
 
-  function snap(
+  async function snap(
     container: HTMLElement | undefined | null,
     selector: string | null | undefined,
     options: undefined | TSnapOptions
@@ -17,6 +19,7 @@ export function useSnapToElement(
     const target = container.querySelector<HTMLElement>(selector);
     if (!target) return;
 
+    const { promise, resolve } = Promise.withResolvers<void>();
     requestAnimationFrame(() => {
       const containerRect = container.getBoundingClientRect();
       const targetRect = target.getBoundingClientRect();
@@ -24,11 +27,17 @@ export function useSnapToElement(
       const targetTop =
         targetRect.top - containerRect.top + container.scrollTop - (options?.margin ?? 0);
 
-      container.scrollTo({
+      const result: any = container.scrollTo({
         top: targetTop,
         behavior: options?.behavior ?? 'instant'
       });
+      if (result instanceof Promise) {
+        result.then(() => resolve()).catch(() => resolve());
+      } else {
+        resolve();
+      }
     });
+    return withTimeout(() => promise, 5000).catch(() => {});
   }
 
   createEffect(on([ref, selector], ([ref, selector]) => snap(ref, selector, options)));

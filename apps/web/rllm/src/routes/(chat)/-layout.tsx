@@ -204,8 +204,8 @@ export function useChatPage(
             type: 'user'
           } as never)
         );
-        updateMessages(({ path }) => ({ path: [...path, 0] })).then(() =>
-          snap.snap(`#user-chat-${chatState.path.length - 1}`, { behavior: 'smooth' })
+        void updateMessages(({ path }) => ({ path: [...path, 0] })).then(
+          () => void snap.snap(`#user-chat-${chatState.path.length - 1}`, { behavior: 'smooth' })
         );
       } else {
         message.unwrap().chunks.push(...newChunks);
@@ -285,21 +285,27 @@ export function useChatPage(
     } else {
       await db.chats.update(chat().id, { messages: $messages.toJSON() });
     }
-    updateMessages({ path: path.slice(0, -1).concat(parentNode.children.length - 1) });
+    await updateMessages({ path: path.slice(0, -1).concat(parentNode.children.length - 1) });
+    requestAnimationFrame(
+      () => void snap.snap(`#user-chat-${path.length - 1}`, { behavior: 'smooth' })
+    );
     sendPrompt.mutate({
       id: chat().id,
       path: chatState.path
     });
   }
 
-  function onRegenerate(path: number[]) {
+  async function onRegenerate(path: number[]) {
     const parentPath = path.slice(0, -1);
     const parentNodeIsUserNode = chatState.messages
       .traverse(parentPath)
       .andThen((node) => node.value)
       .isSomeAnd((message) => message.type === 'user');
     if (!parentNodeIsUserNode) throw new Error('can only regenerate assistant messages');
-    updateMessages({ path: parentPath });
+    await updateMessages({ path: parentPath });
+    requestAnimationFrame(() =>
+      snap.snap(`#user-chat-${parentPath.length - 1}`, { behavior: 'smooth' })
+    );
     sendPrompt.mutate({ id: chat().id, path: parentPath });
   }
 
