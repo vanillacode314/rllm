@@ -1,4 +1,5 @@
 import { sql } from 'event-logger';
+import { Option } from 'ts-result-option';
 import { safeParseJson } from 'ts-result-option/utils';
 import * as z from 'zod/mini';
 
@@ -7,6 +8,7 @@ import { lastOpenedPageSchema, STARTUP_PAGE_VALUES, type TStartupPage } from '~/
 import { USER_METADATA_KEYS } from '~/constants/user-metadata';
 import { parseProxyUrls } from '~/lib/proxy';
 import type { TValidEvent } from '~/queries/mutations';
+import { once } from '~/utils/functions';
 
 import {
   chatsSchema,
@@ -250,6 +252,13 @@ export function createDbApi(logger: LoggerInstance) {
           parseDbRowsInPlace(rows, { jsonKeys: ['defaultModelIds'] });
           return rows;
         }),
+    first: () =>
+      logger.db
+        .query<TProvider>(logger.sql`SELECT * FROM providers ORDER BY "createdAt" ASC LIMIT 1`)
+        .then((rows) => {
+          parseDbRowsInPlace(rows, { jsonKeys: ['defaultModelIds'] });
+          return rows[0] ?? null;
+        }),
     count: () =>
       logger.db
         .query<{ value: number }>(logger.sql`SELECT count(*) as value FROM providers`)
@@ -295,16 +304,14 @@ export function createDbApi(logger: LoggerInstance) {
     hideReasoningDuringGeneration: async (): Promise<boolean> =>
       (await getMetadataValue(USER_METADATA_KEYS.HIDE_REASONING_DURING_GENERATION)) !== 'false',
     lastOpenedPage: async (): Promise<null | TLastOpenedPage> => {
-      const value = await getMetadataValue(USER_METADATA_KEYS.LAST_OPENED_PAGE);
-      if (value === null) return null;
-      const parsed = safeParseJson(value, { validate: lastOpenedPageSchema.parse });
-      return parsed.isOk() ? parsed.unwrap() : null;
+      return Option.from(await getMetadataValue(USER_METADATA_KEYS.LAST_OPENED_PAGE))
+        .andThen((value) => safeParseJson(value, { validate: lastOpenedPageSchema.parse }).ok())
+        .toNull();
     },
     scratchpadChat: async (): Promise<null | TChat> => {
-      const value = await getMetadataValue(USER_METADATA_KEYS.SCRATCHPAD_CHAT);
-      if (value === null) return null;
-      const parsed = safeParseJson(value, { validate: chatsSchema.parse });
-      return parsed.isOk() ? parsed.unwrap() : null;
+      return Option.from(await getMetadataValue(USER_METADATA_KEYS.SCRATCHPAD_CHAT))
+        .andThen((value) => safeParseJson(value, { validate: chatsSchema.parse }).ok())
+        .toNull();
     },
     selectedModelId: () => getMetadataValue(USER_METADATA_KEYS.SELECTED_MODEL_ID),
     setCorsProxyUrls: (urls: string[]) =>
@@ -440,6 +447,10 @@ export function createDbApi(logger: LoggerInstance) {
           ...opts
         }))
       ),
+    // NOTE: we assume clientId never changes once set for a device so we don't need to rerun more than once
+    clientId: once(() => {
+      return logger.getClientId();
+    }),
     mcps,
     providers,
     userMetadata

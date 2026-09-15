@@ -30,6 +30,7 @@ import { SidebarTrigger, useSidebar } from 'ui/sidebar';
 import { Chat } from '~/components/Chat';
 import { PresetSelector } from '~/components/PresetSelector';
 import ThePromptBox from '~/components/ThePromptBox';
+import { FALLBACK_CHAT_SETTINGS } from '~/constants/chat-settings';
 import { useChatState } from '~/context/chat';
 import { useNotifications } from '~/context/notifications';
 import { chatsSchema, type TChat as TDBChat } from '~/db/app-schema';
@@ -212,7 +213,7 @@ export function useChatPage(
     }
 
     const $chat = chat();
-    const clientId = await logger.getClientId();
+    const clientId = await db.clientId();
     if (opts().scratchpad) {
       await db.userMetadata.setScratchpadChat(
         chatsSchema.parse(
@@ -689,21 +690,11 @@ export function useChatPageLoader(opts: { preload?: boolean; scratchpad?: boolea
       scratchpadPromise = queryClient.fetchQuery(queries.userMetadata.scratchpadChat());
       promises.push(scratchpadPromise);
     }
-    const defaultChatSettingsPresetPromise = queryClient.ensureQueryData(
-      queries.userMetadata.defaultChatSettingsPresetId()
-    );
-    const providersPromise = queryClient.ensureQueryData(queries.providers.all());
-    promises.push(defaultChatSettingsPresetPromise, providersPromise);
     await Promise.all(promises);
-    return {
-      defaultChatSettingsPreset: await defaultChatSettingsPresetPromise,
-      providers: await providersPromise,
-      scratchpad: (await scratchpadPromise) ?? null
-    };
+    return { scratchpad: scratchpadPromise ? await scratchpadPromise : null };
   }
 
   function loadMessages(messages: JsonTree<TMessage>) {
-    if (opts.preload) return;
     const tree = Tree.fromJSON(messages);
     purgeOnlyErrorResponses(tree);
     flushOldToolCalls(tree);
@@ -747,6 +738,7 @@ export function useChatPageLoader(opts: { preload?: boolean; scratchpad?: boolea
   }
 
   function loadChat(chat: TDBChat) {
+    if (opts.preload) return;
     startTransition(() => {
       updateChatSettings(chat.settings);
       loadMessages(chat.messages);
@@ -754,9 +746,47 @@ export function useChatPageLoader(opts: { preload?: boolean; scratchpad?: boolea
     });
   }
 
+  async function makeNewChat() {
+    const [fallbackProvider, defaultChatSettingsPresetId] = await Promise.all([
+      queryClient.ensureQueryData(queries.providers.first()),
+      await queryClient.ensureQueryData(queries.userMetadata.defaultChatSettingsPresetId())
+    ]);
+    const chatSettings = FALLBACK_CHAT_SETTINGS(
+      fallbackProvider.defaultModelIds[0],
+      fallbackProvider.id
+    );
+    if (defaultChatSettingsPresetId) {
+      const preset = await queryClient.ensureQueryData(
+        queries.chatPresets.get(defaultChatSettingsPresetId)
+      );
+      if (!preset) {
+        void db.userMetadata
+          .deleteDefaultChatSettingsPresetId()
+          .catch((error) => console.error(error));
+      } else {
+        Object.assign(chatSettings, preset.settings);
+      }
+    }
+    const clientId = await db.clientId();
+    const now = HLC.generate(clientId);
+    const chat: TDBChat = {
+      accessCount: 0,
+      createdAt: now.toString(),
+      finished: true,
+      id: nanoid(),
+      lastAccessedAt: null,
+      messages: new Tree<TMessage>().toJSON(),
+      settings: chatSettings,
+      tags: [],
+      title: 'Untitled New Chat'
+    };
+    return chat;
+  }
+
   return {
     ensureQueryData,
     ensureValidChatProvider,
-    loadChat
+    loadChat,
+    makeNewChat
   };
 }

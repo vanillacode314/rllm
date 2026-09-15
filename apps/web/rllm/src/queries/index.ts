@@ -102,6 +102,12 @@ const providers = {
       queryKey: [...providers.base(), 'all'],
       staleTime: Infinity
     }),
+  first: () =>
+    queryOptions({
+      queryFn: () => db.providers.first(),
+      queryKey: [...providers.base(), 'all', 'first'],
+      staleTime: Infinity
+    }),
   base: () => ['db', 'providers'],
   count: () =>
     queryOptions({

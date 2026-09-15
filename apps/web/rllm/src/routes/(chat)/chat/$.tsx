@@ -5,7 +5,6 @@ import { toast } from 'solid-sonner';
 import { z } from 'zod/mini';
 
 import { useAppDrawer } from '~/components/AppDrawer';
-import { FALLBACK_CHAT_SETTINGS } from '~/constants/chat-settings';
 import { db, logger } from '~/db/client';
 import { queries } from '~/queries';
 import { queryClient } from '~/utils/query-client';
@@ -13,7 +12,7 @@ import { queryClient } from '~/utils/query-client';
 import ChatAppDrawer from '../-ChatAppDrawer';
 import { INCREMENT_ACCESS_COUNT_THRESHOLD_MILLISECONDS } from '../-constants';
 import { useChatPage, useChatPageBeforeLoad, useChatPageLoader } from '../-layout';
-import { resetMessages, updateMessages } from '../-state';
+import { updateMessages } from '../-state';
 import { getLatestPath } from '../-utils';
 
 console.error('FIX OPTIMIZE STORAGE');
@@ -24,31 +23,20 @@ export const Route = createFileRoute('/(chat)/chat/$')({
   // oxlint-disable-next-line perfectionist/sort-objects
   loaderDeps: ({ search: { id } }) => ({ id: id ?? nanoid(), isNewChat: id === undefined }),
   loader: async ({ deps, params, preload }) => {
-    const { ensureQueryData, ensureValidChatProvider, loadChat } = useChatPageLoader({
+    const { makeNewChat, ensureQueryData, ensureValidChatProvider, loadChat } = useChatPageLoader({
       preload
     });
     const { id, isNewChat } = deps;
     if (isNewChat && params._splat !== 'new')
       throw redirect({ params: { _splat: 'new' }, to: '/chat/$' });
 
-    const { defaultChatSettingsPreset, providers } = await ensureQueryData();
+    await ensureQueryData();
 
     if (isNewChat) {
-      if (!preload) resetMessages();
-      const chatSettings = FALLBACK_CHAT_SETTINGS(providers[0].defaultModelIds[0], providers[0].id);
-      if (defaultChatSettingsPreset) {
-        const preset = await queryClient.ensureQueryData(
-          queries.chatPresets.get(defaultChatSettingsPreset)
-        );
-        if (!preset) {
-          await db.userMetadata.deleteDefaultChatSettingsPresetId();
-        } else {
-          Object.assign(chatSettings, preset.settings);
-        }
-      }
-      return { chat: null, chatSettings, id, isNewChat };
+      const chat = await makeNewChat();
+      loadChat(chat);
+      return { chat, isNewChat };
     }
-
     let chat = await queryClient.fetchQuery(queries.chats.get(id));
     if (chat === null) throw redirect({ params: { _splat: 'new' }, to: '/chat/$' });
     chat = await ensureValidChatProvider(chat);
@@ -95,7 +83,7 @@ function ChatPageComponent() {
       logger.on(
         'deleteChat',
         async (event) => {
-          if (event.id !== loaderData().id) return;
+          if (event.id !== loaderData().chat.id) return;
           navigate({ params: { _splat: 'new' }, to: '/chat/$' });
         },
         { self: true }
@@ -103,7 +91,7 @@ function ChatPageComponent() {
     );
     onCleanup(
       logger.on('updateChat', async (event) => {
-        if (event.id !== loaderData().id) return;
+        if (event.id !== loaderData().chat.id) return;
         toast.info('Chat updated', {
           action: {
             label: 'Reload',
@@ -113,7 +101,7 @@ function ChatPageComponent() {
             }
           },
           duration: Number.POSITIVE_INFINITY,
-          id: `updateChat-${loaderData().id}`
+          id: `updateChat-${loaderData().chat.id}`
         });
       })
     );

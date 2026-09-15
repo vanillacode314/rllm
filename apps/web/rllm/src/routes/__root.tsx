@@ -60,7 +60,7 @@ export const Route = createRootRouteWithContext()({
     async function initTransports() {
       const accountId = Option.from(account()).map((account) => account.id);
       if (accountId.isSome()) {
-        const clientId = Option.from(await logger.getMetadata('clientId'))
+        const clientId = Option.from(await db.clientId())
           .okOrElse(() => new Error('Missing clientId in local database metadata'))
           .unwrap();
         const { initWebsocketTransport } = await import('~/sockets/transports/websocket');

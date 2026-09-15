@@ -1,18 +1,11 @@
 import { createFileRoute, useRouter } from '@tanstack/solid-router';
-import { HLC } from 'hlc';
-import { nanoid } from 'nanoid';
-import { Option } from 'ts-result-option';
 import { z } from 'zod/mini';
 
 import { useAppDrawer } from '~/components/AppDrawer';
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
-import { FALLBACK_CHAT_SETTINGS } from '~/constants/chat-settings';
-import { db, logger } from '~/db/client';
+import { db } from '~/db/client';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { createTask } from '~/lib/background-task-manager/tasks';
-import { queries } from '~/queries';
-import type { TMessage } from '~/types/chat';
-import { queryClient } from '~/utils/query-client';
 import { slugify } from '~/utils/string';
 import { Tree } from '~/utils/tree';
 
@@ -25,54 +18,24 @@ console.error('FIX OPTIMIZE STORAGE');
 export const Route = createFileRoute('/(chat)/scratchpad')({
   beforeLoad: useChatPageBeforeLoad,
   component: ScratchpadPageComponent,
-  // oxlint-disable-next-line perfectionist/sort-objects
   loader: async ({ preload }) => {
-    const { ensureQueryData, ensureValidChatProvider, loadChat } = useChatPageLoader({
+    const { makeNewChat, ensureQueryData, ensureValidChatProvider, loadChat } = useChatPageLoader({
       preload,
       scratchpad: true
     });
-    const { defaultChatSettingsPreset, providers, scratchpad } = await ensureQueryData();
-    const jsonChat = Option.from(scratchpad);
-    const isNewChat = jsonChat.isNone();
-    let chat = await jsonChat
-      .okOrElse(() => new Error('No chat found'))
-      .toAsync()
-      .unwrapOrElse(async () => {
-        const chatSettings = FALLBACK_CHAT_SETTINGS(
-          providers[0].defaultModelIds[0],
-          providers[0].id
-        );
-        if (defaultChatSettingsPreset) {
-          const preset = await queryClient.ensureQueryData(
-            queries.chatPresets.get(defaultChatSettingsPreset)
-          );
-          if (!preset) {
-            await db.userMetadata.deleteDefaultChatSettingsPresetId();
-          } else {
-            Object.assign(chatSettings, preset.settings);
-          }
-        }
-        const clientId = await logger.getClientId();
-        const now = HLC.generate(clientId);
-        return {
-          accessCount: 0,
-          createdAt: now.toString(),
-          finished: true,
-          id: nanoid(),
-          lastAccessedAt: null,
-          messages: new Tree<TMessage>().toJSON(),
-          settings: chatSettings,
-          tags: [],
-          title: 'Untitled New Chat',
-          updatedAt: {}
-        };
-      });
+    let { scratchpad } = await ensureQueryData();
+    const isNewChat = scratchpad === null;
+    if (isNewChat) {
+      const chat = await makeNewChat();
+      loadChat(chat);
+      return { chat, isNewChat };
+    }
 
-    chat = await ensureValidChatProvider(chat);
-    loadChat(chat);
+    scratchpad = await ensureValidChatProvider(scratchpad!);
+    loadChat(scratchpad);
 
     return {
-      chat,
+      chat: scratchpad,
       isNewChat
     };
   },

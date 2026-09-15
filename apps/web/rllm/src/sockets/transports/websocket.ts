@@ -1,7 +1,7 @@
 import { createComputed, createMemo, createRoot, on, untrack } from 'solid-js';
-import { AsyncResult, Option } from 'ts-result-option';
+import { Option } from 'ts-result-option';
 
-import { logger } from '~/db/client';
+import { db } from '~/db/client';
 import { account } from '~/signals/account';
 import { env } from '~/utils/env';
 import { isOnline } from '~/utils/signals';
@@ -38,7 +38,7 @@ export class WebsocketTransport implements TTransport {
 
 export async function initWebsocketTransport() {
   let connection: ConnectionManager | undefined;
-  const clientId = Option.from(await logger.getMetadata('clientId'))
+  const clientId = Option.from(await db.clientId())
     .okOrElse(() => new Error('Missing clientId in local database metadata'))
     .unwrap();
 
