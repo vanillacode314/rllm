@@ -1,11 +1,17 @@
-import { createEffect, on, type Accessor } from 'solid-js';
+import { createEffect, createSignal, on, type Accessor } from 'solid-js';
 
+type TSnapOptions = { behavior?: ScrollBehavior; margin?: number };
 export function useSnapToElement(
-  getContainer: Accessor<HTMLElement | null | undefined>,
-  getSelector: Accessor<string | null | undefined>,
-  options?: { behavior?: ScrollBehavior; margin?: number }
+  selector: Accessor<string | null | undefined>,
+  options?: TSnapOptions
 ) {
-  function snap(container?: HTMLElement | null, selector?: string | null) {
+  const [ref, setRef] = createSignal<HTMLElement | null>(null);
+
+  function snap(
+    container: HTMLElement | undefined | null,
+    selector: string | null | undefined,
+    options: undefined | TSnapOptions
+  ) {
     if (!container || !selector) return;
 
     const target = container.querySelector<HTMLElement>(selector);
@@ -25,9 +31,11 @@ export function useSnapToElement(
     });
   }
 
-  createEffect(
-    on([getContainer, getSelector], ([container, selector]) => snap(container, selector))
-  );
+  createEffect(on([ref, selector], ([ref, selector]) => snap(ref, selector, options)));
 
-  return () => snap(getContainer(), getSelector());
+  return {
+    bind: setRef,
+    snap: (selectorOverride?: string, optionsOverride?: TSnapOptions) =>
+      snap(ref(), selectorOverride ?? selector(), optionsOverride ?? options)
+  };
 }

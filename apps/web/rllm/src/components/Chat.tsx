@@ -87,12 +87,6 @@ export function Chat(props: Props): JSXElement {
 
   const isPending = ChatGenerationManager.createIsPending(() => local.chat.id);
 
-  const [{ autoScroll, canScroll, shouldAutoScroll }, { scrollToBottom }] = useAutoScroll({
-    enabled: () => false
-  });
-  // NOTE: needed because typescript cannot tell this is being used as a directive in the markup
-  void autoScroll;
-
   const nodes = createDerivedStore(
     () => {
       const result = [];
@@ -155,8 +149,8 @@ export function Chat(props: Props): JSXElement {
     nodes.findLastIndex((node) => node.node.value!.type === 'user')
   );
 
+  const autoScroll = useAutoScroll({ enabled: () => false });
   const snap = useSnapToElement(
-    () => scrollContainerRef,
     () => {
       void id();
       return untrack(() => `#user-chat-${lastUserChatIndex()}`);
@@ -191,7 +185,7 @@ export function Chat(props: Props): JSXElement {
       <LoadMoreContainer
         hasMore={hasMore()}
         onLoadMore={loadMore}
-        ref={combineRefs(local.ref, autoScroll, (el) => (scrollContainerRef = el))}
+        ref={combineRefs(local.ref, snap.bind, autoScroll.bind, (el) => (scrollContainerRef = el))}
         innerRef={(el) => (innerContainerRef = el)}
         class="relative"
         innerClass={cn('gap-10 flex flex-col', local.class)}
@@ -204,7 +198,7 @@ export function Chat(props: Props): JSXElement {
             </div>
           }
         >
-          <Effect callback={() => snap()} />
+          <Effect callback={() => snap.snap()} />
           <For each={nodes.slice(cutoff())}>
             {(data, i) => {
               const index = () => i() + cutoff();
@@ -255,10 +249,10 @@ export function Chat(props: Props): JSXElement {
           />
         </Suspense>
       </LoadMoreContainer>
-      <Show when={!shouldAutoScroll() && canScroll()}>
+      <Show when={!autoScroll.shouldAutoScroll() && autoScroll.canScroll()}>
         <Button
           class="absolute bottom-(--bottom-arrow,0) left-1/2 rounded-full size-8 text-secondary-foreground/50 hover:text-secondary-foreground bg-secondary/50 hover:bg-secondary border border-secondary-foreground/25 motion-preset-fade motion-duration-300 transition-colors backdrop-blur-xs will-change-transform"
-          onClick={() => scrollToBottom(true)}
+          onClick={() => autoScroll.scrollToBottom(true)}
           size="icon"
           style={{ transform: 'translate3d(-50%, var(--translate-y-arrow, 0px), 0)' }}
           variant="secondary"

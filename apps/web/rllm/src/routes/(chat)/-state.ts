@@ -145,7 +145,7 @@ export function updateMessages(
         path?: number[];
       }
 ) {
-  startTransition(() => {
+  return startTransition(() => {
     const { messages, path } =
       typeof setter === 'function'
         ? setter({ messages: chatState.messages, path: chatState.path })

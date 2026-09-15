@@ -35,6 +35,7 @@ import { useChatState } from '~/context/chat';
 import { useNotifications } from '~/context/notifications';
 import { chatsSchema, type TChat as TDBChat } from '~/db/app-schema';
 import { logger } from '~/db/client';
+import { useSnapToElement } from '~/directives/use-snap-to-element';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { createTask } from '~/lib/background-task-manager/tasks';
 import { ChatGenerationManager } from '~/lib/chat/generation';
@@ -53,6 +54,7 @@ import { compressImageFile, fileToBase64 } from '~/utils/files';
 import { produce } from '~/utils/immer';
 import { createMotionValue } from '~/utils/motionone';
 import { queryClient } from '~/utils/query-client';
+import { combineRefs } from '~/utils/ref';
 import { slugify } from '~/utils/string';
 import { type JsonTree, Tree, TreeNode, type TTree } from '~/utils/tree';
 
@@ -134,6 +136,7 @@ export function useChatPage(
     )
   );
 
+  const snap = useSnapToElement(() => null, { margin: 16 });
   const sendPrompt = useMutation(() => ({
     mutationFn: async ({ id, path }: { id: string; path: number[] }) => {
       const { promise } = await BackgroundTaskManager.scheduleTask(
@@ -206,7 +209,9 @@ export function useChatPage(
             type: 'user'
           } as never)
         );
-        updateMessages(({ path }) => ({ path: [...path, 0] }));
+        updateMessages(({ path }) => ({ path: [...path, 0] })).then(() =>
+          snap.snap(`#user-chat-${chatState.path.length - 1}`, { behavior: 'smooth' })
+        );
       } else {
         message.unwrap().chunks.push(...newChunks);
       }
@@ -583,7 +588,7 @@ export function useChatPage(
               onRegenerate={onRegenerate}
               onTraversal={onTraversal}
               path={chatState.path}
-              ref={(el) => {
+              ref={combineRefs(snap.bind, (el) => {
                 let touchId = 0;
                 let start = 0;
                 let my = 0;
@@ -622,7 +627,7 @@ export function useChatPage(
                   },
                   { passive: true }
                 );
-              }}
+              })}
               style={{
                 'padding-bottom': `calc(${promptBoxSize.height ?? 0}px + var(--spacing) * 6)`
               }}

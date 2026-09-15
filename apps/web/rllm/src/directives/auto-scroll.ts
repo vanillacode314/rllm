@@ -40,7 +40,7 @@ export function useAutoScroll(
     }
   );
 
-  const autoScroll = (_ref: HTMLElement) => {
+  const bind = (_ref: HTMLElement) => {
     ref = _ref;
     createTimeoutLoop(updateHeight, 100);
     createEventListenerMap(
@@ -57,5 +57,5 @@ export function useAutoScroll(
     );
   };
 
-  return [{ autoScroll, canScroll, shouldAutoScroll }, { scrollToBottom }] as const;
+  return { bind, canScroll, shouldAutoScroll, scrollToBottom } as const;
 }
