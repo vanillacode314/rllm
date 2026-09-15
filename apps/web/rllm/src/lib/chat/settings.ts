@@ -1,9 +1,6 @@
-import { Option } from 'ts-result-option';
-
 import { db } from '~/db/client';
-import { chatState, setChatState } from '~/routes/(chat)/-state';
+import { chatState, updateChatSettings } from '~/routes/(chat)/-state';
 import type { TChatSettings } from '~/types/chat';
-import { produce } from '~/utils/immer';
 
 export async function initChatSettings() {
   const [titleGenerationProviderId, titleGenerationModelId, providers] = await Promise.all([
@@ -35,17 +32,15 @@ export async function initChatSettings() {
     tasks.push(() => db.userMetadata.setTitleGenerationModelId(provider.defaultModelIds[0]));
   }
   await Promise.all(tasks.map((task) => task()));
-  setChatState((state) =>
-    produce(state, (draft) => {
-      draft.settings = Option.Some({
-        includeDateTimeInSystemPrompt: true,
-        modelId: providers[0].defaultModelIds[0],
-        providerId: providers[0].id,
-        reasoning: 'medium',
-        systemPrompt: ''
-      });
-    })
-  );
+  if (chatState.settings.isNone()) {
+    updateChatSettings({
+      includeDateTimeInSystemPrompt: true,
+      modelId: providers[0].defaultModelIds[0],
+      providerId: providers[0].id,
+      reasoning: 'medium',
+      systemPrompt: ''
+    });
+  }
 }
 
 export async function saveChatSettings(
@@ -55,11 +50,7 @@ export async function saveChatSettings(
   const { chatId, scratchpad } = opts;
   if (chatState.settings.isNone()) return;
   const updatedSettings = { ...chatState.settings.unwrap(), ...settings };
-  setChatState((state) =>
-    produce(state, (draft) => {
-      draft.settings = Option.Some(updatedSettings);
-    })
-  );
+  updateChatSettings(updatedSettings);
 
   if (scratchpad) {
     const chat = await db.userMetadata.scratchpadChat();
