@@ -35,12 +35,7 @@ export function ScrollOffsetPadding(props: {
   createResizeObserver(() => props.containerRef, updateOffset);
   createEffect(on(() => props.targetSelector, updateOffset));
 
-  return (
-    <div
-      class={props.class}
-      style={{ height: `${offsetHeight()}px`, display: offsetHeight() > 0 ? undefined : 'none' }}
-    />
-  );
+  return <div class={props.class} style={{ height: `${offsetHeight()}px` }} />;
 }
 
 export default ScrollOffsetPadding;

@@ -240,8 +240,8 @@ export function Chat(props: Props): JSXElement {
             }}
           </For>
           <ScrollOffsetPadding
-            margin={16}
-            class="shrink-0 -mt-4"
+            margin={40}
+            class="shrink-0 -mt-10"
             scrollRef={scrollContainerRef}
             containerRef={innerContainerRef}
             targetSelector={`#user-chat-${lastUserChatIndex()}`}
