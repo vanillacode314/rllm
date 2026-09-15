@@ -54,6 +54,7 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
           cache: 'gradle'
+          cache-dependency-path: 'apps/web/rllm/android/**/*.gradle*'
 
       - name: Decode Keystore
         env:
