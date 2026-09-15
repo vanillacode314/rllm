@@ -14,6 +14,7 @@ import {
   type JSXElement,
   Match,
   on,
+  onCleanup,
   onMount,
   type ParentProps,
   Show,
@@ -84,7 +85,19 @@ export function Chat(props: Props): JSXElement {
     'path'
   ]);
 
-  const isPending = ChatGenerationManager.createIsPending(() => local.chat.id);
+  const [isPending, setIsPending] = createSignal(false);
+  const updatePending = (pending: boolean) => {
+    startTransition(() => setIsPending(pending));
+  };
+  createEffect(
+    on(id, (id) => {
+      updatePending(ChatGenerationManager.isPending(id));
+      const unsubscribe = ChatGenerationManager.onPendingChange(id, (pending) =>
+        updatePending(pending)
+      );
+      onCleanup(() => unsubscribe());
+    })
+  );
 
   const nodes = createDerivedStore(
     () => {

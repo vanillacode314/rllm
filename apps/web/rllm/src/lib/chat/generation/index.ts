@@ -1,4 +1,4 @@
-import { Debouncer } from '@tanstack/solid-pacer';
+import { Throttler } from '@tanstack/solid-pacer';
 import type { Accessor } from 'solid-js';
 import { createMemo, from } from 'solid-js';
 import { Option } from 'ts-result-option';
@@ -323,7 +323,7 @@ export class ChatGenerationManager {
     }
     const system = prompts.join('\n\n');
 
-    const debouncedOnUpdate = new Debouncer(
+    const throttledUpdate = new Throttler(
       async ({ chunks, usage }) => {
         if (chunks && chunks.length > 0) Object.assign(message.chunks, chunks);
         if (usage) {
@@ -341,7 +341,7 @@ export class ChatGenerationManager {
       adapter,
       messages,
       model: chat.settings.modelId,
-      onUpdate: debouncedOnUpdate.maybeExecute,
+      onUpdate: throttledUpdate.maybeExecute,
       reasoningEffort: chat.settings.reasoning,
       sessionId: chat.id,
       signal: controller.signal,
@@ -350,11 +350,11 @@ export class ChatGenerationManager {
     })
       .match(
         () => {
-          debouncedOnUpdate.flush();
+          throttledUpdate.flush();
           finalizeChat(chat, newPath);
         },
         (error) => {
-          debouncedOnUpdate.cancel();
+          throttledUpdate.cancel();
           if (controller.signal.aborted) return;
           finalizeChat(chat, newPath, formatError(error));
           console.error(error);
