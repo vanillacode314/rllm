@@ -3,6 +3,7 @@ import { Gesture } from '@use-gesture/vanilla';
 import { createEffect, on, onCleanup, splitProps, type JSX, type ParentProps } from 'solid-js';
 
 import { createMotionValue } from '~/utils/motionone';
+import { combineRefs } from '~/utils/ref';
 import { cn } from '~/utils/tailwind';
 
 export type LoadMoreContainerProps = JSX.HTMLAttributes<HTMLDivElement> &
@@ -92,11 +93,8 @@ export function LoadMoreContainer(props: LoadMoreContainerProps) {
 
   return (
     <div
-      ref={(el) => {
-        ref = el;
-        local.ref?.(el);
-      }}
-      class={cn('overflow-auto touch-none', local.class)}
+      ref={combineRefs(local.ref, (el) => (ref = el))}
+      class={cn('overflow-auto', local.class)}
       {...others}
     >
       <div
