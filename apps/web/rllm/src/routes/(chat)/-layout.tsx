@@ -34,7 +34,7 @@ import { FALLBACK_CHAT_SETTINGS } from '~/constants/chat-settings';
 import { useChatState } from '~/context/chat';
 import { useNotifications } from '~/context/notifications';
 import { chatsSchema, type TChat as TDBChat } from '~/db/app-schema';
-import { db, logger } from '~/db/client';
+import { db } from '~/db/client';
 import { useSnapToElement } from '~/directives/use-snap-to-element';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
 import { createTask } from '~/lib/background-task-manager/tasks';
@@ -672,10 +672,10 @@ export function useChatPageLoader(opts: { preload?: boolean; scratchpad?: boolea
     );
 
     if (provider === null) {
-      const providers = await db.providers.all();
+      const provider = await db.providers.first();
       Object.assign(chat.settings, {
-        model: providers[0].defaultModelIds[0],
-        providerId: providers[0].id
+        model: provider.defaultModelIds[0],
+        providerId: provider.id
       });
       if (!opts.scratchpad) {
         await db.chats.update(chat.id, { settings: chat.settings });
