@@ -93,7 +93,7 @@ export class OpenAIAdapter implements TAdapter {
       .addon(abortAddon());
     if (signal) stream = stream.signal({ abort: () => {}, signal });
     if (this.baseUrl.startsWith('https://opencode.ai/zen'))
-      stream.headers({ 'x-opencode-session': sessionId });
+      stream = stream.headers({ 'x-opencode-session': sessionId });
     const response = await stream.post(requestBody, '/chat/completions').res();
 
     if (!response.ok) {
