@@ -240,7 +240,7 @@ export function Chat(props: Props): JSXElement {
             }}
           </For>
           <ScrollOffsetPadding
-            margin={40}
+            margin={16}
             class="shrink-0 -mt-10"
             scrollRef={scrollContainerRef}
             containerRef={innerContainerRef}
