@@ -56,6 +56,8 @@ export class ProxyManager {
   static async initialize(proxyUrls: string[]): Promise<void> {
     this.#proxyUrls = proxyUrls;
     await this.checkHealth();
+    window.addEventListener('online', () => this.checkHealth());
+    window.addEventListener('offline', () => this.checkHealth());
   }
 
   static middleware(): ConfiguredMiddleware {
