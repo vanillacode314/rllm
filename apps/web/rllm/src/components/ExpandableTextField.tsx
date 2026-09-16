@@ -7,6 +7,8 @@ import { cn } from 'ui/utils/tailwind';
 
 import { combineRefs } from '~/utils/ref';
 
+const MAX_LINES = 20;
+
 type TextFieldTextAreaProps<T extends ValidComponent = 'textarea'> =
   TextFieldPrimitive.TextFieldTextAreaProps<T> & {
     ref?: (el: HTMLTextAreaElement) => void;
@@ -20,47 +22,60 @@ export function ExpandableTextField<T extends ValidComponent = 'textarea'>(
   let ref!: HTMLTextAreaElement;
   const [local, others] = splitProps(props as TextFieldTextAreaProps, ['class', 'ref']);
 
+  let composing = false;
+
   createEffect(() => {
     if (!('value' in others)) return;
     void others.value;
-    untrack(() => adjustHeight(true));
-  });
-  createEventListenerMap(() => ref, {
-    input: () => adjustHeight(false),
-    paste: () => adjustHeight(true)
+    if (composing) return;
+    untrack(adjustHeight);
   });
 
-  function adjustHeight(useHack = false) {
-    if (!ref) return;
-    const lineHeight = Number(getComputedStyle(ref).lineHeight.replace('px', ''));
-    const paddingTop = Number(getComputedStyle(ref).paddingTop.replace('px', ''));
-    const paddingBottom = Number(getComputedStyle(ref).paddingBottom.replace('px', ''));
-    const maxHeight = 20 * lineHeight + paddingTop + paddingBottom;
-    const prevAlignment = ref.style.alignSelf;
+  createEventListenerMap(() => ref, {
+    input: () => {
+      if (composing) return;
+      adjustHeight();
+    },
+    compositionstart: () => {
+      composing = true;
+    },
+    compositionend: () => {
+      composing = false;
+      adjustHeight();
+    }
+  });
+
+  function adjustHeight() {
+    if (!ref?.isConnected) return;
+
+    const style = getComputedStyle(ref);
+    const lineHeight = Number.parseFloat(style.lineHeight) || 0;
+    const paddingTop = Number.parseFloat(style.paddingTop) || 0;
+    const paddingBottom = Number.parseFloat(style.paddingBottom) || 0;
+    const maxHeight = MAX_LINES * lineHeight + paddingTop + paddingBottom;
+
+    const prevAlignSelf = ref.style.alignSelf;
     const prevOverflow = ref.style.overflow;
+    const { selectionStart, selectionEnd } = ref;
+    const isFocused = document.activeElement === ref;
 
     const isFirefox = 'MozAppearance' in ref.style;
-    if (!isFirefox) {
-      ref.style.overflow = 'hidden';
-    }
-
     ref.style.alignSelf = 'start';
+    if (!isFirefox) ref.style.overflow = 'hidden';
     ref.style.height = 'auto';
 
-    let newHeight = ref.scrollHeight + (ref.offsetHeight - ref.clientHeight);
-    if (maxHeight) {
-      newHeight = Math.min(newHeight, maxHeight);
-    }
+    const borderBoxDelta = ref.offsetHeight - ref.clientHeight;
+    let newHeight = ref.scrollHeight + borderBoxDelta;
+    if (maxHeight > 0) newHeight = Math.min(newHeight, maxHeight);
+
     ref.style.height = `${newHeight}px`;
     ref.style.overflow = prevOverflow;
-    ref.style.alignSelf = prevAlignment;
+    ref.style.alignSelf = prevAlignSelf;
 
-    // NOTE: hack to scroll the textarea to the new cursor position reliably across browsers
-    if (useHack) {
-      queueMicrotask(() => {
-        ref.blur();
-        ref.focus();
-      });
+    if (isFocused && selectionStart != null && selectionEnd != null) {
+      try {
+        ref.setSelectionRange(selectionStart, selectionEnd);
+      } catch {}
     }
   }
 
