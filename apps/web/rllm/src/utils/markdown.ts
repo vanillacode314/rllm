@@ -3,6 +3,7 @@ import { common, createLowlight } from 'lowlight';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import type { PluggableList } from 'unified';
@@ -99,6 +100,7 @@ function remarkDedentCodeBlocks() {
 }
 
 const remarkPlugins = [
+  remarkBreaks,
   remarkDedentCodeBlocks,
   remarkGfm,
   [remarkMath, { singleDollarTextMath: false }]
