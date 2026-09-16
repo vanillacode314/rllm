@@ -1,7 +1,6 @@
 import { createWritableMemo } from '@solid-primitives/memo';
 import { useQuery } from '@tanstack/solid-query';
 import { createVirtualizer } from '@tanstack/solid-virtual';
-import Fuse from 'fuse.js';
 import { createMemo, createSignal, For } from 'solid-js';
 import {
   Combobox,
@@ -16,6 +15,7 @@ import {
 } from 'ui/combobox';
 
 import type { TAdapter } from '~/lib/adapters/types';
+import { useFuse } from '~/primitives/use-fuse';
 import type { TModel, TProvider } from '~/types';
 
 export function ModelSelector(props: {
@@ -45,39 +45,25 @@ export function ModelSelector(props: {
 
   const models = () => (modelsQuery.isSuccess ? modelsQuery.data : defaultModels());
 
-  const sorterFuse = createMemo(
-    () =>
-      new Fuse(models(), {
-        isCaseSensitive: false,
-        keys: ['id'],
-        shouldSort: true,
-        threshold: 1
-      })
-  );
-  const sortedModels = createMemo(() =>
-    input().length > 0
-      ? sorterFuse()
-          .search(input())
-          .map((match) => match.item)
-      : models()
-  );
+  const sortedModels = useFuse({
+    items: models,
+    query: input,
+    returnAllOnEmptyQuery: true,
+    isCaseSensitive: false,
+    keys: ['id'],
+    shouldSort: true,
+    threshold: 1
+  });
 
-  const filterFuse = createMemo(
-    () =>
-      new Fuse(models(), {
-        isCaseSensitive: false,
-        keys: ['id'],
-        shouldSort: true,
-        threshold: 0.5
-      })
-  );
-  const filteredModels = createMemo(() =>
-    input().length > 0
-      ? filterFuse()
-          .search(input())
-          .map((match) => match.item)
-      : models()
-  );
+  const filteredModels = useFuse({
+    items: models,
+    query: input,
+    returnAllOnEmptyQuery: true,
+    isCaseSensitive: false,
+    keys: ['id'],
+    shouldSort: true,
+    threshold: 0.5
+  });
 
   const [listboxRef, setListboxRef] = createSignal<HTMLUListElement | null>(null);
 

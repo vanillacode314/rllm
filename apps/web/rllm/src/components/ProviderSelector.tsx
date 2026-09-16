@@ -1,6 +1,4 @@
 import { createWritableMemo } from '@solid-primitives/memo';
-import Fuse from 'fuse.js';
-import { createMemo } from 'solid-js';
 import {
   Combobox,
   ComboboxContent,
@@ -13,6 +11,7 @@ import {
 } from 'ui/combobox';
 
 import type { TProvider } from '~/db/schema';
+import { useFuse } from '~/primitives/use-fuse';
 
 export function ProviderSelector(props: {
   class?: string;
@@ -25,39 +24,26 @@ export function ProviderSelector(props: {
   );
 
   const providers = () => props.providers;
-  const sorterFuse = createMemo(
-    () =>
-      new Fuse(providers(), {
-        isCaseSensitive: false,
-        keys: ['name'],
-        shouldSort: true,
-        threshold: 1
-      })
-  );
-  const sortedProviders = createMemo(() =>
-    input().length > 0
-      ? sorterFuse()
-          .search(input())
-          .map((match) => match.item)
-      : providers()
-  );
 
-  const filterFuse = createMemo(
-    () =>
-      new Fuse(providers(), {
-        isCaseSensitive: false,
-        keys: ['name'],
-        shouldSort: true,
-        threshold: 0.5
-      })
-  );
-  const filteredProviders = createMemo(() =>
-    input().length > 0
-      ? filterFuse()
-          .search(input())
-          .map((match) => match.item)
-      : providers()
-  );
+  const sortedProviders = useFuse({
+    items: providers,
+    query: input,
+    returnAllOnEmptyQuery: true,
+    isCaseSensitive: false,
+    keys: ['name'],
+    shouldSort: true,
+    threshold: 1
+  });
+
+  const filteredProviders = useFuse({
+    items: providers,
+    query: input,
+    returnAllOnEmptyQuery: true,
+    isCaseSensitive: false,
+    keys: ['name'],
+    shouldSort: true,
+    threshold: 0.5
+  });
 
   return (
     <Combobox<TProvider>

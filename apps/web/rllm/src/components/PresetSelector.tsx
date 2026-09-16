@@ -1,6 +1,5 @@
 import { createWritableMemo } from '@solid-primitives/memo';
 import { createVirtualizer } from '@tanstack/solid-virtual';
-import Fuse from 'fuse.js';
 import { createMemo, createSignal, For } from 'solid-js';
 import {
   Combobox,
@@ -15,6 +14,7 @@ import {
 } from 'ui/combobox';
 
 import type { TChatPreset } from '~/db/app-schema';
+import { useFuse } from '~/primitives/use-fuse';
 
 export function PresetSelector(props: {
   class?: string;
@@ -23,39 +23,25 @@ export function PresetSelector(props: {
 }) {
   const [input, setInput] = createWritableMemo<string>(() => '');
 
-  const sorterFuse = createMemo(
-    () =>
-      new Fuse(props.presets, {
-        isCaseSensitive: false,
-        keys: ['name'],
-        shouldSort: true,
-        threshold: 1
-      })
-  );
-  const sortedPresets = createMemo(() =>
-    input().length > 0
-      ? sorterFuse()
-          .search(input())
-          .map((match) => match.item)
-      : props.presets
-  );
+  const sortedPresets = useFuse({
+    items: () => props.presets,
+    query: input,
+    returnAllOnEmptyQuery: true,
+    isCaseSensitive: false,
+    keys: ['name'],
+    shouldSort: true,
+    threshold: 1
+  });
 
-  const filterFuse = createMemo(
-    () =>
-      new Fuse(props.presets, {
-        isCaseSensitive: false,
-        keys: ['name'],
-        shouldSort: true,
-        threshold: 0.5
-      })
-  );
-  const filteredPresets = createMemo(() =>
-    input().length > 0
-      ? filterFuse()
-          .search(input())
-          .map((match) => match.item)
-      : props.presets
-  );
+  const filteredPresets = useFuse({
+    items: () => props.presets,
+    query: input,
+    returnAllOnEmptyQuery: true,
+    isCaseSensitive: false,
+    keys: ['name'],
+    shouldSort: true,
+    threshold: 0.5
+  });
 
   const [listboxRef, setListboxRef] = createSignal<HTMLUListElement | null>(null);
 
