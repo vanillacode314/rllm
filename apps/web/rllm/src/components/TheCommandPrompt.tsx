@@ -18,6 +18,7 @@ import { useChatState } from '~/context/chat';
 import { db } from '~/db/client';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { saveChatSettings } from '~/lib/chat/settings';
+import { useFuse } from '~/primitives/use-fuse';
 import { queries } from '~/queries';
 import { slugify } from '~/utils/string';
 
@@ -69,7 +70,7 @@ function TheCommandPrompt() {
       provider
     }))
   );
-  const models = useQuery(() => ({
+  const modelsQuery = useQuery(() => ({
     queryFn: async () => {
       const models = await Promise.all(
         adapters().map(async ({ adapter, provider }) => {
@@ -95,6 +96,27 @@ function TheCommandPrompt() {
     enabled: mode() === 'presets'
   }));
   const presets = () => (presetsQuery.isSuccess ? presetsQuery.data : []);
+  const models = () =>
+    modelsQuery.isSuccess
+      ? modelsQuery.data.flatMap(({ models, provider }) => {
+          return models.map((model) => ({
+            key1: model.id,
+            key2: provider.name,
+            model,
+            provider
+          }));
+        })
+      : [];
+
+  const sortedModels = useFuse({
+    items: models,
+    query: () => (mode() !== 'models' ? '' : input().trimStart().substring(1)),
+    returnAllOnEmptyQuery: true,
+    isCaseSensitive: false,
+    keys: ['key1', 'key2'],
+    shouldSort: true,
+    threshold: 1
+  });
 
   const items = createMemo((): Record<string, TItem[]> => {
     switch (mode()) {
@@ -160,24 +182,22 @@ function TheCommandPrompt() {
         };
       case 'models':
         return {
-          'Switch Model': models.isSuccess
-            ? models.data.flatMap(({ models, provider }) =>
-                models.map((model) => ({
-                  handler: () => {
-                    saveChatSettings(
-                      {
-                        modelId: model.id,
-                        providerId: provider.id
-                      },
-                      { chatId: chatState.currentChatId, scratchpad: chatState.isScratchpadRoute }
-                    );
+          'Switch Model': sortedModels()
+            .map(({ provider, model }) => ({
+              handler: () => {
+                saveChatSettings(
+                  {
+                    modelId: model.id,
+                    providerId: provider.id
                   },
-                  keywords: [`@${model.id} ${provider.name}`],
-                  label: `${model.id} (${provider.name})`,
-                  value: `${provider.id}/${model.id}`
-                }))
-              )
-            : []
+                  { chatId: chatState.currentChatId, scratchpad: chatState.isScratchpadRoute }
+                );
+              },
+              keywords: [input()],
+              label: `${model.id} (${provider.name})`,
+              value: `${provider.id}/${model.id}`
+            }))
+            .slice(0, 10)
         };
       case 'presets':
         return {
