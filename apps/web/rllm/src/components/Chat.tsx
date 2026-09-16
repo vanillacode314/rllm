@@ -42,6 +42,7 @@ import { cn } from 'ui/utils/tailwind';
 
 import type { TChat } from '~/db/app-schema';
 import { useAutoScroll } from '~/directives/auto-scroll';
+import { usePullToLoadMore } from '~/directives/use-pull-to-load-more';
 import { useSnapToElement } from '~/directives/use-snap-to-element';
 import { ChatGenerationManager } from '~/lib/chat/generation';
 import { RetriableToolRegistry } from '~/lib/chat/tools';
@@ -54,7 +55,6 @@ import { createFunctionWithPendingSignal } from '~/utils/signals';
 import { createDerivedStore } from '~/utils/stores';
 import { lowlightWorkerPool } from '~/workers/lowlight';
 
-import { LoadMoreContainer } from './LoadMoreContainer';
 import Markdown from './markdown/Markdown';
 import { useAlertDialog } from './modals/auto-import/AlertDialog';
 import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
@@ -147,7 +147,8 @@ export function Chat(props: Props): JSXElement {
   const loadMore = createFunctionWithPendingSignal(async () => {
     // TODO: doesn't handle multiple promises in bound
     if (!hasMore()) return;
-    const start = performance.now();
+    // Wait for pull to load snap back, the UI hangs otherwise till the transition settles
+    await pullToLoadMore.waitForAnimation();
     const el = scrollContainerRef;
     const scrollBottom = el.scrollHeight - el.scrollTop;
     await startTransition(() => {
@@ -155,9 +156,6 @@ export function Chat(props: Props): JSXElement {
     });
     const newScrollBottom = el.scrollHeight - scrollBottom;
     el.scrollTop = newScrollBottom;
-    const duration = performance.now() - start;
-    // NOTE: better UX to have it be a little slow rather than flash pending state for 10ms
-    if (duration < 1000) await new Promise((resolve) => setTimeout(resolve, 1000 - duration));
   });
 
   const hasMore = createMemo(() => cutoff() > 0);
@@ -174,6 +172,10 @@ export function Chat(props: Props): JSXElement {
     },
     { margin: 16 }
   );
+  const pullToLoadMore = usePullToLoadMore({
+    hasMore,
+    onLoadMore: loadMore
+  });
 
   return (
     <div class="h-full relative overflow-hidden grid isolate">
@@ -199,75 +201,97 @@ export function Chat(props: Props): JSXElement {
           </div>
         </Show>
       </Transition>
-      <LoadMoreContainer
-        hasMore={hasMore()}
-        onLoadMore={loadMore}
-        ref={combineRefs(local.ref, snap.bind, autoScroll.bind, (el) => (scrollContainerRef = el))}
-        innerRef={(el) => (innerContainerRef = el)}
-        class="relative"
-        innerClass={cn('gap-10 flex flex-col', local.class)}
+      <div
+        class="overflow-auto relative"
+        ref={combineRefs(
+          local.ref,
+          pullToLoadMore.bind,
+          snap.bind,
+          autoScroll.bind,
+          (el) => (scrollContainerRef = el)
+        )}
         {...others}
       >
-        <Suspense
-          fallback={
-            <div class="h-full grid place-content-center">
-              <span class="text-4xl icon-[svg-spinners--bars-scale]" />
-            </div>
-          }
+        <div
+          class={cn('gap-10 flex flex-col', local.class)}
+          ref={innerContainerRef}
+          style={pullToLoadMore.innerStyle()}
         >
-          <Effect callback={() => snap.snap()} />
-          <For each={nodes.slice(cutoff())}>
-            {(data, i) => {
-              const index = () => i() + cutoff();
-              const message = () => data.node.value!;
-              const currentPath = createMemo(() => local.path.slice(0, index() + 1));
+          <Suspense
+            fallback={
+              <div class="h-full grid place-content-center">
+                <span class="text-4xl icon-[svg-spinners--bars-scale]" />
+              </div>
+            }
+          >
+            <Effect callback={() => snap.snap()} />
+            <Show when={hasMore()}>
+              <div class="flex flex-col items-center -mb-10 pb-4">
+                <button
+                  class="p-4 grid place-content-center border rounded-full size-10"
+                  style={{
+                    rotate: `${Math.min(1, pullToLoadMore.offset() / pullToLoadMore.threshold()) * 180}deg`
+                  }}
+                  onClick={() => loadMore()}
+                >
+                  <span class="icon-[heroicons--arrow-down]" aria-hidden="true" />
+                  <span class="sr-only">Click to load more</span>
+                </button>
+              </div>
+            </Show>
+            <For each={nodes.slice(cutoff())}>
+              {(data, i) => {
+                const index = () => i() + cutoff();
+                const message = () => data.node.value!;
+                const currentPath = createMemo(() => local.path.slice(0, index() + 1));
 
-              return (
-                <Show
-                  fallback={
-                    <UserChat
-                      canDelete={
-                        message().chunks.length > 1 &&
-                        (index() !== 0 || data.numberOfSiblings > 0 || local.path[0] !== 0)
-                      }
-                      displayName={
-                        displayName.isSuccess && displayName.data ? displayName.data : 'user'
-                      }
-                      id={`user-chat-${index()}`}
+                return (
+                  <Show
+                    fallback={
+                      <UserChat
+                        canDelete={
+                          message().chunks.length > 1 &&
+                          (index() !== 0 || data.numberOfSiblings > 0 || local.path[0] !== 0)
+                        }
+                        displayName={
+                          displayName.isSuccess && displayName.data ? displayName.data : 'user'
+                        }
+                        id={`user-chat-${index()}`}
+                        index={data.pathIndex}
+                        message={message() as TMessage & { type: 'user' }}
+                        numberOfSiblings={data.numberOfSiblings}
+                        onDelete={local.onDelete.bind(null, currentPath())}
+                        onEdit={local.onEdit.bind(null, currentPath())}
+                        onTraversal={local.onTraversal.bind(null, currentPath())}
+                      />
+                    }
+                    when={message().type === 'llm'}
+                  >
+                    <LLMChat
                       index={data.pathIndex}
-                      message={message() as TMessage & { type: 'user' }}
+                      isPending={isPending() && index() === nodes.length - 1}
+                      message={message() as TMessage & { type: 'llm' }}
                       numberOfSiblings={data.numberOfSiblings}
                       onDelete={local.onDelete.bind(null, currentPath())}
-                      onEdit={local.onEdit.bind(null, currentPath())}
+                      onRegenerate={local.onRegenerate.bind(null, currentPath())}
+                      onRetry={local.onRetry.bind(null, currentPath())}
+                      onToolCallRetry={local.onToolCallRetry.bind(null, currentPath())}
                       onTraversal={local.onTraversal.bind(null, currentPath())}
                     />
-                  }
-                  when={message().type === 'llm'}
-                >
-                  <LLMChat
-                    index={data.pathIndex}
-                    isPending={isPending() && index() === nodes.length - 1}
-                    message={message() as TMessage & { type: 'llm' }}
-                    numberOfSiblings={data.numberOfSiblings}
-                    onDelete={local.onDelete.bind(null, currentPath())}
-                    onRegenerate={local.onRegenerate.bind(null, currentPath())}
-                    onRetry={local.onRetry.bind(null, currentPath())}
-                    onToolCallRetry={local.onToolCallRetry.bind(null, currentPath())}
-                    onTraversal={local.onTraversal.bind(null, currentPath())}
-                  />
-                </Show>
-              );
-            }}
-          </For>
-          <ScrollOffsetPadding
-            margin={16}
-            class="shrink-0 -mt-10"
-            scrollRef={scrollContainerRef}
-            containerRef={innerContainerRef}
-            targetSelector={`#user-chat-${lastUserChatIndex()}`}
-          />
-        </Suspense>
-      </LoadMoreContainer>
+                  </Show>
+                );
+              }}
+            </For>
+            <ScrollOffsetPadding
+              margin={16}
+              class="shrink-0 -mt-10"
+              scrollRef={scrollContainerRef}
+              containerRef={innerContainerRef}
+              targetSelector={`#user-chat-${lastUserChatIndex()}`}
+            />
+          </Suspense>
+        </div>
+      </div>
       <Show when={!autoScroll.shouldAutoScroll() && autoScroll.canScroll()}>
         <Button
           class="absolute bottom-(--bottom-arrow,0) left-1/2 rounded-full size-8 text-secondary-foreground/50 hover:text-secondary-foreground bg-secondary/50 hover:bg-secondary border border-secondary-foreground/25 motion-preset-fade motion-duration-300 transition-colors backdrop-blur-xs will-change-transform"
