@@ -38,7 +38,7 @@ export default defineConfig(({ mode }) => {
   const config: UserConfig = {
     build: {
       reportCompressedSize: false,
-      sourcemap: true
+      sourcemap: false
     },
     define: {
       __VERSION__: JSON.stringify(pkgJson.version)
