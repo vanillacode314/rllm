@@ -45,6 +45,7 @@ const ValidTask = z.discriminatedUnion('type', [
       feedbackEnabled: z.boolean(),
       path: z.array(z.number()),
       retry: z._default(z.boolean(), false),
+      retryToolCallIds: z._default(z.array(z.string()), []),
       scratchpad: z._default(z.boolean(), false)
     }),
     type: z.literal('startLLMGeneration')
@@ -56,7 +57,7 @@ const ValidTask = z.discriminatedUnion('type', [
     type: z.literal('indexDocument')
   })
 ]);
-type TValidTask = z.infer<typeof ValidTask>;
+type TValidTask = z.input<typeof ValidTask>;
 
 export function createTask(task: TValidTask, priority: TTaskPriority = 'idle', id?: string): TTask {
   id ??= nanoid();
@@ -144,7 +145,8 @@ export function createTask(task: TValidTask, priority: TTaskPriority = 'idle', i
               task.arguments.path,
               task.arguments.attachements,
               task.arguments.feedbackEnabled,
-              task.arguments.retry
+              task.arguments.retry,
+              task.arguments.retryToolCallIds
             );
           signal.addEventListener('abort', () => controller.abort());
           await promise;

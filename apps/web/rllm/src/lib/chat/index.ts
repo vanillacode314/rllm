@@ -187,7 +187,7 @@ export function handleCompletion(opts: {
 
 // NOTE: cannot do parallel tool calls, since most mcp servers currently have
 // bugs in them that stall all requests other than the first when making parallel request
-function executeToolCalls(
+export function executeToolCalls(
   tool_calls: Array<TLLMMessageChunk & { type: 'tool_call' }>,
   tools: TTool[],
   signal: AbortSignal,

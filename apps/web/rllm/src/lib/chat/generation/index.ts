@@ -2,30 +2,26 @@ import { Throttler } from '@tanstack/solid-pacer';
 import type { Accessor } from 'solid-js';
 import { createMemo, from } from 'solid-js';
 import { Option } from 'ts-result-option';
-import * as z from 'zod/mini';
 
-import { useFeedbackModal } from '~/components/modals/auto-import/FeedbackModal';
-import {
-  ASK_QUESTIONS_TOOL_PROMPT,
-  ATTACHMENT_TOOL_INSTRUCTIONS_PROMPT,
-  HANDOFF_TOOL_INSTRUCTIONS_PROMPT,
-  MATH_SYSTEM_PROMPT,
-  WEB_SEARCH_SYSTEM_PROMPT
-} from '~/constants/prompts';
+import { MATH_SYSTEM_PROMPT, WEB_SEARCH_SYSTEM_PROMPT } from '~/constants/prompts';
 import type { TProvider } from '~/db/app-schema';
 import { db } from '~/db/client';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { MCPManager } from '~/lib/mcp/manager';
-import { vectorDb } from '~/lib/vector-db/client';
-import { transientDb } from '~/lib/vector-db/transient';
 import { finalizeChat } from '~/routes/(chat)/-utils';
-import type { TAttachment, TChat, TMessage } from '~/types/chat';
+import type { TTool } from '~/types';
+import type { TAttachment, TChat, TLLMMessageChunk, TMessage } from '~/types/chat';
 import { getMessagesForPath } from '~/utils/chat';
 import { formatError } from '~/utils/errors';
 import { Tree, TreeNode } from '~/utils/tree';
 
-import { handleCompletion } from '..';
-import { makeTool } from '../utils';
+import { executeToolCalls, handleCompletion } from '..';
+import {
+  askQuestionsTool,
+  handoffTool,
+  makeAttachmentsTool,
+  RetriableToolRegistry
+} from '../tools';
 import type { ChatGenerationStorage } from './storages';
 
 export class ChatGenerationManager {
@@ -101,7 +97,8 @@ export class ChatGenerationManager {
     path: number[],
     attachments: TAttachment[],
     feedbackEnabled: boolean = false,
-    retry: boolean = false
+    retry: boolean = false,
+    retryToolCallIds: string[] = []
   ): Promise<{
     chat: TChat;
     controller: AbortController;
@@ -121,18 +118,49 @@ export class ChatGenerationManager {
       mcpTools.length > 0 ? Option.Some(mcpTools) : Option.None()
     );
 
-    let message: TMessage & { type: 'llm' };
-    if (retry) {
-      const erroredMessage = node.value.expect(
-        `should be able to traverse to node at ${JSON.stringify(path)}`
+    function insertTool(tool: TTool) {
+      tools = Option.Some(
+        tools.mapOr([tool], (tools) => {
+          tools.push(tool);
+          return tools;
+        })
       );
-      if (erroredMessage.type !== 'llm') throw new Error('can only retry llm messages');
-      message = erroredMessage;
+    }
+
+    function resetMessage(message: TMessage & { type: 'llm' }) {
       message.error = undefined;
       message.finished = false;
       message.model = chat.settings.modelId;
       message.provider = provider.name;
       message.usage = undefined;
+    }
+    let message: TMessage & { type: 'llm' };
+    let newPath: number[];
+    if (retryToolCallIds.length > 0) {
+      const sourceMessage = node.value.expect(
+        `should be able to traverse to node at ${JSON.stringify(path)}`
+      );
+      if (sourceMessage.type !== 'llm') throw new Error('can only retry llm messages');
+      const parentPath = path.slice(0, -1);
+      const parentNode = chat.messages
+        .traverse(parentPath)
+        .expect(`should be able to traverse to node at ${JSON.stringify(parentPath)}`);
+      message = structuredClone(sourceMessage);
+      const lastRetriedIndex = message.chunks.findLastIndex(
+        (chunk) => chunk.type === 'tool_call' && retryToolCallIds.includes(chunk.id)
+      );
+      if (lastRetriedIndex !== -1) message.chunks = message.chunks.slice(0, lastRetriedIndex + 1);
+      resetMessage(message);
+      parentNode.addChild(new TreeNode(message));
+      newPath = parentPath.concat(parentNode.children.length - 1);
+    } else if (retry) {
+      const erroredMessage = node.value.expect(
+        `should be able to traverse to node at ${JSON.stringify(path)}`
+      );
+      if (erroredMessage.type !== 'llm') throw new Error('can only retry llm messages');
+      message = erroredMessage;
+      resetMessage(message);
+      newPath = path;
     } else {
       message = {
         chunks: [],
@@ -142,158 +170,14 @@ export class ChatGenerationManager {
         type: 'llm'
       };
       node.addChild(new TreeNode(message));
+      newPath = [...path, node.children.length - 1];
     }
     chat.finished = false;
-    const newPath = retry ? path : [...path, node.children.length - 1];
     this.emitUpdate(id);
     const messages = getMessagesForPath(newPath, chat.messages).unwrap();
 
-    const attachmentsByTransientStatus = {
-      library: new Set(
-        attachments.filter((attachment) => !attachment.transient).map((attachment) => attachment.id)
-      ),
-      transient: new Set(
-        attachments.filter((attachment) => attachment.transient).map((attachment) => attachment.id)
-      )
-    };
-    if (attachments.length > 0) {
-      const tool = makeTool({
-        description: ATTACHMENT_TOOL_INSTRUCTIONS_PROMPT(
-          attachments.map((attachement) => `${attachement.id}: ${attachement.description}`)
-        ),
-        handler: async (args, signal) => {
-          signal?.throwIfAborted();
-          const { query } = args;
-          const { limit, offset } = args.postSearchFilters;
-          const { afterIndex, beforeIndex } = args.preSearchFilters ?? {};
-          if (afterIndex !== undefined && beforeIndex !== undefined && afterIndex > beforeIndex) {
-            throw new Error('afterIndex must be less than beforeIndex');
-          }
-          if (!attachments.some((attachment) => args.ids.includes(attachment.id))) {
-            throw new Error(
-              `Attachment with id (${args.ids.join(',')}) not found in the provided attachments`
-            );
-          }
-          const results = (
-            await Promise.all([
-              await transientDb.query(query, {
-                afterIndex,
-                beforeIndex,
-                documentIds: args.ids.filter((id) =>
-                  attachmentsByTransientStatus.transient.has(id)
-                ),
-                limit: offset + limit,
-                signal
-              }),
-              await vectorDb.query(query, {
-                afterIndex,
-                beforeIndex,
-                documentIds: args.ids.filter((id) => attachmentsByTransientStatus.library.has(id)),
-                limit: offset + limit,
-                signal
-              })
-            ])
-          )
-            .flat()
-            .filter((value) => value !== undefined);
-          results.sort((a, b) => a.similarity - b.similarity);
-          return JSON.stringify(
-            results
-              .slice(offset, offset + limit)
-              .filter((result) => {
-                if (afterIndex !== undefined && result.index < afterIndex) return false;
-                if (beforeIndex !== undefined && result.index > beforeIndex) return false;
-                return true;
-              })
-              .slice(offset, offset + limit)
-              .map((result) => ({
-                content: result.text,
-                documentId: result.document_id,
-                id: result.id,
-                index: result.index
-              })),
-            null,
-            2
-          );
-        },
-        inputSchema: z.object({
-          ids: z.array(z.string()).check(z.minLength(1)),
-          postSearchFilters: z.object({
-            limit: z.number().check(z.int(), z.gt(0)),
-            offset: z.number().check(z.int(), z.gte(0))
-          }),
-          preSearchFilters: z.optional(
-            z.object({
-              afterIndex: z.optional(z.number().check(z.int(), z.gt(0))),
-              beforeIndex: z.optional(z.number().check(z.int(), z.gt(0)))
-            })
-          ),
-          query: z.string().check(z.minLength(1))
-        }),
-        name: 'retrieve_from_attachments'
-      });
-      tools = Option.Some(
-        tools.mapOr([tool], (tools) => {
-          tools.push(tool);
-          return tools;
-        })
-      );
-    }
-    if (feedbackEnabled) {
-      const feedbackModal = useFeedbackModal();
-      const feedbackTool = makeTool({
-        description: ASK_QUESTIONS_TOOL_PROMPT,
-        handler: async (args, signal) => {
-          signal?.throwIfAborted();
-          const { questions } = args;
-          for (const question of questions) {
-            if (question.options === undefined) continue;
-            for (let i = question.options.length - 1, j = 0; i >= 0; i--, j++) {
-              if (question.options[i].trim().toLowerCase() === 'other')
-                question.options.splice(i, 1);
-            }
-          }
-          const responses = await feedbackModal.open(questions);
-          if (responses) {
-            return JSON.stringify({ responses, success: true });
-          }
-          return JSON.stringify({ message: 'Cancelled by user', success: false });
-        },
-        inputSchema: z.object({
-          questions: z
-            .array(
-              z
-                .object({
-                  id: z.string(),
-                  options: z.optional(z.array(z.string())),
-                  placeholder: z.optional(z.string()),
-                  question: z.string(),
-                  type: z.union([z.literal('radio'), z.literal('checkbox'), z.literal('textarea')])
-                })
-                .check(
-                  z.refine(
-                    (value) =>
-                      !(
-                        ['checkbox', 'radio'].includes(value.type) &&
-                        (value.options === undefined || value.options.length < 2)
-                      ),
-                    {
-                      error: 'Checkbox or radio questions must have at least 2 options'
-                    }
-                  )
-                )
-            )
-            .check(z.minLength(1))
-        }),
-        name: 'ask_questions'
-      });
-      tools = Option.Some(
-        tools.mapOr([feedbackTool], (tools) => {
-          tools.push(feedbackTool);
-          return tools;
-        })
-      );
-    }
+    if (attachments.length > 0) insertTool(makeAttachmentsTool(attachments));
+    if (feedbackEnabled) insertTool(askQuestionsTool);
 
     function isHandoffMode() {
       const lastUserMsg = messages
@@ -307,27 +191,27 @@ export class ChatGenerationManager {
       );
     }
 
-    if (isHandoffMode()) {
-      const handoffTool = makeTool({
-        description: HANDOFF_TOOL_INSTRUCTIONS_PROMPT,
-        handler: (args) => {
-          document.dispatchEvent(new CustomEvent('chat:handoff', { detail: args }));
-          return JSON.stringify({ success: true });
-        },
-        inputSchema: z.object({
-          prefilledPrompt: z.string().check(z.minLength(1))
-        }),
-        name: 'handoff_to_new_chat'
-      });
-      tools = Option.Some(
-        tools.mapOr([handoffTool], (tools) => {
-          tools.push(handoffTool);
-          return tools;
-        })
-      );
-    }
+    if (isHandoffMode()) insertTool(handoffTool);
 
     this.addChat(id, chat, controller, newPath);
+    if (retryToolCallIds.length > 0) {
+      const tool_calls = message.chunks.filter(
+        (chunk): chunk is TLLMMessageChunk & { type: 'tool_call' } =>
+          chunk.type === 'tool_call' && retryToolCallIds.includes(chunk.id)
+      );
+      for (const tool_call of tool_calls) {
+        tool_call.content = '';
+        tool_call.success = null;
+      }
+      const retryTools = [...new Set(tool_calls.map((tool_call) => tool_call.tool.name))]
+        .map((name) => RetriableToolRegistry.get(name))
+        .filter((tool) => tool.isSome())
+        .map((tool) => tool.unwrap());
+      this.emitUpdate(id);
+      await executeToolCalls(tool_calls, retryTools, controller.signal, () =>
+        this.emitUpdate(id)
+      ).inspectErr(console.error);
+    }
     const prompts = [MATH_SYSTEM_PROMPT] as string[];
     if (chat.settings.includeDateTimeInSystemPrompt)
       prompts.push(`Current date and time: ${this.formatCurrentDateTime()}`);

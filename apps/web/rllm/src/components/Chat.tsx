@@ -44,6 +44,7 @@ import type { TChat } from '~/db/app-schema';
 import { useAutoScroll } from '~/directives/auto-scroll';
 import { useSnapToElement } from '~/directives/use-snap-to-element';
 import { ChatGenerationManager } from '~/lib/chat/generation';
+import { RetriableToolRegistry } from '~/lib/chat/tools';
 import { queries } from '~/queries';
 import type { TLLMMessageChunk, TMessage, TUserMessageChunk } from '~/types/chat';
 import { formatToPercentage, formatToTokens } from '~/utils/number';
@@ -67,6 +68,7 @@ type Props = Omit<JSX.HTMLAttributes<HTMLDivElement>, 'ref'> & {
   onEdit: (path: number[], chunkIndex: number, chunk: TUserMessageChunk) => void;
   onRegenerate: (path: number[]) => void;
   onRetry: (path: number[]) => void;
+  onToolCallRetry: (path: number[], chunkId: string) => void;
   onTraversal: (path: number[], direction: -1 | 1) => void;
   path: number[];
 };
@@ -83,6 +85,7 @@ export function Chat(props: Props): JSXElement {
     'onEdit',
     'onRegenerate',
     'onRetry',
+    'onToolCallRetry',
     'onTraversal',
     'path'
   ]);
@@ -249,6 +252,7 @@ export function Chat(props: Props): JSXElement {
                     onDelete={local.onDelete.bind(null, currentPath())}
                     onRegenerate={local.onRegenerate.bind(null, currentPath())}
                     onRetry={local.onRetry.bind(null, currentPath())}
+                    onToolCallRetry={local.onToolCallRetry.bind(null, currentPath())}
                     onTraversal={local.onTraversal.bind(null, currentPath())}
                   />
                 </Show>
@@ -287,6 +291,7 @@ function LLMChat(props: {
   onDelete?: () => void;
   onRegenerate: () => void;
   onRetry: () => void;
+  onToolCallRetry: (chunkId: string) => void;
   onTraversal: (direction: -1 | 1) => void;
 }) {
   const hasNext = () => props.index < props.numberOfSiblings;
@@ -478,7 +483,8 @@ function LLMChat(props: {
                     <Match when={chunk.type === 'tool_call'}>
                       <LLMToolCallChunk
                         chunk={chunk as TLLMMessageChunk & { type: 'tool_call' }}
-                        isPending={props.isPending && index() === props.message.chunks.length - 1}
+                        isPending={props.isPending}
+                        onRetry={() => props.onToolCallRetry(chunk.id)}
                       />
                     </Match>
                     <Match when={true}>
@@ -598,6 +604,7 @@ function LLMTextChunk(props: { chunk: TLLMMessageChunk & { type: 'text' }; inPro
 function LLMToolCallChunk(props: {
   chunk: TLLMMessageChunk & { type: 'tool_call' };
   isPending: boolean;
+  onRetry: () => void;
 }) {
   const [open, setOpen] = createSignal(false);
   const requestHtml = useQuery(() => ({
@@ -635,29 +642,44 @@ function LLMToolCallChunk(props: {
 
   return (
     <Collapsible class="space-y-1.5" onOpenChange={setOpen} open={open()}>
-      <CollapsibleTrigger class="text-sm opacity-90 flex w-full items-center gap-2">
-        <span class="font-mono text-xs tracking-wider uppercase flex items-baseline gap-1">
-          <span class="icon-[heroicons--wrench-screwdriver] text-xs" />
-          <span class="normal-case">{props.chunk.tool.name}</span>
-        </span>
-        <Switch>
-          <Match when={props.chunk.success === null}>
-            <span class="icon-[svg-spinners--180-ring-with-bg]" />
-          </Match>
-          <Match when={props.chunk.success}>
-            <span
-              classList={{
-                'icon-[heroicons--chevron-down]': !open(),
-                'icon-[heroicons--chevron-right]': open()
-              }}
-            />
-            <span class="icon-[heroicons--check-circle-16-solid] text-green-600" />
-          </Match>
-          <Match when={!props.chunk.success}>
-            <span class="icon-[heroicons--x-circle-16-solid] text-red-600" />
-          </Match>
-        </Switch>
-      </CollapsibleTrigger>
+      <div class="flex items-center gap-2 w-full">
+        <CollapsibleTrigger class="text-sm opacity-90 flex items-center gap-2">
+          <span class="font-mono text-xs tracking-wider uppercase flex items-baseline gap-1">
+            <span class="icon-[heroicons--wrench-screwdriver] text-xs" />
+            <span class="normal-case">{props.chunk.tool.name}</span>
+          </span>
+          <Switch>
+            <Match when={props.chunk.success === null}>
+              <span class="icon-[svg-spinners--180-ring-with-bg]" />
+            </Match>
+            <Match when={props.chunk.success}>
+              <span
+                classList={{
+                  'icon-[heroicons--chevron-down]': !open(),
+                  'icon-[heroicons--chevron-right]': open()
+                }}
+              />
+              <span class="icon-[heroicons--check-circle-16-solid] text-green-600" />
+            </Match>
+            <Match when={!props.chunk.success}>
+              <span class="icon-[heroicons--x-circle-16-solid] text-red-600" />
+            </Match>
+          </Switch>
+        </CollapsibleTrigger>
+        <Show when={RetriableToolRegistry.has(props.chunk.tool.name)}>
+          <Button
+            class="size-6 shrink-0"
+            disabled={props.isPending}
+            onClick={() => props.onRetry()}
+            size="icon"
+            type="button"
+            variant="ghost"
+          >
+            <span class="sr-only">Retry</span>
+            <span class="icon-[heroicons--arrow-path]" />
+          </Button>
+        </Show>
+      </div>
 
       <CollapsibleContent class="space-y-2">
         <article class="space-y-0.5">

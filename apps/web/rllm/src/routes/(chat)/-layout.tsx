@@ -133,7 +133,17 @@ export function useChatPage(
 
   const snap = useSnapToElement(() => null, { margin: 16 });
   const sendPrompt = useMutation(() => ({
-    mutationFn: async ({ id, path, retry }: { id: string; path: number[]; retry?: boolean }) => {
+    mutationFn: async ({
+      id,
+      path,
+      retry,
+      retryToolCallIds
+    }: {
+      id: string;
+      path: number[];
+      retry?: boolean;
+      retryToolCallIds?: string[];
+    }) => {
       const { promise } = await BackgroundTaskManager.scheduleTask(
         createTask(
           {
@@ -142,8 +152,9 @@ export function useChatPage(
               chatId: id,
               feedbackEnabled: chatState.feedbackEnabled,
               path: unwrap(path),
-              retry: Boolean(retry),
-              scratchpad: Boolean(opts().scratchpad)
+              retry,
+              retryToolCallIds,
+              scratchpad: opts().scratchpad
             },
             type: 'startLLMGeneration'
           },
@@ -317,6 +328,15 @@ export function useChatPage(
     }
     await updateMessages({ path });
     sendPrompt.mutate({ id: chat().id, path, retry: true });
+  }
+
+  async function onToolCallRetry(path: number[], chunkId: string) {
+    if (sendPrompt.isPending || isPending()) {
+      toast.error('Please wait for the current request to finish');
+      return;
+    }
+    await updateMessages({ path: path.slice(0, -1) });
+    sendPrompt.mutate({ id: chat().id, path, retryToolCallIds: [chunkId] });
   }
 
   async function onTraversal(path: number[], direction: -1 | 1) {
@@ -562,6 +582,7 @@ export function useChatPage(
               onEdit={onEdit}
               onRegenerate={onRegenerate}
               onRetry={onRetry}
+              onToolCallRetry={onToolCallRetry}
               onTraversal={onTraversal}
               path={chatState.path}
               ref={combineRefs(snap.bind, (el) => {
@@ -665,6 +686,7 @@ export function useChatPage(
     onEdit,
     onRegenerate,
     onRetry,
+    onToolCallRetry,
     onTraversal,
     sendPrompt
   };
