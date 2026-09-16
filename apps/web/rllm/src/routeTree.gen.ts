@@ -15,7 +15,6 @@ import { Route as DocumentsRouteImport } from './routes/documents'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
-import { Route as SettingsStorageRouteImport } from './routes/settings/storage'
 import { Route as SettingsProxyRouteImport } from './routes/settings/proxy'
 import { Route as SettingsProvidersRouteImport } from './routes/settings/providers'
 import { Route as SettingsModelsRouteImport } from './routes/settings/models'
@@ -55,11 +54,6 @@ const IndexRoute = IndexRouteImport.update({
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsStorageRoute = SettingsStorageRouteImport.update({
-  id: '/storage',
-  path: '/storage',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsProxyRoute = SettingsProxyRouteImport.update({
@@ -128,7 +122,6 @@ export interface FileRoutesByFullPath {
   '/settings/models': typeof SettingsModelsRoute
   '/settings/providers': typeof SettingsProvidersRoute
   '/settings/proxy': typeof SettingsProxyRoute
-  '/settings/storage': typeof SettingsStorageRoute
   '/settings/': typeof SettingsIndexRoute
   '/chat/$': typeof chatChatSplatRoute
 }
@@ -146,7 +139,6 @@ export interface FileRoutesByTo {
   '/settings/models': typeof SettingsModelsRoute
   '/settings/providers': typeof SettingsProvidersRoute
   '/settings/proxy': typeof SettingsProxyRoute
-  '/settings/storage': typeof SettingsStorageRoute
   '/settings': typeof SettingsIndexRoute
   '/chat/$': typeof chatChatSplatRoute
 }
@@ -166,7 +158,6 @@ export interface FileRoutesById {
   '/settings/models': typeof SettingsModelsRoute
   '/settings/providers': typeof SettingsProvidersRoute
   '/settings/proxy': typeof SettingsProxyRoute
-  '/settings/storage': typeof SettingsStorageRoute
   '/settings/': typeof SettingsIndexRoute
   '/(chat)/chat/$': typeof chatChatSplatRoute
 }
@@ -187,7 +178,6 @@ export interface FileRouteTypes {
     | '/settings/models'
     | '/settings/providers'
     | '/settings/proxy'
-    | '/settings/storage'
     | '/settings/'
     | '/chat/$'
   fileRoutesByTo: FileRoutesByTo
@@ -205,7 +195,6 @@ export interface FileRouteTypes {
     | '/settings/models'
     | '/settings/providers'
     | '/settings/proxy'
-    | '/settings/storage'
     | '/settings'
     | '/chat/$'
   id:
@@ -224,7 +213,6 @@ export interface FileRouteTypes {
     | '/settings/models'
     | '/settings/providers'
     | '/settings/proxy'
-    | '/settings/storage'
     | '/settings/'
     | '/(chat)/chat/$'
   fileRoutesById: FileRoutesById
@@ -281,13 +269,6 @@ declare module '@tanstack/solid-router' {
       path: '/'
       fullPath: '/settings/'
       preLoaderRoute: typeof SettingsIndexRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/storage': {
-      id: '/settings/storage'
-      path: '/storage'
-      fullPath: '/settings/storage'
-      preLoaderRoute: typeof SettingsStorageRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/proxy': {
@@ -372,7 +353,6 @@ interface SettingsRouteChildren {
   SettingsModelsRoute: typeof SettingsModelsRoute
   SettingsProvidersRoute: typeof SettingsProvidersRoute
   SettingsProxyRoute: typeof SettingsProxyRoute
-  SettingsStorageRoute: typeof SettingsStorageRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
@@ -385,7 +365,6 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsModelsRoute: SettingsModelsRoute,
   SettingsProvidersRoute: SettingsProvidersRoute,
   SettingsProxyRoute: SettingsProxyRoute,
-  SettingsStorageRoute: SettingsStorageRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }
 

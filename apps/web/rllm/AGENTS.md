@@ -5,29 +5,36 @@ A local-first LLM chat UI with end-to-end encrypted syncing between devices. Bui
 ## Build Commands
 
 | Command | Description |
-|---------|-------------|
-| `bun run dev` | Start dev server on port 3000 |
-| `bun run start` | Alias for `dev` |
-| `bun run build` | Build for production |
-| `bun run serve` | Preview production build |
-| `bun run test` | Run all tests (vitest run) |
-| `bun run test <path>` | Run single test file |
-| `bun run lint` | ESLint with auto-fix on `src/` |
-| `bun run format` | Prettier write on `src/` |
-| `bun run typecheck` | TypeScript type checking (`tsc`) |
-| `bun run db:migrate` | Generate and run Drizzle migrations |
+|---|---|
+| `bun run dev` / `bun run start` | Dev server on port 3000 (`vite --port 3000 --mode ${VITE_MODE:-web}`) |
+| `bun run build` | Production build for `$VITE_MODE` (`vite build --mode $VITE_MODE`) |
+| `bun run build:web` | Web production build |
+| `bun run build:android` | Android build, then `cap-sync` + `gradlew assembleRelease` |
+| `bun run dev:android` | `cap run android` with `ANDROID_DEBUG=1` |
+| `bun run serve` | Preview the production build |
+| `bun run test` | `vitest run` — there are currently **no test files** in the repo |
+| `bun run lint` | `oxlint --fix` (whole project) |
+| `bun run format` | `oxfmt --write src` |
+| `bun run typecheck` | `tsc` (TypeScript 7, `strict`) |
+| `bun run db:migrate` | `drizzle-kit generate` + `node scripts/generate-migrations.ts` |
+| `bun run cap-sync` | Capacitor config/version sync (`scripts/`) |
+| `bun run dependencies` | Copy the pdf.js worker into `public/` |
+| `bun run generate-pwa-assets` | Regenerate PWA icons/splash |
+
+`VITE_MODE` also picks platform implementations: with `VITE_MODE=android` Vite aliases `src/db/client.platform.android.ts`, `src/lib/vector-db/client.platform.android.ts` and `src/lib/vector-db/transient.platform.android.ts` in place of their `.web.ts` counterparts (see the `resolve.alias` block in `vite.config.ts`). Everything else is shared between web and Android.
 
 ## Tech Stack
 
-- **Framework**: SolidJS 1.9+, Vite 7, TypeScript 5.9 (strict)
+- **Framework**: SolidJS 1.9+, Vite 8, TypeScript 7 (strict, pinned via the monorepo catalog)
 - **Routing**: TanStack Router (file-based, auto code-splitting)
 - **Data Fetching**: TanStack Solid Query
-- **Styling**: Tailwind CSS v4 (`@tailwindcss/vite`), UnoCSS (web fonts), Kobalte UI primitives
-- **Database**: SQLite via sqlocal (OPFS), Drizzle ORM
+- **Styling**: Tailwind CSS v4 (`@tailwindcss/vite`), UnoCSS (web fonts), Kobalte UI primitives (workspace `ui` package)
+- **Database**: SQLite via sqlocal (OPFS) + Capacitor SQLite on Android, Drizzle ORM
 - **PWA**: Serwist (service worker), workbox build
 - **Workers**: Comlink for web worker RPC (encryption, markdown, syntax highlighting, RAG)
 - **Encryption/Sync**: ethers for E2EE, Protobuf (bufbuild) for wire format
 - **Error Handling**: `ts-result-option` (Result/Option types throughout)
+- **Lint / format**: oxlint + oxfmt (not ESLint/Prettier)
 
 ## Code Style Guidelines
 
@@ -36,24 +43,35 @@ A local-first LLM chat UI with end-to-end encrypted syncing between devices. Bui
 - **Target**: ESNext with strict mode enabled
 - **JSX**: Preserve with `solid-js` as JSX import source
 - **Module**: ES modules with bundler resolution, `verbatimModuleSyntax`
-- **Unused variables**: Prefix with `_` to ignore (enforced by ESLint)
+- **Unused variables**: Prefix with `_` to ignore (enforced by oxlint)
 - **Prefer const**: Always use `const` for destructuring
 
 ### Imports
 
-- Use `~/*` alias for all src imports (e.g., `~/components/Button`)
-- ESLint enforces alias usage over relative imports (`@dword-design/import-alias`)
-- Group imports: external deps → internal types → internal modules
+- Use `~/*` alias for all src imports (e.g., `~/components/Button`); relative imports only for siblings inside the same feature folder
+- Import grouping/sorting is enforced by the shared oxlint config (perfectionist plugin)
 - Use `import type` for type-only imports
-- Import sorting enforced by `perfectionist` plugin (object sort is OFF)
+- Prefer top-level `import type` declarations over inline `import('pkg').Type` annotations
 
-### Formatting (Prettier)
+### Formatting (oxfmt)
+
+Configured in `/workspace/packages/config/oxfmt.config.ts`, extended by `oxfmt.config.ts` (which ignores `src/routeTree.gen.ts` and `src/db/migrations.json`):
 
 - **Indent**: Spaces (not tabs)
 - **Quotes**: Single quotes
 - **Trailing commas**: None
 - **Print width**: 100 characters
-- **Experimental ternaries**: Enabled
+- **Imports**: Sorted (`sortImports: true`)
+- **package.json**: Not sorted by the formatter (`sortPackageJson: false`)
+
+### Linting (oxlint)
+
+`oxlint.config.ts` extends `@rthings/config/solid/oxlint.config`, adds the `oxlint-plugin-ts-result-option` JS plugin, and overrides two rules:
+
+- `no-await-in-loop: 'off'` — sequential awaits are deliberate here (event-log replay, transactions, socket/stream loops); do not re-add per-line disables for it
+- `ts-result-option/must-use-result: 'error'` — every `Result`/`AsyncResult` value must be handled (`match`/`unwrap`/`map`) or explicitly discarded with `void`
+
+`solid/reactivity` is **on** (via `eslint-plugin-solid` in the shared config). When a tracked read is intentionally outside a tracked scope, add a targeted `// oxlint-disable-next-line solid/reactivity` with a reason instead of relaxing the rule.
 
 ### Naming Conventions
 
@@ -61,9 +79,9 @@ A local-first LLM chat UI with end-to-end encrypted syncing between devices. Bui
 - **Functions**: camelCase
 - **Constants**: UPPER_SNAKE_CASE for true constants (preferred convention)
 - **Types/Interfaces**: PascalCase with `T` prefix (e.g., `TMessage`, `TChat`)
-- **Files**: camelCase for utilities, PascalCase for components
+- **Files**: camelCase for utilities, PascalCase for components, `use-*` for directive factories
 - **DB tables**: camelCase
-- **Route files**: kebab-case, `$` prefix for dynamic params
+- **Route files**: kebab-case, `$` prefix for dynamic params, `-` prefix for colocated non-route files
 
 ### Styling
 
@@ -74,11 +92,11 @@ A local-first LLM chat UI with end-to-end encrypted syncing between devices. Bui
 
 ### Error Handling
 
-- Use `ts-result-option` library for `Option`, `Result`, `AsyncResult` types
-- Use `tryBlock` with generator syntax (`async function*`) for async fallible operations
-- Handle errors with `.match()`, `.unwrapOr()`, `.inspectErr()` — never throw
+- Use `ts-result-option` for `Option`, `Result`, `AsyncResult` — never throw
+- Use `tryBlock` from `ts-result-option/utils` with generator syntax (`async function*`) for fallible flows; `yield* <result>` behaves like Rust's `?`
+- Annotate a `tryBlock` generator with `AsyncGen<T, E>` / `SyncGen<T, E>` (also from `ts-result-option/utils`) when you want the compiler to check each `return`/`yield` against `T`/`E` — without the annotation a wrong payload is reported on the `tryBlock` call, with it the offending `return` is flagged directly
+- Handle errors with `.match()`, `.unwrapOr()`, `.inspectErr()`; discard unhandled values with `void` (lint-enforced)
 - Use `safeParseJson` with Zod validation for runtime JSON parsing
-- `eslint-plugin-ts-result-option` enforces proper usage patterns
 
 ### SolidJS Patterns
 
@@ -86,7 +104,6 @@ A local-first LLM chat UI with end-to-end encrypted syncing between devices. Bui
 - **Stores**: Use `createStore` for complex state, `createSignal` for simple state
 - **Memoization**: Use `createMemo` for derived values
 - **Effects**: Use `createComputed` for reactive computations
-- **Disable**: `solid/reactivity` ESLint rule is OFF (manual management)
 - **Immutability**: Use `produce` from immer for immutable updates
 - **Debouncing**: Use `debounce` from `@tanstack/solid-pacer` for streaming updates
 - **Event bus**: Use `CustomEvent` for cross-component communication (e.g., `chat:updated:noscroll`, `chat:handoff`)
@@ -113,7 +130,7 @@ export function MyComponent(props: Props) {
 
 ### Auto-imports
 
-Only `./src/utils/debug.ts` is auto-imported (via `unplugin-auto-import`). No other auto-imports are configured.
+Only `./src/utils/debug.ts` is auto-imported (via `unplugin-auto-import`, configured in `vite.config.ts`). No other auto-imports are configured.
 
 ### PWA
 
@@ -127,47 +144,53 @@ Only `./src/utils/debug.ts` is auto-imported (via `unplugin-auto-import`). No ot
 
 ```
 src/
-├── components/       # Reusable UI components
-│   ├── ui/           # Kobalte-based primitives (button, dialog, switch, etc.)
-│   ├── modals/       # Modal dialogs (feedback, preset edit, etc.)
+├── components/       # Reusable UI components (Kobalte primitives come from the `ui` workspace package)
 │   ├── ChatList/     # Chat list panel components
+│   ├── form/         # Form controls
+│   ├── markdown/     # Markdown renderer (Markdown.tsx, Renderer.tsx, types.ts) + CopyButton
+│   ├── modals/       # Modal dialogs (feedback, preset edit, auto-import wrappers)
+│   ├── transitions/  # Transition helpers (TransitionAppear, TransitionSlide)
 │   ├── Chat.tsx      # Main chat view
-│   ├── ChatSettingsControls.tsx
-│   ├── TheChatSettingsDrawer.tsx
-│   ├── TheCommandPrompt.tsx
-│   └── ThePromptBox.tsx
-├── constants/        # App-wide constants
-├── context/          # SolidJS context providers
+│   └── The*.tsx      # Layout chrome: sidebar, drawers, prompt box, command prompt
+├── constants/        # App-wide constants (settings sections, user-metadata keys)
+├── context/          # SolidJS context providers (chat, notifications)
 ├── db/               # Database layer
 │   ├── schema.ts     # Combined tables export
 │   ├── app-schema.ts # App tables (mcps, chats, providers, userMetadata, chatPresets)
 │   ├── events-schema.ts # Event log tables (metadata, events)
-│   ├── utils.ts      # createDbApi / createLoggerProxy / parseDbRowsInPlace
-│   └── client.ts     # Database client + logger setup
-├── directives/       # SolidJS custom directives
+│   ├── client.ts     # Database client entry
+│   ├── client.platform.{web,android}.ts / client.platform.common.ts # Platform DB adapters
+│   ├── client.constants.ts / client.types.ts
+│   ├── migrationHooks.ts / migrations.json
+│   └── utils.ts      # createDbApi / createLoggerProxy / parseDbRowsInPlace
+├── directives/       # SolidJS directive factories (use-auto-scroll, use-hover-state-change, …)
 ├── lib/              # Core business logic
-│   ├── chat/         # Chat settings, generation, presets, utils
+│   ├── chat/         # Chat settings, presets, tasks, tools, utils + generation/
 │   ├── adapters/     # LLM provider adapters (OpenAI)
-│   ├── mcp/          # MCP client + manager
+│   ├── mcp/          # MCP client, manager, schemas, utils
 │   ├── providers/    # Provider configuration utilities
 │   ├── rag/          # RAG for PDF/EPUB with embeddings
-│   ├── proxy/        # CORS proxy support
-│   └── background-task-manager/ # Background task orchestration
-├── queries/          # TanStack Query options (`queries` object)
+│   ├── vector-db/    # Vector DB clients (platform variants like db/)
+│   ├── background-task-manager/ # Background task orchestration
+│   ├── proxy.ts      # CORS proxy support
+│   └── query-cache.ts
+├── primitives/       # Small reusable reactive primitives (use-fuse)
+├── queries/          # TanStack Query options (`queries` object) + mutations/
 ├── routes/           # TanStack Router file-based routes
 │   ├── __root.tsx    # Root layout
 │   ├── index.tsx     # Home
 │   ├── $.tsx         # Catch-all
-│   ├── chat/         # Chat routes
-│   │   ├── $.tsx     # Individual chat (with -state.ts, -utils.ts, -ChatAppDrawer.tsx)
-│   │   └── -state.ts # Chat-level signal state
-│   ├── settings/     # Settings sub-routes
-│   └── presets.tsx   # Presets management
-├── signals/          # Global signal definitions
-├── sockets/          # WebSocket/sync communication
+│   ├── documents.tsx / presets.tsx / settings.tsx
+│   ├── (chat)/       # Chat route group
+│   │   ├── -layout.tsx / -state.ts / -utils.ts / -constants.ts / -ChatAppDrawer.tsx
+│   │   ├── chat/$.tsx # Individual chat
+│   │   └── scratchpad.tsx
+│   └── settings/     # Settings sub-routes (account, appearance, data, general, mcp, models, providers, proxy)
+├── signals/          # Global signal definitions (account, index)
+├── sockets/          # WebSocket/sync communication (messages, transports/)
 ├── styles/           # Additional styles (starry-night themes)
-├── types/            # Zod-based type definitions (chat, utils)
-├── utils/            # Utility functions (crypto, markdown, tree, form, etc.)
+├── types/            # Zod-based type definitions (chat/, utils)
+├── utils/            # Utility functions (crypto, markdown, tree, form, storage, …)
 └── workers/          # Web workers (comlink RPC)
     ├── encryption/   # E2EE encryption worker
     ├── lowlight/     # Syntax highlighting (lowlight)
@@ -176,23 +199,28 @@ src/
     └── starry-night/ # Syntax highlighting (starry-night)
 ```
 
+`src/routeTree.gen.ts` is generated by `@tanstack/router-plugin` (regenerated on dev/build; excluded from formatting).
+
 ### Key Modules
 
 | Module | Role |
-|--------|------|
-| `lib/chat/generation.ts` | `ChatGenerationManager` — orchestrates full LLM completion lifecycle with tool execution, RAG, handoff, and feedback |
+|---|---|
+| `lib/chat/generation/index.ts` | `ChatGenerationManager` — orchestrates full LLM completion lifecycle with tool execution, RAG, handoff, and feedback |
 | `lib/chat/index.ts` | `handleCompletion` — low-level streaming loop with tool call execution |
 | `lib/chat/utils.ts` | `generateTitleAndTags`, `summarizeChat`, `makeTool` — utility completions |
+| `lib/chat/tasks.ts` / `lib/background-task-manager/` | Background task orchestration for titles/tags/summaries |
 | `lib/chat/settings.ts` | Chat settings schema (Zod) + init/update logic |
+| `lib/chat/presets.ts` | Chat preset handling |
 | `lib/adapters/openai/` | OpenAI-compatible API adapter |
-| `lib/mcp/manager.ts` | MCPManager — tool registration and discovery |
+| `lib/mcp/{index,client,manager,utils}.ts` | MCP manager — tool registration, discovery, JSON-RPC/SSE transport |
 | `lib/rag/` | PDF/EPUB text extraction + embedding-based retrieval |
-| `db/client.ts` | Platform database client: SQLite adapter, event-sourcing logger, and the `db` API |
-| `db/utils.ts` | `createDbApi(logger)` — the `db.<table>.<method>()` read/write API (including one typed accessor pair per `USER_METADATA_KEYS` entry), plus `createLoggerProxy` and `parseDbRowsInPlace` |
+| `lib/proxy.ts` | CORS proxy support (`ProxyManager`) |
+| `db/client.ts` (+ `client.platform.*`) | Platform database client: SQLite adapter, event-sourcing logger, and the `db` API |
+| `db/utils.ts` | `createDbApi(logger)` — the `db.<table>.<method>()` read/write API (including one typed accessor pair per `USER_METADATA_KEYS` entry from `constants/user-metadata.ts`), plus `createLoggerProxy` and `parseDbRowsInPlace` |
 
 ## Database & Sync
 
-- **Engine**: SQLite via `sqlocal` (in-browser OPFS)
+- **Engine**: SQLite via `sqlocal` (in-browser OPFS) on web, Capacitor SQLite on Android
 - **ORM**: Drizzle ORM with schemas split into `app-schema.ts` (domain tables) and `events-schema.ts` (event log)
 - **Pattern**: Event-sourcing — every DB mutation is an event. Call `db.<table>.create/update/upsert/delete(...)` (or a typed `db.userMetadata.set…` accessor); those wrap `logger.dispatch(event)`, which is called nowhere else. Reads are `db.<table>.get/all/…`
 - **Tables**:
@@ -245,10 +273,10 @@ When adding a user-state mutation that should be synced across all clients, it m
 ## Routing
 
 - File-based routing with TanStack Router (`@tanstack/router-plugin/vite`)
-- Routes defined as files in `src/routes/`
+- Routes defined as files in `src/routes/`; groups like `(chat)` don't appear in the URL
 - Use `createFileRoute` for route definitions
-- Dynamic route parameters use `$` prefix (e.g., `$.tsx` for catch-all, `chat/$.tsx` for individual chats)
-- Route-level state and utilities are colocated using `-` prefix files (e.g., `chat/-state.ts`, `chat/-utils.ts`)
+- Dynamic route parameters use `$` prefix (e.g., `$.tsx` for catch-all, `(chat)/chat/$.tsx` for individual chats)
+- Route-level state and utilities are colocated using `-` prefix files (e.g., `(chat)/-state.ts`, `(chat)/-utils.ts`), which the router ignores as routes
 - Auto code-splitting enabled
 
 ## Web Workers
@@ -256,7 +284,7 @@ When adding a user-state mutation that should be synced across all clients, it m
 All workers use Comlink (`vite-plugin-comlink`) for RPC communication:
 
 | Worker | Purpose |
-|--------|---------|
+|---|---|
 | `encryption/` | End-to-end encryption/decryption |
 | `lowlight/` | Syntax highlighting via lowlight |
 | `markdown/` | Markdown to HTML conversion |
@@ -265,16 +293,18 @@ All workers use Comlink (`vite-plugin-comlink`) for RPC communication:
 
 ## Workspace Dependencies
 
-This project uses workspace packages from the parent monorepo (`/home/projects/rllm/default/packages/`):
+This project uses workspace packages from the parent monorepo (`/workspace/packages/`):
 
+- `config` (`@rthings/config`) — shared oxlint/oxfmt/tsconfig presets
+- `ui` — UI primitives (`ui/button`, `ui/card`, `ui/*`) plus `ui/styles.css`
+- `ts-result-option` — Result/Option types and `tryBlock`/`AsyncGen`/`SyncGen` (core error handling)
+- `oxlint-plugin-ts-result-option` — lint rules enforcing Result usage (`must-use-result`, file naming, …)
 - `event-logger` — Event sourcing log for DB operations
 - `hlc` — Hybrid logical clock for ordering
-- `proto` — Protocol buffer definitions
-- `ts-result-option` — Result/Option types (core error handling)
-- `eslint-plugin-ts-result-option` — ESLint rules for Result types
+- `proto` — Protocol buffer definitions (regenerate with `bun run proto:generate`)
 - `object-pool` — Object pooling utility
-- `merkle-tree` — Merkle tree implementation
-- `rehype-shiki` — Shiki syntax highlighting for rehype
-- `vite-plugin-dbg` — Vite plugin for development debugging (`process.env.NODE_ENV === 'development'`)
+- `vector-db` — Vector storage used by RAG
+
+Other packages exist in the monorepo (`merkle-tree`, `event-bus`, the Go ports) but are not consumed by this app.
 
 Always ensure workspace packages are properly linked before running commands.

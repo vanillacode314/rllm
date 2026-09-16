@@ -24,21 +24,21 @@ export function PresetSelector(props: {
   const [input, setInput] = createWritableMemo<string>(() => '');
 
   const sortedPresets = useFuse({
+    isCaseSensitive: false,
     items: () => props.presets,
+    keys: ['name'],
     query: input,
     returnAllOnEmptyQuery: true,
-    isCaseSensitive: false,
-    keys: ['name'],
     shouldSort: true,
     threshold: 1
   });
 
   const filteredPresets = useFuse({
+    isCaseSensitive: false,
     items: () => props.presets,
+    keys: ['name'],
     query: input,
     returnAllOnEmptyQuery: true,
-    isCaseSensitive: false,
-    keys: ['name'],
     shouldSort: true,
     threshold: 0.5
   });
@@ -59,7 +59,7 @@ export function PresetSelector(props: {
     <Combobox<TChatPreset>
       class={props.class}
       defaultFilter={(option) => filteredPresets().includes(option)}
-      onChange={async (value) => {
+      onChange={(value) => {
         if (!value) return;
         props.onChange(value);
         setInput('');
@@ -112,7 +112,9 @@ export function PresetSelector(props: {
                           width: '100%'
                         }}
                       >
-                        <ComboboxItemLabel class="truncate">{item.rawValue.name}</ComboboxItemLabel>
+                        <ComboboxItemLabel class="truncate">
+                          {(item.rawValue as unknown as TChatPreset).name}
+                        </ComboboxItemLabel>
                         <ComboboxItemIndicator />
                       </ComboboxItem>
                     );
@@ -126,5 +128,3 @@ export function PresetSelector(props: {
     </Combobox>
   );
 }
-
-export default PresetSelector;

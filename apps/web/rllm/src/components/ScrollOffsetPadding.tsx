@@ -2,11 +2,11 @@ import { createResizeObserver } from '@solid-primitives/resize-observer';
 import { createEffect, createSignal, on } from 'solid-js';
 
 export function ScrollOffsetPadding(props: {
+  class?: string;
+  containerRef?: HTMLElement;
   margin: number;
   scrollRef?: HTMLElement;
-  containerRef?: HTMLElement;
   targetSelector: string;
-  class?: string;
 }) {
   const [offsetHeight, setOffsetHeight] = createSignal(0);
 
@@ -37,5 +37,3 @@ export function ScrollOffsetPadding(props: {
 
   return <div class={props.class} style={{ height: `${offsetHeight()}px` }} />;
 }
-
-export default ScrollOffsetPadding;

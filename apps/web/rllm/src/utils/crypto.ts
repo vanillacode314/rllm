@@ -36,7 +36,9 @@ const encryptSingleChunk = (
           name: 'AES-GCM'
         },
         aesKey,
-        data
+        data.buffer instanceof ArrayBuffer
+          ? (data as Uint8Array<ArrayBuffer>)
+          : new Uint8Array(data)
       );
       signal?.throwIfAborted();
 

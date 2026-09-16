@@ -26,13 +26,13 @@ export type NormalComponents = {
 };
 export type Options = {
   components: Components;
-  includeElementIndex: boolean;
-  linkTarget: TransformLinkTarget | TransformLinkTargetType;
-  rawSourcePos: boolean;
-  skipHtml: boolean;
-  sourcePos: boolean;
+  includeElementIndex?: boolean;
+  linkTarget?: TransformLinkTarget | TransformLinkTargetType;
+  rawSourcePos?: boolean;
+  skipHtml?: boolean;
+  sourcePos?: boolean;
   transformImageUri?: TransformImage;
-  transformLinkUri: false | null | TransformLink;
+  transformLinkUri?: false | null | TransformLink;
 };
 export type Raw = {
   type: 'raw';
@@ -81,6 +81,7 @@ type SpecialComponents = {
   h5: HeadingComponent | SolidMarkdownNames;
   h6: HeadingComponent | SolidMarkdownNames;
   li: LiComponent | SolidMarkdownNames;
+  'mention-src': any;
   ol: OrderedListComponent | SolidMarkdownNames;
   td: SolidMarkdownNames | TableCellComponent;
   th: SolidMarkdownNames | TableCellComponent;

@@ -23,7 +23,7 @@ import { unified } from 'unified';
 import { VFile } from 'vfile';
 
 import { useDocumentDialog } from '~/components/modals/auto-import/DocumentDialog';
-import { hoverStateChange } from '~/directives/hover-state-change';
+import { useHoverState } from '~/directives/use-hover-state';
 import { vectorDb } from '~/lib/vector-db/client';
 import { transientDb } from '~/lib/vector-db/transient';
 import { chatState } from '~/routes/(chat)/-state';
@@ -35,7 +35,6 @@ import * as markdownWorker from '~/workers/markdown';
 
 import CopyButton from './CopyButton';
 import { MarkdownRoot } from './Renderer';
-void hoverStateChange;
 
 type TProps = JSX.HTMLAttributes<HTMLDivElement> & {
   content: string;
@@ -58,22 +57,30 @@ function SourceComponent(
   >
 ) {
   const documentDialog = useDocumentDialog();
+  const queryKey = createMemo(() =>
+    props.type === 'document'
+      ? (['document', props.documentId, props.id] as const)
+      : (['document'] as const)
+  );
   const documentQuery = useQuery(() => ({
     enabled: props.type === 'document',
     queryFn: async ({ queryKey: [, documentId, id] }) => {
+      if (!documentId || !id) throw new Error('Invalid document id');
       const document = chatState.attachments.find((attachment) => attachment.id === documentId)!;
       const text = document.transient
         ? await transientDb.getText(id, documentId)
         : await vectorDb.getText(id, documentId);
       return { ...document, text: text ?? 'Error: Not Found' };
     },
-    queryKey: ['document', props.documentId, props.id] as const
+    queryKey: queryKey()
   }));
-  const [isHovering, setIsHovering] = createSignal<boolean>(false);
+  const hoverState = useHoverState();
 
   return (
     <>
-      <span class={cn('rounded-full px-1 mr-1 transition-colors', isHovering() && 'bg-primary/15')}>
+      <span
+        class={cn('rounded-full px-1 mr-1 transition-colors', hoverState.get() && 'bg-primary/15')}
+      >
         <span>{props.children}</span>
       </span>
       <Switch>
@@ -89,8 +96,8 @@ function SourceComponent(
             <button
               class="bg-accent rounded-full px-2 truncate text-xs font-mono max-w-36"
               onClick={() => documentDialog.open({ document: documentQuery.data! })}
+              ref={hoverState.bind}
               title={documentQuery.data?.description}
-              use:hoverStateChange={setIsHovering}
             >
               {documentQuery.data?.description}
             </button>
@@ -99,12 +106,12 @@ function SourceComponent(
         <Match when={props.type === 'url'}>
           <a
             class="bg-accent rounded-full px-2 truncate text-xs font-mono max-w-36"
-            href={props.href}
+            href={(props as typeof props & { type: 'url' }).href}
+            ref={hoverState.bind}
             rel="noreferrer"
             target="_blank"
-            use:hoverStateChange={setIsHovering}
           >
-            {props.href}
+            {(props as typeof props & { type: 'url' }).href}
           </a>
         </Match>
       </Switch>
@@ -201,7 +208,7 @@ function Markdown(props: TProps) {
           },
           schema: html
         }}
-        node={node}
+        node={node as any}
       />
     </div>
   );

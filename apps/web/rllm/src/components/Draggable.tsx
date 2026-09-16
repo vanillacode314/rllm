@@ -31,6 +31,7 @@ export function AttachDraggable<T extends Record<string, unknown>>(
     onDrop?: (arg: ElementEventBasePayload) => void;
   }>
 ) {
+  // oxlint-disable-next-line solid/reactivity
   const { canDrag, onDrag, onDragStart, onDrop } = props;
   const ref = children(() => props.children);
   const [state] = useDraggable();

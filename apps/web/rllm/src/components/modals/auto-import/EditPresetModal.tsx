@@ -15,14 +15,14 @@ import { Switch, SwitchControl, SwitchLabel, SwitchThumb } from 'ui/switch';
 import { TextField, TextFieldInput, TextFieldLabel, TextFieldTextArea } from 'ui/text-field';
 import * as z from 'zod/mini';
 
-import ValidationErrors from '~/components/form/ValidationErrors';
-import ModelSelector from '~/components/ModelSelector';
-import ProviderSelector from '~/components/ProviderSelector';
+import { ValidationErrors } from '~/components/form/ValidationErrors';
+import { ModelSelector } from '~/components/ModelSelector';
+import { ProviderSelector } from '~/components/ProviderSelector';
 import { REASONING_VALUE_TO_LABEL_MAP } from '~/constants/chat-settings';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { updatePreset } from '~/lib/chat/presets';
-import type { TChatSettings } from '~/lib/chat/settings';
 import { queries } from '~/queries';
+import type { TChatSettings } from '~/types/chat';
 import { createForm, parseFormErrors } from '~/utils/form';
 
 export const [editPresetModalOpen, setEditPresetModalOpen] = createSignal<false | string>(false);

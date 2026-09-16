@@ -20,8 +20,8 @@ import { Tree, type TTree } from '~/utils/tree';
 const CHAT_STATE_LOCALFORAGE_KEY = 'rllm:chat-state';
 
 type TChatState = {
-  chat: Option<Omit<TChat, 'messages' | 'settings'>>;
   attachments: TAttachment[];
+  chat: Option<Omit<TChat, 'messages' | 'settings'>>;
   feedbackEnabled: boolean;
   messages: TTree<TMessage>;
   path: number[];
@@ -30,8 +30,8 @@ type TChatState = {
 };
 
 const makeDefaultChatState: () => TChatState = () => ({
-  chat: Option.None(),
   attachments: [],
+  chat: Option.None(),
   feedbackEnabled: false,
   messages: new Tree(),
   path: [],
@@ -95,6 +95,16 @@ export function updateAttachmentById(id: string, data: Partial<TAttachment>) {
   );
 }
 
+export function updateChat(chat: Omit<TChat, 'messages' | 'settings'>) {
+  startTransition(() => {
+    setChatState((state) =>
+      produce(state, (draft) => {
+        draft.chat = Option.Some(chat);
+      })
+    );
+  });
+}
+
 export function updateChatSettings(settings: z.input<typeof chatSettingsSchema>) {
   setChatState((state) =>
     produce(state, (draft) => {
@@ -111,16 +121,6 @@ export function updateFeedbackEnabled(feedbackEnabled: boolean) {
   );
 }
 
-export function updateChat(chat: Omit<TChat, 'messages' | 'settings'>) {
-  startTransition(() => {
-    setChatState((state) =>
-      produce(state, (draft) => {
-        draft.chat = Option.Some(chat);
-      })
-    );
-  });
-}
-
 export function updateMessages(
   setter:
     | (({ messages, path }: { messages: TTree<TMessage>; path: number[] }) => {
@@ -132,6 +132,7 @@ export function updateMessages(
         path?: number[];
       }
 ) {
+  // oxlint-disable-next-line solid/reactivity
   return startTransition(() => {
     const { messages, path } =
       typeof setter === 'function'

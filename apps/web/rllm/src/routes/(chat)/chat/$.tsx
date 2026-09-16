@@ -9,7 +9,7 @@ import { db, logger } from '~/db/client';
 import { queries } from '~/queries';
 import { queryClient } from '~/utils/query-client';
 
-import ChatAppDrawer from '../-ChatAppDrawer';
+import { ChatAppDrawer } from '../-ChatAppDrawer';
 import { INCREMENT_ACCESS_COUNT_THRESHOLD_MILLISECONDS } from '../-constants';
 import { useChatPage, useChatPageBeforeLoad, useChatPageLoader } from '../-layout';
 import { updateMessages } from '../-state';
@@ -20,10 +20,10 @@ console.error('FIX OPTIMIZE STORAGE');
 export const Route = createFileRoute('/(chat)/chat/$')({
   beforeLoad: useChatPageBeforeLoad,
   component: ChatPageComponent,
-  // oxlint-disable-next-line perfectionist/sort-objects
   loaderDeps: ({ search: { id } }) => ({ id: id ?? nanoid(), isNewChat: id === undefined }),
+  // oxlint-disable-next-line perfectionist/sort-objects
   loader: async ({ deps, params, preload }) => {
-    const { makeNewChat, ensureQueryData, ensureValidChatProvider, loadChat } = useChatPageLoader({
+    const { ensureQueryData, ensureValidChatProvider, loadChat, makeNewChat } = useChatPageLoader({
       preload
     });
     const { id, isNewChat } = deps;

@@ -13,6 +13,7 @@ interface MCPTestResultProps {
 
 export function MCPTestResult(props: MCPTestResultProps) {
   const [expanded, setExpanded] = createSignal(false);
+  const tools = () => (props.result.success ? props.result.tools : []);
 
   return (
     <Show
@@ -25,7 +26,9 @@ export function MCPTestResult(props: MCPTestResultProps) {
               Error
             </Badge>
           </AlertTitle>
-          <AlertDescription class="whitespace-pre-wrap mt-2">{props.result.error}</AlertDescription>
+          <AlertDescription class="whitespace-pre-wrap mt-2">
+            {(props.result as TestMCPServerResult & { success: false }).error}
+          </AlertDescription>
         </Alert>
       }
       when={props.result.success}
@@ -45,7 +48,7 @@ export function MCPTestResult(props: MCPTestResultProps) {
           </Show>
         </CardHeader>
         <CardContent class="p-3 pt-0">
-          <Show when={props.result.tools && props.result.tools.length > 0}>
+          <Show when={tools().length > 0}>
             <div class="mt-3">
               <button
                 class="group flex items-center gap-1.5 text-sm font-medium text-foreground transition-colors hover:text-foreground/80"
@@ -60,14 +63,14 @@ export function MCPTestResult(props: MCPTestResultProps) {
                   }}
                 />
                 <span>
-                  {props.result.tools!.length} tool
-                  {props.result.tools!.length > 1 ? 's' : ''} available
+                  {tools().length} tool
+                  {tools().length > 1 ? 's' : ''} available
                 </span>
               </button>
 
               <Show when={expanded()}>
                 <div class="mt-3 space-y-2">
-                  <For each={props.result.tools!}>
+                  <For each={tools()}>
                     {(tool: TTool) => (
                       <Alert>
                         <div class="flex items-start gap-2">
@@ -91,5 +94,3 @@ export function MCPTestResult(props: MCPTestResultProps) {
     </Show>
   );
 }
-
-export default MCPTestResult;

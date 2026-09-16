@@ -109,11 +109,11 @@ function TheCommandPrompt() {
       : [];
 
   const sortedModels = useFuse({
+    isCaseSensitive: false,
     items: models,
+    keys: ['key1', 'key2'],
     query: () => (mode() !== 'models' ? '' : input().trimStart().substring(1)),
     returnAllOnEmptyQuery: true,
-    isCaseSensitive: false,
-    keys: ['key1', 'key2'],
     shouldSort: true,
     threshold: 1
   });
@@ -183,7 +183,7 @@ function TheCommandPrompt() {
       case 'models':
         return {
           'Switch Model': sortedModels()
-            .map(({ provider, model }) => ({
+            .map(({ model, provider }) => ({
               handler: () => {
                 saveChatSettings(
                   {
@@ -258,6 +258,15 @@ function TheCommandPrompt() {
     Object.entries(items()).filter(([, items]) => items.some((item) => item.condition?.() ?? true))
   );
 
+  async function onSelect(item: TItem, value: string) {
+    await item.handler(value);
+    batch(() => {
+      setInput('');
+      if (item.noClose) return;
+      setCommandPromptOpen(false);
+    });
+  }
+
   return (
     <CommandDialog
       loop
@@ -283,14 +292,7 @@ function TheCommandPrompt() {
                     <CommandItem
                       class="flex gap-1.5 items-center"
                       keywords={item.keywords}
-                      onSelect={async (value) => {
-                        await item.handler(value);
-                        batch(() => {
-                          setInput('');
-                          if (item.noClose) return;
-                          setCommandPromptOpen(false);
-                        });
-                      }}
+                      onSelect={(value) => onSelect(item, value)}
                       value={item.value}
                     >
                       <Show when={item.icon}>

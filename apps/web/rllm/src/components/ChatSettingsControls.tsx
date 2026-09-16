@@ -12,14 +12,14 @@ import { cn } from 'ui/utils/tailwind';
 import { REASONING_VALUE_TO_LABEL_MAP } from '~/constants/chat-settings';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { createPreset, type TChatPreset } from '~/lib/chat/presets';
-import { type TChatSettings } from '~/lib/chat/settings';
 import { MCPManager } from '~/lib/mcp/manager';
 import { queries } from '~/queries';
 import type { TModel, TProvider } from '~/types';
+import type { TChatSettings } from '~/types/chat';
 
-import ModelSelector from './ModelSelector';
-import PresetSelector from './PresetSelector';
-import ProviderSelector from './ProviderSelector';
+import { ModelSelector } from './ModelSelector';
+import { PresetSelector } from './PresetSelector';
+import { ProviderSelector } from './ProviderSelector';
 
 export type ChatSettingsControlsProps = {
   class?: string;
@@ -243,5 +243,3 @@ export function PresetsSection(props: {
     </div>
   );
 }
-
-export default ChatSettingsControls;

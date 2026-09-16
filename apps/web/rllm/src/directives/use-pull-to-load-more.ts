@@ -1,13 +1,13 @@
 import { createEventListenerMap } from '@solid-primitives/event-listener';
 import { WheelGesture } from '@use-gesture/vanilla';
 import type { AnimationPlaybackControls } from 'motion';
-import { createEffect, createSignal, on, onCleanup, type Accessor, type JSX } from 'solid-js';
+import { type Accessor, createEffect, createSignal, type JSX, on, onCleanup } from 'solid-js';
 
 import { createMotionValue } from '~/utils/motionone';
 
 export type UsePullToLoadMoreOptions = {
   hasMore: Accessor<boolean>;
-  onLoadMore: () => void | Promise<void>;
+  onLoadMore: () => Promise<void> | void;
   threshold?: number;
 };
 
@@ -21,7 +21,7 @@ export function usePullToLoadMore(options: UsePullToLoadMoreOptions) {
   function resetOffset() {
     for (const resolve of animationWaiters) resolve();
     animationWaiters.clear();
-    return (currentAnimation = animateOffset(0, { type: 'spring', stiffness: 200, damping: 15 }));
+    return (currentAnimation = animateOffset(0, { damping: 15, stiffness: 200, type: 'spring' }));
   }
 
   function waitForAnimation(): Promise<void> {
@@ -47,7 +47,7 @@ export function usePullToLoadMore(options: UsePullToLoadMoreOptions) {
           if (!wheeling) {
             const shouldLoadMore = offset() > threshold();
             resetOffset();
-            shouldLoadMore && options.onLoadMore();
+            if (shouldLoadMore) options.onLoadMore();
             return;
           }
           if (Math.floor(ref.scrollTop) > 0 || (dy >= 0 && my >= 0)) return;
@@ -58,9 +58,11 @@ export function usePullToLoadMore(options: UsePullToLoadMoreOptions) {
       let down = false;
       let startY = 0;
       createEventListenerMap(ref, {
-        touchstart: (event) => {
-          down = true;
-          startY = event.touches[0].clientY;
+        touchend: () => {
+          down = false;
+          const shouldLoadMore = offset() > threshold();
+          resetOffset();
+          if (shouldLoadMore) options.onLoadMore();
         },
         touchmove: (event) => {
           if (!down) return;
@@ -69,11 +71,9 @@ export function usePullToLoadMore(options: UsePullToLoadMoreOptions) {
           if (dy < 0) return;
           setOffset(dy * 0.3);
         },
-        touchend: () => {
-          down = false;
-          const shouldLoadMore = offset() > threshold();
-          resetOffset();
-          shouldLoadMore && options.onLoadMore();
+        touchstart: (event) => {
+          down = true;
+          startY = event.touches[0].clientY;
         }
       });
 
@@ -85,9 +85,9 @@ export function usePullToLoadMore(options: UsePullToLoadMoreOptions) {
 
   return {
     bind: setRef,
+    innerStyle: (): JSX.CSSProperties => ({ transform: `translateY(${offset()}px)` }),
     offset,
     threshold,
-    waitForAnimation,
-    innerStyle: (): JSX.CSSProperties => ({ transform: `translateY(${offset()}px)` })
+    waitForAnimation
   };
 }

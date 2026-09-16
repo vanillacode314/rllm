@@ -26,6 +26,18 @@ const [open, setOpen] = createSignal(false);
 export function ConfirmDialog() {
   onCleanup(() => setOpen(false));
 
+  async function onConfirm() {
+    setOpen(false);
+    await options()?.onConfirm?.();
+    resolvePromise?.(true);
+  }
+
+  function onCancel() {
+    setOpen(false);
+    options()?.onCancel?.();
+    resolvePromise?.(false);
+  }
+
   return (
     <Dialog onOpenChange={setOpen} open={open()}>
       <DialogContent>
@@ -34,24 +46,10 @@ export function ConfirmDialog() {
           <DialogDescription>{options()?.description}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button
-            onClick={() => {
-              setOpen(false);
-              options()?.onCancel?.();
-              resolvePromise?.(false);
-            }}
-            variant="secondary"
-          >
+          <Button onClick={() => onCancel()} variant="secondary">
             {options()?.cancelText || 'Cancel'}
           </Button>
-          <Button
-            onClick={async () => {
-              setOpen(false);
-              await options()?.onConfirm?.();
-              resolvePromise?.(true);
-            }}
-            variant={options()?.variant || 'default'}
-          >
+          <Button onClick={() => onConfirm()} variant={options()?.variant || 'default'}>
             {options()?.confirmText || 'Confirm'}
           </Button>
         </DialogFooter>

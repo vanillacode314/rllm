@@ -57,7 +57,6 @@ export class ChatGenerationManager {
     let chat = Option.None<TChat>();
     let provider = Option.None<TProvider>();
     for (const storage of this.storages) {
-      // oxlint-disable-next-line no-await-in-loop
       let jsonChat;
       ({ chat: jsonChat, provider } = await storage.getChat(id));
       if (jsonChat.isSome()) {
@@ -208,8 +207,8 @@ export class ChatGenerationManager {
         .filter((tool) => tool.isSome())
         .map((tool) => tool.unwrap());
       this.emitUpdate(id);
-      await executeToolCalls(tool_calls, retryTools, controller.signal, () =>
-        this.emitUpdate(id)
+      void (
+        await executeToolCalls(tool_calls, retryTools, controller.signal, () => this.emitUpdate(id))
       ).inspectErr(console.error);
     }
     const prompts = [MATH_SYSTEM_PROMPT] as string[];

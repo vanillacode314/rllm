@@ -127,6 +127,7 @@ function SettingsAccountComponent() {
         setStatus('loading', true);
         yield* withTransaction((tx) =>
           tryBlock(
+            // oxlint-disable-next-line solid/reactivity
             async function* () {
               const response = await syncServerApi
                 .query({ accountId: id })
@@ -227,6 +228,15 @@ function SettingsAccountComponent() {
     }
   }
 
+  async function onLogin() {
+    const result = await login();
+    result
+      .inspectErr(() => {
+        toast.error('Failed to login. If this persists, please contact support');
+      })
+      .unwrap();
+  }
+
   return (
     <div class="flex flex-col gap-4">
       <Switch>
@@ -317,15 +327,7 @@ function SettingsAccountComponent() {
                 <span class="icon-[heroicons--plus]" />
                 <span>Create new account</span>
               </Button>
-              <Button
-                onClick={async () =>
-                  (await login())
-                    .inspectErr(() => {
-                      toast.error('Failed to login. If this persists, please contact support');
-                    })
-                    .unwrap()
-                }
-              >
+              <Button onClick={() => onLogin()}>
                 <span class="icon-[heroicons--arrow-left-on-rectangle]" />
                 <span>Login</span>
               </Button>

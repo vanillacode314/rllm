@@ -60,5 +60,3 @@ export function TheSidebar() {
     </Sidebar>
   );
 }
-
-export default TheSidebar;

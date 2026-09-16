@@ -12,7 +12,7 @@ import {
 import { TextField, TextFieldInput, TextFieldTextArea } from 'ui/text-field';
 import { cn } from 'ui/utils/tailwind';
 
-import ValidationErrors from '~/components/form/ValidationErrors';
+import { ValidationErrors } from '~/components/form/ValidationErrors';
 
 const toggleCheckbox = (questionId: string, option: string) => {
   setState(
@@ -266,7 +266,12 @@ function CheckboxOption(props: CheckboxOptionProps) {
           : 'border-input bg-background text-foreground'
       )}
     >
-      <input checked={props.isChecked} class="hidden" onChange={props.onChange} type="checkbox" />
+      <input
+        checked={props.isChecked}
+        class="hidden"
+        onChange={() => props.onChange()}
+        type="checkbox"
+      />
       <span
         aria-hidden="true"
         class={cn(
@@ -390,10 +395,10 @@ function Question(props: QuestionProps) {
         <TextareaQuestion placeholder={props.question.placeholder} questionId={props.question.id} />
       </Show>
       <Show when={props.question.type === 'checkbox'}>
-        <CheckboxQuestion options={props.question.options} questionId={props.question.id} />
+        <CheckboxQuestion options={props.question.options ?? []} questionId={props.question.id} />
       </Show>
       <Show when={props.question.type === 'radio' || props.question.type === undefined}>
-        <RadioQuestion options={props.question.options} questionId={props.question.id} />
+        <RadioQuestion options={props.question.options ?? []} questionId={props.question.id} />
       </Show>
     </div>
   );
@@ -409,7 +414,12 @@ function RadioOption(props: RadioOptionProps) {
           : 'border-input bg-background text-foreground'
       )}
     >
-      <input checked={props.isChecked} class="hidden" onChange={props.onChange} type="radio" />
+      <input
+        checked={props.isChecked}
+        class="hidden"
+        onChange={() => props.onChange()}
+        type="radio"
+      />
       <span
         aria-hidden="true"
         class={cn(

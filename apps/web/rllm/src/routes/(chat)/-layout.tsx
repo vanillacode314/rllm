@@ -5,13 +5,11 @@ import { createHotkey } from '@tanstack/solid-hotkeys';
 import { useMutation, useQuery } from '@tanstack/solid-query';
 import { type NavigateFn, redirect, useBlocker, useRouter } from '@tanstack/solid-router';
 import { HLC } from 'hlc';
-import { animate } from 'motion';
 import { nanoid } from 'nanoid';
 import {
   type Accessor,
   createMemo,
   createRenderEffect,
-  createSignal,
   For,
   on,
   onCleanup,
@@ -33,7 +31,7 @@ import ThePromptBox from '~/components/ThePromptBox';
 import { FALLBACK_CHAT_SETTINGS } from '~/constants/chat-settings';
 import { useChatState } from '~/context/chat';
 import { useNotifications } from '~/context/notifications';
-import { chatsSchema, type TChat as TDBChat } from '~/db/app-schema';
+import { chatsSchema, type TChatPreset, type TChat as TDBChat } from '~/db/app-schema';
 import { db } from '~/db/client';
 import { useSnapToElement } from '~/directives/use-snap-to-element';
 import { BackgroundTaskManager } from '~/lib/background-task-manager';
@@ -496,6 +494,19 @@ export function useChatPage(
     const presetsQuery = useQuery(() => queries.chatPresets.all());
     const chatRouteState = useChatState();
 
+    async function onPresetChange(preset: TChatPreset) {
+      try {
+        await saveChatSettings(preset.settings, {
+          chatId: chatRouteState.currentChatId,
+          scratchpad: chatRouteState.isScratchpadRoute
+        });
+        toast.success(`Preset "${preset.name}" loaded`);
+      } catch (error) {
+        console.error(error);
+        toast.error('Failed to load preset');
+      }
+    }
+
     return (
       <div class="content-grid mx-auto w-full" style={{ '--padding-inline': '0rem' }}>
         <Show when={!sidebar.open()}>
@@ -553,18 +564,7 @@ export function useChatPage(
                   Or Load A Preset
                 </h3>
                 <PresetSelector
-                  onChange={async (preset) => {
-                    try {
-                      await saveChatSettings(preset.settings, {
-                        chatId: chatRouteState.currentChatId,
-                        scratchpad: chatRouteState.isScratchpadRoute
-                      });
-                      toast.success(`Preset "${preset.name}" loaded`);
-                    } catch (error) {
-                      console.error(error);
-                      toast.error('Failed to load preset');
-                    }
-                  }}
+                  onChange={(preset) => onPresetChange(preset)}
                   presets={presetsQuery.data ?? []}
                 />
               </div>
@@ -575,7 +575,8 @@ export function useChatPage(
               chat={{
                 ...chat(),
                 messages: chatState.messages.toJSON(),
-                settings: chatState.settings.unwrapOr({})
+                // TODO: move the fallback into Chat once it accepts an Option
+                settings: chatState.settings.unwrapOr(FALLBACK_CHAT_SETTINGS('', ''))
               }}
               class="p-4 [view-transition-name:main-content]"
               onDelete={onDelete}

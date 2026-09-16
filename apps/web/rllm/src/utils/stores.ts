@@ -1,5 +1,5 @@
 import { createComputed, createMemo, on } from 'solid-js';
-import { createStore, reconcile, type ReconcileOptions, unwrap } from 'solid-js/store';
+import { createStore, reconcile, type ReconcileOptions } from 'solid-js/store';
 
 import { produce } from './immer';
 

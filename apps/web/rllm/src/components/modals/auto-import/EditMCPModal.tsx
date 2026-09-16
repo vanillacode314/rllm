@@ -12,8 +12,8 @@ import {
 import { TextField, TextFieldInput, TextFieldLabel } from 'ui/text-field';
 import * as z from 'zod/mini';
 
-import ValidationErrors from '~/components/form/ValidationErrors';
-import MCPTestResult from '~/components/MCPTestResult';
+import { ValidationErrors } from '~/components/form/ValidationErrors';
+import { MCPTestResult } from '~/components/MCPTestResult';
 import { db } from '~/db/client';
 import { testMCPServer, type TestMCPServerResult } from '~/lib/mcp/utils';
 import { queries } from '~/queries';

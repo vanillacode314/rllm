@@ -13,6 +13,7 @@ import { cn } from 'ui/utils/tailwind';
 import { useConfirmDialog } from '~/components/modals/auto-import/ConfirmDialog';
 import { usePromptDialog } from '~/components/modals/auto-import/PromptDialog';
 import { db } from '~/db/client';
+import type { TPagedMinimalChat } from '~/db/utils';
 import { queries } from '~/queries';
 import { isChatOpen } from '~/utils/chat';
 import { produce } from '~/utils/immer';
@@ -45,9 +46,9 @@ export function ChatListSection(props: ChatListSectionProps) {
   const chatsQuery = useInfiniteQuery(() =>
     queries.chats.pagedMinimal({ query: filterState.query, tags: Array.from(filterState.tags) })
   );
-  const chats = createDerivedStore<(typeof chatsQuery.data.pages)[number]>(
+  const chats = createDerivedStore<TPagedMinimalChat[]>(
     (prev) => {
-      const current = chatsQuery.isSuccess ? chatsQuery.data.pages.flat() : [];
+      const current = chatsQuery.isSuccess ? (chatsQuery.data?.pages.flat() ?? []) : [];
       if (prev === undefined) return current;
 
       const pending = chatsQuery.isPending;

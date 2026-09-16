@@ -13,12 +13,13 @@ import {
 
 import { useChatState } from '~/context/chat';
 import { type TChatPreset } from '~/lib/chat/presets';
-import { saveChatSettings, type TChatSettings } from '~/lib/chat/settings';
+import { saveChatSettings } from '~/lib/chat/settings';
 import { chatState } from '~/routes/(chat)/-state';
 import { isMobile } from '~/signals';
+import type { TChatSettings } from '~/types/chat';
 import { produce } from '~/utils/immer';
 
-import ChatSettingsControls from './ChatSettingsControls';
+import { ChatSettingsControls } from './ChatSettingsControls';
 
 const [chatSettingsDrawerOpen, setChatSettingsDrawerOpen] = createSignal(false);
 

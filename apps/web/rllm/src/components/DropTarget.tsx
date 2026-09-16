@@ -14,6 +14,7 @@ export function DropTarget(
     onDrop?: (args: ElementDropTargetEventBasePayload) => void;
   }>
 ) {
+  // oxlint-disable-next-line solid/reactivity
   const { canDrop, onDrag, onDragEnter, onDragLeave, onDrop } = props;
   const ref = children(() => props.children);
 

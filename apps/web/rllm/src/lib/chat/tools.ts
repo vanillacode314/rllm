@@ -109,9 +109,7 @@ function makeAttachmentsTool(attachments: TAttachment[]): TTool {
           await transientDb.query(query, {
             afterIndex,
             beforeIndex,
-            documentIds: args.ids.filter((id) =>
-              attachmentsByTransientStatus.transient.has(id)
-            ),
+            documentIds: args.ids.filter((id) => attachmentsByTransientStatus.transient.has(id)),
             limit: offset + limit,
             signal
           }),

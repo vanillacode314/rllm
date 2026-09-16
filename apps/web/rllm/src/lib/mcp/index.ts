@@ -84,7 +84,7 @@ function initializeMCPSession(
  */
 function makeMCPCall<
   const TMethod extends TValidMcpServerJSONMethods['method'],
-  TResponse = TValidMcpServerJSONResponses[`"${TMethod}"`]
+  TResponse = TValidMcpServerJSONResponses[TMethod]
 >(config: {
   id: string;
   method: TMethod;

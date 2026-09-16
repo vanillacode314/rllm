@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/solid-query';
 import { createFileRoute } from '@tanstack/solid-router';
 import { createMemo } from 'solid-js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'ui/card';
-import { Label } from 'ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'ui/select';
 import { Switch, SwitchControl, SwitchLabel, SwitchThumb } from 'ui/switch';
 
@@ -116,7 +115,9 @@ function SettingsGeneralComponent() {
             optionValue="value"
           >
             <SelectTrigger aria-label="Web Search MCP">
-              <SelectValue>{(state) => state.selectedOption().label}</SelectValue>
+              <SelectValue<ReturnType<typeof webSearchMcpOptions>[number]>>
+                {(state) => state.selectedOption().label}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent />
           </Select>

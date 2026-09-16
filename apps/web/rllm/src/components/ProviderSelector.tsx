@@ -10,8 +10,8 @@ import {
   ComboboxTrigger
 } from 'ui/combobox';
 
-import type { TProvider } from '~/db/schema';
 import { useFuse } from '~/primitives/use-fuse';
+import type { TProvider } from '~/types';
 
 export function ProviderSelector(props: {
   class?: string;
@@ -26,21 +26,21 @@ export function ProviderSelector(props: {
   const providers = () => props.providers;
 
   const sortedProviders = useFuse({
+    isCaseSensitive: false,
     items: providers,
+    keys: ['name'],
     query: input,
     returnAllOnEmptyQuery: true,
-    isCaseSensitive: false,
-    keys: ['name'],
     shouldSort: true,
     threshold: 1
   });
 
   const filteredProviders = useFuse({
+    isCaseSensitive: false,
     items: providers,
+    keys: ['name'],
     query: input,
     returnAllOnEmptyQuery: true,
-    isCaseSensitive: false,
-    keys: ['name'],
     shouldSort: true,
     threshold: 0.5
   });
@@ -55,7 +55,7 @@ export function ProviderSelector(props: {
           <ComboboxItemIndicator />
         </ComboboxItem>
       )}
-      onChange={async (value) => {
+      onChange={(value) => {
         if (!value) return;
         props.onChange(value);
       }}
@@ -74,5 +74,3 @@ export function ProviderSelector(props: {
     </Combobox>
   );
 }
-
-export default ProviderSelector;

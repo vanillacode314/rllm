@@ -10,10 +10,10 @@ import { Button } from 'ui/button';
 import { SidebarProvider } from 'ui/sidebar';
 import { Toaster } from 'ui/sonner';
 
-import AppDrawer from '~/components/AppDrawer';
+import { AppDrawer } from '~/components/AppDrawer';
 import TheChatSettingsDrawer from '~/components/TheChatSettingsDrawer';
 import TheCommandPrompt from '~/components/TheCommandPrompt';
-import TheSidebar from '~/components/TheSidebar';
+import { TheSidebar } from '~/components/TheSidebar';
 import { db, logger } from '~/db/client';
 import { dbStorage, scratchpadStorage } from '~/lib/chat/generation/storages';
 import { retryFailedTitleAndTags } from '~/lib/chat/tasks';

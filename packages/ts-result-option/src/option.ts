@@ -136,6 +136,8 @@ class Option<T> {
    *
    * @param predicate – Function that decides whether the value should be kept.
    */
+  filter<U extends T>(predicate: (value: T) => value is U): Option<U>;
+  filter(predicate: (value: T) => boolean): Option<T>;
   filter(predicate: (value: T) => boolean): Option<T> {
     return this._isSome && predicate(this._value) ? this : Option.None();
   }

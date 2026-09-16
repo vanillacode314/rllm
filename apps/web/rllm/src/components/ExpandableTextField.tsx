@@ -9,12 +9,14 @@ import { combineRefs } from '~/utils/ref';
 
 const MAX_LINES = 20;
 
-type TextFieldTextAreaProps<T extends ValidComponent = 'textarea'> =
-  TextFieldPrimitive.TextFieldTextAreaProps<T> & {
-    ref?: (el: HTMLTextAreaElement) => void;
-    class?: string | undefined;
-    onPaste: (event: ClipboardEvent) => void;
-  };
+type TextFieldTextAreaProps<T extends ValidComponent = 'textarea'> = Omit<
+  TextFieldPrimitive.TextFieldTextAreaProps<T>,
+  'ref'
+> & {
+  class?: string | undefined;
+  onPaste: (event: ClipboardEvent) => void;
+  ref?: (el: HTMLTextAreaElement) => void;
+};
 
 export function ExpandableTextField<T extends ValidComponent = 'textarea'>(
   props: PolymorphicProps<T, TextFieldTextAreaProps<T>>
@@ -32,15 +34,15 @@ export function ExpandableTextField<T extends ValidComponent = 'textarea'>(
   });
 
   createEventListenerMap(() => ref, {
-    input: () => {
-      if (composing) return;
+    compositionend: () => {
+      composing = false;
       adjustHeight();
     },
     compositionstart: () => {
       composing = true;
     },
-    compositionend: () => {
-      composing = false;
+    input: () => {
+      if (composing) return;
       adjustHeight();
     }
   });
@@ -56,7 +58,7 @@ export function ExpandableTextField<T extends ValidComponent = 'textarea'>(
 
     const prevAlignSelf = ref.style.alignSelf;
     const prevOverflow = ref.style.overflow;
-    const { selectionStart, selectionEnd } = ref;
+    const { selectionEnd, selectionStart } = ref;
     const isFocused = document.activeElement === ref;
 
     const isFirefox = 'MozAppearance' in ref.style;

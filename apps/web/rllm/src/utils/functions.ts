@@ -11,7 +11,7 @@ interface LRUCacheOptions {
 function once<Fn extends (...args: unknown[]) => unknown>(fn: Fn): Fn {
   let called = false;
   let result: ReturnType<Fn>;
-  return function (...args) {
+  return function (this: unknown, ...args) {
     if (!called) {
       called = true;
       result = fn.call(this, ...args) as never;
