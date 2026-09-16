@@ -9,6 +9,66 @@ import { ajv } from '~/utils/ajv';
 import { formatError } from '~/utils/errors';
 import { produce } from '~/utils/immer';
 
+// NOTE: cannot do parallel tool calls, since most mcp servers currently have
+// bugs in them that stall all requests other than the first when making parallel request
+export function executeToolCalls(
+  tool_calls: Array<TLLMMessageChunk & { type: 'tool_call' }>,
+  tools: TTool[],
+  signal: AbortSignal,
+  onUpdate: () => void
+) {
+  return AsyncResult.from(
+    async () => {
+      for (const tool_call of tool_calls) {
+        signal?.throwIfAborted();
+        await Option.fromUndefined(tools.find((tool) => tool.name === tool_call.tool.name))
+          .okOrElse(
+            () =>
+              new Error(
+                `Tool with name ${tool_call.tool.name} not found. Expected one of (${tools.map((tool) => tool.name).join(', ')})`
+              )
+          )
+          .andThen((tool) => {
+            signal?.throwIfAborted();
+            return safeParseJson(tool_call.tool.arguments, {
+              validate: (args) => {
+                const valid = ajv.validate(tool.jsonSchema, args);
+                if (!valid)
+                  throw new Error(
+                    JSON.stringify({
+                      code: 'INVALID_ARGUMENTS',
+                      error: ajv.errors,
+                      success: false
+                    })
+                  );
+                return args;
+              }
+            }).map((args) => ({ args, tool }));
+          })
+          .toAsync()
+          .andThen(({ args, tool }) => {
+            return AsyncResult.from(
+              () => Promise.try(tool.handler, args, signal),
+              (e) => new Error(`Failed to execute tool`, { cause: e })
+            ).inspectErr(console.log);
+          })
+          .match(
+            (value) => {
+              tool_call.content = value;
+              tool_call.success = true;
+            },
+            (error) => {
+              tool_call.content = formatError(error);
+              tool_call.success = false;
+            }
+          )
+          .finally(() => onUpdate());
+      }
+    },
+    (e) => new Error('Error while executing tool calls', { cause: e })
+  );
+}
+
 export function handleCompletion(opts: {
   adapter: TAdapter;
   messages: TMessage[];
@@ -76,7 +136,6 @@ export function handleCompletion(opts: {
           tools
         });
         if (controller.signal.aborted) return;
-        // oxlint-disable-next-line no-await-in-loop
         let result = await generator.next();
         if (controller.signal.aborted) return;
 
@@ -139,7 +198,6 @@ export function handleCompletion(opts: {
             }
           }
           onUpdate?.({ chunks: producedChunks });
-          // oxlint-disable-next-line no-await-in-loop
           result = await generator.next();
         }
 
@@ -182,66 +240,5 @@ export function handleCompletion(opts: {
       return AsyncResult.Ok();
     },
     (e) => new Error('Error while generating completion', { cause: e })
-  );
-}
-
-// NOTE: cannot do parallel tool calls, since most mcp servers currently have
-// bugs in them that stall all requests other than the first when making parallel request
-export function executeToolCalls(
-  tool_calls: Array<TLLMMessageChunk & { type: 'tool_call' }>,
-  tools: TTool[],
-  signal: AbortSignal,
-  onUpdate: () => void
-) {
-  return AsyncResult.from(
-    async () => {
-      for (const tool_call of tool_calls) {
-        signal?.throwIfAborted();
-        // oxlint-disable-next-line no-await-in-loop
-        await Option.fromUndefined(tools.find((tool) => tool.name === tool_call.tool.name))
-          .okOrElse(
-            () =>
-              new Error(
-                `Tool with name ${tool_call.tool.name} not found. Expected one of (${tools.map((tool) => tool.name).join(', ')})`
-              )
-          )
-          .andThen((tool) => {
-            signal?.throwIfAborted();
-            return safeParseJson(tool_call.tool.arguments, {
-              validate: (args) => {
-                const valid = ajv.validate(tool.jsonSchema, args);
-                if (!valid)
-                  throw new Error(
-                    JSON.stringify({
-                      code: 'INVALID_ARGUMENTS',
-                      error: ajv.errors,
-                      success: false
-                    })
-                  );
-                return args;
-              }
-            }).map((args) => ({ args, tool }));
-          })
-          .toAsync()
-          .andThen(({ args, tool }) => {
-            return AsyncResult.from(
-              () => Promise.try(tool.handler, args, signal),
-              (e) => new Error(`Failed to execute tool`, { cause: e })
-            ).inspectErr(console.log);
-          })
-          .match(
-            (value) => {
-              tool_call.content = value;
-              tool_call.success = true;
-            },
-            (error) => {
-              tool_call.content = formatError(error);
-              tool_call.success = false;
-            }
-          )
-          .finally(() => onUpdate());
-      }
-    },
-    (e) => new Error('Error while executing tool calls', { cause: e })
   );
 }

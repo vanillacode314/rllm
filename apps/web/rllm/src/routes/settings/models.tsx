@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'ui/ca
 import { Label } from 'ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'ui/select';
 
-import ModelSelector from '~/components/ModelSelector';
+import { ModelSelector } from '~/components/ModelSelector';
 import { CURRENT_MODEL_ID } from '~/constants/chat-settings';
 import { db } from '~/db/client';
 import { OpenAIAdapter } from '~/lib/adapters/openai';

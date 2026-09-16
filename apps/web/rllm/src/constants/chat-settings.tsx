@@ -1,4 +1,4 @@
-import type { TChatSettings } from '~/lib/chat/settings';
+import type { TChatSettings } from '~/types/chat';
 
 export const CURRENT_MODEL_ID = 'current-model';
 

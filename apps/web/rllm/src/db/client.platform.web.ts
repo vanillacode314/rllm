@@ -70,7 +70,10 @@ async function getLogger(): Promise<LoggerInstance> {
         },
         validateEvent: (event) => validEventSchema.parse(event)
       });
-      await setupDb(instance);
+      await setupDb(instance).unwrapOrElse((error) => {
+        loggerPromise = null;
+        throw error;
+      });
       loggerInstance = instance;
       return instance;
     })();

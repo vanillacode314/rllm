@@ -337,7 +337,6 @@ export class ConnectionManager {
     let cursor = '';
     let hasMore = false;
     do {
-      // oxlint-disable-next-line no-await-in-loop
       const rows = await logger.db.query<{ timestamp: string }>(
         logger.sql`
                           SELECT timestamp from events 

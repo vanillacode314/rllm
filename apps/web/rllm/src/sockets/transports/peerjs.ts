@@ -34,7 +34,7 @@ class PeerJSTransportFactory implements TTransportFactory {
   }
 
   async connect(remoteId: string) {
-    const { promise, reject, resolve } = Promise.withResolvers<PeerJSTransport>();
+    const { promise, resolve } = Promise.withResolvers<PeerJSTransport>();
     const conn = this.#peer.connect(remoteId);
     conn.on('open', () => {
       conn.on('error', (error) => this.#errorEvent.emit({ error, remoteId }));

@@ -1,4 +1,4 @@
-import { createComputed, createMemo, createRoot, on, untrack } from 'solid-js';
+import { createComputed, createMemo, createRoot, on } from 'solid-js';
 import { Option } from 'ts-result-option';
 
 import { db } from '~/db/client';

@@ -30,11 +30,6 @@ export const SETTINGS_PAGES = Object.freeze([
     name: 'Proxy',
     path: '/settings/proxy'
   },
-  // {
-  // 	name: 'Storage',
-  // 	icon: 'icon-[heroicons--folder]',
-  // 	path: '/settings/storage'
-  // },
   {
     icon: 'icon-[heroicons--document]',
     name: 'Data',

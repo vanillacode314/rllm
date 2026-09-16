@@ -28,7 +28,7 @@ type Props = Omit<JSX.HTMLAttributes<HTMLDivElement>, 'onInput'> & {
   chatId?: string;
   class?: string | undefined;
   feedbackEnabled: boolean;
-  inputRef?: ((el: HTMLTextAreaElement) => void) | HTMLTextAreaElement;
+  inputRef?: (el: HTMLTextAreaElement) => void;
   isNewChat: boolean;
   isPending: boolean;
   onAbort: () => void;
@@ -192,6 +192,10 @@ function Toolbar(props: {
     await db.chats.delete(props.chatId!);
   }
 
+  async function onLoadLibrary() {
+    const result = await libraryPicker.pick();
+    if (result) props.onLibraryAttach?.(result);
+  }
   async function onLoadAttachment(accept: string) {
     const file = await getFile(accept);
     if (file) props.onAttachment(file);
@@ -332,12 +336,7 @@ function Toolbar(props: {
               >
                 <span>PDF/Epub</span>
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={async () => {
-                  const result = await libraryPicker.pick();
-                  if (result) props.onLibraryAttach?.(result);
-                }}
-              >
+              <DropdownMenuItem onSelect={() => onLoadLibrary()}>
                 <span>Library</span>
               </DropdownMenuItem>
             </DropdownMenuContent>

@@ -21,6 +21,10 @@ import {
 } from './app-schema';
 import type { LoggerInstance } from './client.types';
 
+export type TMinimalChat = Pick<TChat, 'finished' | 'id' | 'tags' | 'title'>;
+
+export type TPagedMinimalChat = TMinimalChat & { score: number };
+
 type TAllData = {
   chatPresets: TChatPreset[];
   chats: TChat[];
@@ -139,7 +143,7 @@ export function createDbApi(logger: LoggerInstance) {
       logger.dispatch({ data: { id }, type: 'incrementChatAccessCount', ...opts }),
     minimal: () =>
       logger.db
-        .query<Pick<TChat, 'finished' | 'id' | 'tags' | 'title'>>(
+        .query<TMinimalChat>(
           logger.sql`SELECT "finished", "id", "tags", "title" FROM chats ORDER BY "createdAt" DESC`
         )
         .then((rows) => {
@@ -168,7 +172,7 @@ export function createDbApi(logger: LoggerInstance) {
       const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
       return logger.db
-        .query<Pick<TChat, 'finished' | 'id' | 'tags' | 'title'> & { score: number }>({
+        .query<TPagedMinimalChat>({
           params: [...params, limit, offset],
           sql: `SELECT "finished", "id", "accessCount" * MAX(0, 1 - (strftime('%s','now') - ("lastAccessedAt" / 1000.0)) / (86400.0 * 7)) as "score", "tags", "title" FROM chats ${whereClause} ORDER BY "score" DESC, "lastAccessedAt" DESC, "createdAt" DESC, "score" IS NULL LIMIT ? OFFSET ?`
         })
@@ -252,13 +256,6 @@ export function createDbApi(logger: LoggerInstance) {
           parseDbRowsInPlace(rows, { jsonKeys: ['defaultModelIds'] });
           return rows;
         }),
-    first: () =>
-      logger.db
-        .query<TProvider>(logger.sql`SELECT * FROM providers ORDER BY "createdAt" ASC LIMIT 1`)
-        .then((rows) => {
-          parseDbRowsInPlace(rows, { jsonKeys: ['defaultModelIds'] });
-          return rows[0] ?? null;
-        }),
     count: () =>
       logger.db
         .query<{ value: number }>(logger.sql`SELECT count(*) as value FROM providers`)
@@ -271,6 +268,13 @@ export function createDbApi(logger: LoggerInstance) {
       ),
     delete: (id: string, opts?: TWriteOptions) =>
       logger.dispatch({ data: { id }, type: 'deleteProvider', ...opts }),
+    first: () =>
+      logger.db
+        .query<TProvider>(logger.sql`SELECT * FROM providers ORDER BY "createdAt" ASC LIMIT 1`)
+        .then((rows) => {
+          parseDbRowsInPlace(rows, { jsonKeys: ['defaultModelIds'] });
+          return rows[0] ?? null;
+        }),
     get: async (id: string): Promise<null | TProvider> => {
       const rows = await logger.db.query<TProvider>(
         logger.sql`SELECT * FROM providers WHERE id = ${id}`
@@ -283,17 +287,17 @@ export function createDbApi(logger: LoggerInstance) {
   };
 
   const userMetadata = {
-    deleteDefaultChatSettingsPresetId: () =>
-      logger.dispatch({
-        data: { id: USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET },
-        type: 'deleteUserMetadata'
-      }),
     corsProxyUrls: async (): Promise<string[]> =>
       parseProxyUrls(await getMetadataValue(USER_METADATA_KEYS.CORS_PROXY_URL)),
     defaultChatSettingsPresetId: () =>
       getMetadataValue(USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET),
     delete: (id: string, opts?: TWriteOptions) =>
       logger.dispatch({ data: { id }, type: 'deleteUserMetadata', ...opts }),
+    deleteDefaultChatSettingsPresetId: () =>
+      logger.dispatch({
+        data: { id: USER_METADATA_KEYS.DEFAULT_CHAT_SETTINGS_PRESET },
+        type: 'deleteUserMetadata'
+      }),
     deleteScratchpadChat: () =>
       logger.dispatch({
         data: { id: USER_METADATA_KEYS.SCRATCHPAD_CHAT },
@@ -377,6 +381,10 @@ export function createDbApi(logger: LoggerInstance) {
   return {
     chatPresets,
     chats,
+    // NOTE: we assume clientId never changes once set for a device so we don't need to rerun more than once
+    clientId: once(() => {
+      return logger.getClientId();
+    }),
     createChatFromScratchpad: (data: TEventData<'createChat'>, opts?: TWriteOptions) =>
       logger.dispatch(
         { data, type: 'createChat', ...opts },
@@ -447,10 +455,6 @@ export function createDbApi(logger: LoggerInstance) {
           ...opts
         }))
       ),
-    // NOTE: we assume clientId never changes once set for a device so we don't need to rerun more than once
-    clientId: once(() => {
-      return logger.getClientId();
-    }),
     mcps,
     providers,
     userMetadata
@@ -486,6 +490,7 @@ export function createLoggerProxy(getLogger: () => Promise<LoggerInstance>): Log
         if (!isCancelled) {
           unsubscribe = instance.on(type, handler, opts);
         }
+        return undefined;
       });
 
       return () => {

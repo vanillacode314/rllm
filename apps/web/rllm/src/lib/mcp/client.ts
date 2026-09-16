@@ -40,6 +40,7 @@ class MCPClient implements TMCPClient {
   #serverInfo: null | { name: string; version: string } = null;
   #sessionId: Option<string> = Option.None();
 
+  // oxlint-disable-next-line solid/reactivity
   #status: Signal<TMCPClientStatus> = createSignal<TMCPClientStatus>('disconnected');
 
   #url: string;

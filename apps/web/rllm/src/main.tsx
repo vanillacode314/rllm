@@ -1,3 +1,4 @@
+// oxlint-disable import/no-unassigned-import
 import { Keyboard } from '@capacitor/keyboard';
 import { createRouter, type ErrorComponentProps, RouterProvider } from '@tanstack/solid-router';
 

@@ -1,7 +1,7 @@
 import { createEventListenerMap } from '@solid-primitives/event-listener';
 import { createTimeoutLoop } from '@solid-primitives/timer';
 import { debounce } from '@tanstack/solid-pacer';
-import { type Accessor, createMemo, createSignal, onMount } from 'solid-js';
+import { type Accessor, createMemo, createSignal } from 'solid-js';
 
 export function useAutoScroll(
   options: {
@@ -26,6 +26,7 @@ export function useAutoScroll(
   }
 
   const scrollToBottom = debounce(
+    // oxlint-disable-next-line solid/reactivity
     (force: boolean = false) => {
       if (!ref) throw new Error('attach ref to autoScroll');
 
@@ -57,5 +58,5 @@ export function useAutoScroll(
     );
   };
 
-  return { bind, canScroll, shouldAutoScroll, scrollToBottom } as const;
+  return { bind, canScroll, scrollToBottom, shouldAutoScroll } as const;
 }

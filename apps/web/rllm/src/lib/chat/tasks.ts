@@ -31,7 +31,6 @@ export async function retryFailedTitleAndTags() {
     for (const task of tasks.slice(i, i + 10)) {
       promises.push(Promise.try(() => void task.handler(controller.signal)));
     }
-    // oxlint-disable-next-line no-await-in-loop
     await Promise.all(promises);
   }
 }

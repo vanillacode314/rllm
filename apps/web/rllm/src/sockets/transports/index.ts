@@ -69,7 +69,6 @@ export class PeerManager {
           const remoteId = body.payload.value.clientId;
           for (const [transport] of this.#transports) {
             try {
-              // oxlint-disable-next-line no-await-in-loop
               const t = await withTimeout(
                 () => transport.ready().then(() => transport.connect(remoteId)),
                 10 * 1000

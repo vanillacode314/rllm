@@ -30,12 +30,14 @@ export function ProviderTestResult(props: ProviderTestResultProps) {
     });
   });
 
+  const error = () => (props.result.success ? '' : props.result.error);
+
   return (
     <Show
       fallback={
         <Alert variant="destructive">
           <div class="flex items-start gap-3">
-            <span class="icon-[heroicons--x-circle-solid] mt-0.5 h-5 w-5 flex-shrink-0" />
+            <span class="icon-[heroicons--x-circle-solid] mt-0.5 h-5 w-5 shrink-0" />
             <div class="min-w-0 flex-1">
               <div class="flex flex-wrap items-center gap-2">
                 <AlertTitle>Connection Failed</AlertTitle>
@@ -44,7 +46,7 @@ export function ProviderTestResult(props: ProviderTestResultProps) {
                 </Badge>
               </div>
 
-              <AlertDescription class="mt-2">{props.result.error}</AlertDescription>
+              <AlertDescription class="mt-2">{error()}</AlertDescription>
 
               <Button class="mt-3" onClick={props.onRetry} size="sm" variant="outline">
                 <span>Try Again</span>
@@ -123,5 +125,3 @@ export function ProviderTestResult(props: ProviderTestResultProps) {
     </Show>
   );
 }
-
-export default ProviderTestResult;

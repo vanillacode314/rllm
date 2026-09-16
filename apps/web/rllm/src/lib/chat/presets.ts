@@ -2,8 +2,7 @@ import { nanoid } from 'nanoid';
 
 import type { TChatPreset } from '~/db/app-schema';
 import { db } from '~/db/client';
-
-import type { TChatSettings } from './settings';
+import type { TChatSettings } from '~/types/chat';
 
 export type { TChatPreset };
 

@@ -2,7 +2,6 @@ import { createActiveElement } from '@solid-primitives/active-element';
 import { createWritableMemo } from '@solid-primitives/memo';
 import { createHotkey } from '@tanstack/solid-hotkeys';
 import { useQuery } from '@tanstack/solid-query';
-import { animate } from 'motion';
 import {
   createEffect,
   createMemo,
@@ -26,7 +25,6 @@ import {
 } from 'solid-js';
 import { Dynamic } from 'solid-js/web';
 import { toast } from 'solid-sonner';
-import { Transition } from 'solid-transition-group';
 import { Button } from 'ui/button';
 import { Callout, CalloutContent, CalloutTitle } from 'ui/callout';
 import { Card, CardContent, CardHeader, CardTitle } from 'ui/card';
@@ -41,7 +39,7 @@ import { TextField, TextFieldTextArea } from 'ui/text-field';
 import { cn } from 'ui/utils/tailwind';
 
 import type { TChat } from '~/db/app-schema';
-import { useAutoScroll } from '~/directives/auto-scroll';
+import { useAutoScroll } from '~/directives/use-auto-scroll';
 import { usePullToLoadMore } from '~/directives/use-pull-to-load-more';
 import { useSnapToElement } from '~/directives/use-snap-to-element';
 import { ChatGenerationManager } from '~/lib/chat/generation';
@@ -59,10 +57,10 @@ import Markdown from './markdown/Markdown';
 import { useAlertDialog } from './modals/auto-import/AlertDialog';
 import { useConfirmDialog } from './modals/auto-import/ConfirmDialog';
 import { ScrollOffsetPadding } from './ScrollOffsetPadding';
+import { TransitionAppear } from './transitions/TransitionAppear';
 
 type Props = Omit<JSX.HTMLAttributes<HTMLDivElement>, 'ref'> & {
-  ref?: (el: HTMLDivElement) => void;
-  chat: Omit<TChat, 'createdAt' | 'updatedAt'>;
+  chat: Omit<TChat, 'accessCount' | 'createdAt' | 'lastAccessedAt' | 'updatedAt'>;
   class?: string | undefined;
   onDelete: (path: number[], chunkIndex?: number) => void;
   onEdit: (path: number[], chunkIndex: number, chunk: TUserMessageChunk) => void;
@@ -71,6 +69,7 @@ type Props = Omit<JSX.HTMLAttributes<HTMLDivElement>, 'ref'> & {
   onToolCallRetry: (path: number[], chunkId: string) => void;
   onTraversal: (path: number[], direction: -1 | 1) => void;
   path: number[];
+  ref?: (el: HTMLDivElement) => void;
 };
 export function Chat(props: Props): JSXElement {
   const id = createMemo(() => props.chat.id);
@@ -179,28 +178,13 @@ export function Chat(props: Props): JSXElement {
 
   return (
     <div class="h-full relative overflow-hidden grid isolate">
-      <Transition
-        onEnter={(el, done) => {
-          animate(
-            el,
-            { scale: [0, 1], opacity: [0, 1] },
-            { type: 'spring', bounce: 0.4, visualDuration: 0.4 }
-          ).finished.then(done);
-        }}
-        onExit={(el, done) => {
-          animate(
-            el,
-            { scale: [1, 0], opacity: [1, 0] },
-            { type: 'spring', bounce: 0.4, visualDuration: 0.4 }
-          ).finished.then(done);
-        }}
-      >
+      <TransitionAppear>
         <Show when={loadMore.pending}>
           <div class="grid place-content-center absolute top-8 left-1/2 -translate-x-1/2 z-10 bg-primary text-primary-foreground size-10 rounded-full text-2xl">
             <span class="icon-[svg-spinners--180-ring-with-bg] shrink-0" />
           </div>
         </Show>
-      </Transition>
+      </TransitionAppear>
       <div
         class="overflow-auto relative"
         ref={combineRefs(
@@ -214,7 +198,7 @@ export function Chat(props: Props): JSXElement {
       >
         <div
           class={cn('gap-10 flex flex-col', local.class)}
-          ref={innerContainerRef}
+          ref={(el) => (innerContainerRef = el)}
           style={pullToLoadMore.innerStyle()}
         >
           <Suspense
@@ -229,12 +213,12 @@ export function Chat(props: Props): JSXElement {
               <div class="flex flex-col items-center -mb-10 pb-4">
                 <button
                   class="p-4 grid place-content-center border rounded-full size-10"
+                  onClick={() => loadMore()}
                   style={{
                     rotate: `${Math.min(1, pullToLoadMore.offset() / pullToLoadMore.threshold()) * 180}deg`
                   }}
-                  onClick={() => loadMore()}
                 >
-                  <span class="icon-[heroicons--arrow-down]" aria-hidden="true" />
+                  <span aria-hidden="true" class="icon-[heroicons--arrow-down]" />
                   <span class="sr-only">Click to load more</span>
                 </button>
               </div>
@@ -283,10 +267,10 @@ export function Chat(props: Props): JSXElement {
               }}
             </For>
             <ScrollOffsetPadding
-              margin={16}
               class="shrink-0 -mt-10"
-              scrollRef={scrollContainerRef}
               containerRef={innerContainerRef}
+              margin={16}
+              scrollRef={scrollContainerRef}
               targetSelector={`#user-chat-${lastUserChatIndex()}`}
             />
           </Suspense>
@@ -305,6 +289,11 @@ export function Chat(props: Props): JSXElement {
       </Show>
     </div>
   );
+}
+
+function Effect(props: { callback: () => void }) {
+  onMount(() => props.callback());
+  return <></>;
 }
 
 function LLMChat(props: {
@@ -761,10 +750,18 @@ function UserChat(props: {
 }) {
   const hasNext = () => props.index < props.numberOfSiblings;
   const hasPrev = () => props.index > 0;
-  const filteredChunks = createMemo(() => props.message.chunks.filter((chunk) => !chunk.hidden));
   const [open, setOpen] = createSignal(true);
 
   const confirmDialog = useConfirmDialog();
+
+  async function onDelete() {
+    const yes = await confirmDialog.confirm({
+      description: 'Are you sure?',
+      title: 'Delete'
+    });
+    if (!yes) return;
+    props.onDelete();
+  }
   return (
     <>
       <Card class="border-primary border" id={props.id}>
@@ -789,16 +786,7 @@ function UserChat(props: {
             <Show when={props.canDelete}>
               <Button
                 class="size-6"
-                onClick={async () => {
-                  if (
-                    !(await confirmDialog.confirm({
-                      description: 'Are you sure?',
-                      title: 'Delete'
-                    }))
-                  )
-                    return;
-                  props.onDelete();
-                }}
+                onClick={() => onDelete()}
                 size="icon"
                 type="button"
                 variant="ghost"
@@ -841,7 +829,7 @@ function UserChat(props: {
           </div>
           <CollapsibleContent>
             <CardContent class="p-4 pt-0 flex flex-col gap-4 h-full max-h-[30vh] overflow-auto">
-              <For each={filteredChunks()}>
+              <For each={props.message.chunks}>
                 {(chunk, index) => (
                   <Switch>
                     <Match when={chunk.type === 'text'}>
@@ -894,13 +882,14 @@ function UserImageChunk(props: {
     </div>
   );
 }
+export default Chat;
 
 function UserTextChunk(props: {
   chunk: TUserMessageChunk & { type: 'text' };
   onDelete: () => void;
   onEdit: (chunk: TUserMessageChunk) => void;
 }) {
-  const [content, setContent] = createSignal(props.chunk.content);
+  const [content, setContent] = createWritableMemo(() => props.chunk.content);
   const [editing, setEditing] = createSignal(false);
   const id = createUniqueId(); // [1]
   const confirmDialog = useConfirmDialog();
@@ -919,6 +908,12 @@ function UserTextChunk(props: {
     },
     () => ({ enabled: activeElement()?.id === `prompt:${id}` })
   );
+
+  async function onDelete() {
+    const yes = await confirmDialog.confirm({ description: 'Are you sure?', title: 'Delete' });
+    if (!yes) return;
+    props.onDelete();
+  }
 
   return (
     <div class="flex flex-col gap-4">
@@ -989,11 +984,7 @@ function UserTextChunk(props: {
           </Button>
           <Button
             class="size-6"
-            onClick={async () => {
-              if (!(await confirmDialog.confirm({ description: 'Are you sure?', title: 'Delete' })))
-                return;
-              props.onDelete();
-            }}
+            onClick={() => onDelete()}
             size="icon"
             type="button"
             variant="ghost"
@@ -1024,10 +1015,4 @@ function UserTextChunk(props: {
       </Show>
     </div>
   );
-}
-export default Chat;
-
-function Effect(props: { callback: () => void }) {
-  onMount(props.callback);
-  return <></>;
 }

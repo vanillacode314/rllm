@@ -3,6 +3,7 @@ import { AsyncResult } from 'ts-result-option';
 
 function compressImageFile(file: File, options: Omit<Compressor.Options, 'error' | 'success'>) {
   const { promise, reject, resolve } = Promise.withResolvers<Blob | File>();
+  // oxlint-disable-next-line no-new
   new Compressor(file, {
     ...options,
     error(e) {

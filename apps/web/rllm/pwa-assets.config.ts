@@ -1,4 +1,4 @@
-import { defineConfig, Preset } from '@vite-pwa/assets-generator/config';
+import { defineConfig, type Preset } from '@vite-pwa/assets-generator/config';
 
 const preset = {
 	apple: { sizes: [180] },

@@ -42,7 +42,7 @@ export type JSONRPCRequestSchema = z.infer<typeof jsonRpcRequestSchema>;
 
 export const jsonRpcResponseSchema = z.union([
   z.object({
-    id: z.union([z.string(), z.number()]),
+    id: z.optional(z.union([z.string(), z.number()])),
     jsonrpc: z.literal('2.0'),
     result: z.unknown()
   }),

@@ -3,8 +3,7 @@ import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { createSelectSchema } from 'drizzle-zod';
 import * as z from 'zod';
 
-import type { TChatSettings } from '~/lib/chat/settings';
-import type { TChat as TChatChat, TMessage as TChatMessage } from '~/types/chat';
+import type { TChat as TChatChat, TMessage as TChatMessage, TChatSettings } from '~/types/chat';
 import type { JsonTree } from '~/utils/tree';
 
 const timestamp = () => text().notNull();

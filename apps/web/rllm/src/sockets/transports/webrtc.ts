@@ -21,7 +21,6 @@ class WebRTCEndpoint {
     await this.#pc.setRemoteDescription(answer);
     while (this.#pendingIceCandidates.length > 0) {
       const candidate = this.#pendingIceCandidates.shift();
-      // oxlint-disable-next-line no-await-in-loop
       await this.#pc.addIceCandidate(candidate);
     }
   }
@@ -57,7 +56,6 @@ class WebRTCEndpoint {
     await this.#pc.setRemoteDescription(offer);
     while (this.#pendingIceCandidates.length > 0) {
       const candidate = this.#pendingIceCandidates.shift();
-      // oxlint-disable-next-line no-await-in-loop
       await this.#pc.addIceCandidate(candidate);
     }
     const answer = await this.#pc.createAnswer();

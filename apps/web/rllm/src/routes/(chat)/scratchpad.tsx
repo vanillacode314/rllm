@@ -9,7 +9,7 @@ import { createTask } from '~/lib/background-task-manager/tasks';
 import { slugify } from '~/utils/string';
 import { Tree } from '~/utils/tree';
 
-import ChatAppDrawer from './-ChatAppDrawer';
+import { ChatAppDrawer } from './-ChatAppDrawer';
 import { useChatPage, useChatPageBeforeLoad, useChatPageLoader } from './-layout';
 import { updateMessages } from './-state';
 
@@ -19,7 +19,7 @@ export const Route = createFileRoute('/(chat)/scratchpad')({
   beforeLoad: useChatPageBeforeLoad,
   component: ScratchpadPageComponent,
   loader: async ({ preload }) => {
-    const { makeNewChat, ensureQueryData, ensureValidChatProvider, loadChat } = useChatPageLoader({
+    const { ensureQueryData, ensureValidChatProvider, loadChat, makeNewChat } = useChatPageLoader({
       preload,
       scratchpad: true
     });

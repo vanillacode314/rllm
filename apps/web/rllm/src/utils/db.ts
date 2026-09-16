@@ -39,7 +39,9 @@ function tableToObject<T extends object>(rows: never[][], columns: (keyof T)[]):
   });
 }
 
-const withTransaction: WithTransactionFn = (fn) =>
+const withTransaction: WithTransactionFn = <T, E>(
+  fn: (ts: TSqlRunner) => AsyncResult<T, E> | Promise<T> | Result<T, E>
+) =>
   AsyncResult.from(
     async () => {
       return logger.db.transaction(async (tx) => {

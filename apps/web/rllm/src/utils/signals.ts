@@ -24,6 +24,28 @@ import { produce } from './immer';
 const isOnline = createConnectivitySignal();
 const pageVisible = createPageVisibility();
 
+export function createFunctionWithPendingSignal<T extends (...args: any[]) => any>(
+  fn: T
+): T & { pending: boolean } {
+  const [pending, setPending] = createSignal(0);
+  const wrappedFn = (...args: Parameters<T>) => {
+    let isPromise = false;
+    setPending((v) => v + 1);
+    try {
+      const result = fn(...args);
+      isPromise = result instanceof Promise;
+      if (isPromise) {
+        return result.finally(() => setPending((v) => v - 1));
+      }
+      return result;
+    } finally {
+      if (!isPromise) setPending((v) => v - 1);
+    }
+  };
+  Object.defineProperty(wrappedFn, 'pending', { get: createMemo(() => pending() > 0) });
+  return wrappedFn as T & { pending: boolean };
+}
+
 function createDebouncedMemo<T>(
   fn: (p: T | undefined) => T,
   value: NoInfer<T>,
@@ -36,7 +58,6 @@ function createDebouncedMemo<T>(
   const scheduled = createScheduled((fn) => debounce(fn, options?.duration ?? 1000));
   return createMemo((value) => (scheduled() ? fn(value) : value), value, options);
 }
-
 function createLatestAsync<T, S>(
   source: () => S,
   fetcher: (source: S) => Promise<T>,
@@ -134,28 +155,6 @@ function syncToURLHash(signal: Signal<boolean>, key: string): Signal<boolean> {
   createEffect(updateURLHashOnSignalChange);
 
   return [s, set];
-}
-
-export function createFunctionWithPendingSignal<T extends (...args: any[]) => any>(
-  fn: T
-): T & { pending: boolean } {
-  const [pending, setPending] = createSignal(0);
-  const wrappedFn = (...args: Parameters<T>) => {
-    let isPromise = false;
-    setPending((v) => v + 1);
-    try {
-      const result = fn(...args);
-      isPromise = result instanceof Promise;
-      if (isPromise) {
-        return result.finally(() => setPending((v) => v - 1));
-      }
-      return result;
-    } finally {
-      if (!isPromise) setPending((v) => v - 1);
-    }
-  };
-  Object.defineProperty(wrappedFn, 'pending', { get: createMemo(() => pending() > 0) });
-  return wrappedFn as T & { pending: boolean };
 }
 
 export { createDebouncedMemo, createLatestAsync, isOnline, pageVisible, syncToURLHash };

@@ -39,13 +39,13 @@ type TProxyEntry = { id: string; url: string };
 function ProxyItem(props: {
   canMoveDown: boolean;
   canMoveUp: boolean;
+  class?: string;
   entry: TProxyEntry;
   isActive: boolean;
   onDelete: (url: string) => void;
   onEdit: (url: string) => void;
   onMoveDown: () => void;
   onMoveUp: () => void;
-  class?: string;
 }) {
   const confirmDialog = useConfirmDialog();
 
@@ -196,9 +196,9 @@ function SettingsProxyComponent() {
                         }}
                       >
                         <ProxyItem
-                          class="mb-2"
                           canMoveDown={index() < entries.length - 1}
                           canMoveUp={index() > 0}
+                          class="mb-2"
                           entry={entry}
                           isActive={activeProxyUrl() === entry.url}
                           onDelete={handleDelete}

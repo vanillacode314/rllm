@@ -46,21 +46,21 @@ export function ModelSelector(props: {
   const models = () => (modelsQuery.isSuccess ? modelsQuery.data : defaultModels());
 
   const sortedModels = useFuse({
+    isCaseSensitive: false,
     items: models,
+    keys: ['id'],
     query: input,
     returnAllOnEmptyQuery: true,
-    isCaseSensitive: false,
-    keys: ['id'],
     shouldSort: true,
     threshold: 1
   });
 
   const filteredModels = useFuse({
+    isCaseSensitive: false,
     items: models,
+    keys: ['id'],
     query: input,
     returnAllOnEmptyQuery: true,
-    isCaseSensitive: false,
-    keys: ['id'],
     shouldSort: true,
     threshold: 0.5
   });
@@ -81,7 +81,7 @@ export function ModelSelector(props: {
     <Combobox<TModel>
       class={props.class}
       defaultFilter={(option) => filteredModels().includes(option)}
-      onChange={async (value) => {
+      onChange={(value) => {
         if (!value) return;
         props.onChange(value);
       }}
@@ -137,7 +137,9 @@ export function ModelSelector(props: {
                           width: '100%'
                         }}
                       >
-                        <ComboboxItemLabel class="truncate">{item.rawValue.id}</ComboboxItemLabel>
+                        <ComboboxItemLabel class="truncate">
+                          {(item.rawValue as unknown as TModel).id}
+                        </ComboboxItemLabel>
                         <ComboboxItemIndicator />
                       </ComboboxItem>
                     );
@@ -151,5 +153,3 @@ export function ModelSelector(props: {
     </Combobox>
   );
 }
-
-export default ModelSelector;

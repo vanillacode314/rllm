@@ -96,5 +96,3 @@ export function useAppDrawer() {
     toggle: () => setState('open', (value) => !value)
   };
 }
-
-export default AppDrawer;

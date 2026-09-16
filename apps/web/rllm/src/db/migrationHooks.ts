@@ -1,4 +1,3 @@
-// oxlint-disable no-await-in-loop
 import type { TSqlRunner } from 'event-logger';
 import { nanoid } from 'nanoid';
 import { safeParseJson } from 'ts-result-option/utils';

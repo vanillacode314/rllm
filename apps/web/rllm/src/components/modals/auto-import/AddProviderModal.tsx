@@ -13,8 +13,8 @@ import {
 import { TextField, TextFieldInput, TextFieldLabel } from 'ui/text-field';
 import * as z from 'zod/mini';
 
-import ValidationErrors from '~/components/form/ValidationErrors';
-import ProviderTestResult from '~/components/ProviderTestResult';
+import { ValidationErrors } from '~/components/form/ValidationErrors';
+import { ProviderTestResult } from '~/components/ProviderTestResult';
 import { db } from '~/db/client';
 import { testProvider, type TestProviderResult } from '~/lib/providers/utils';
 import { createForm, parseFormErrors } from '~/utils/form';

@@ -13,5 +13,3 @@ export function ValidationErrors(props: {
     </Show>
   );
 }
-
-export default ValidationErrors;

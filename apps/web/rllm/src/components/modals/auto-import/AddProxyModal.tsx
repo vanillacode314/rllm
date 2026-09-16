@@ -11,7 +11,7 @@ import {
 import { TextField, TextFieldInput, TextFieldLabel } from 'ui/text-field';
 import * as z from 'zod/mini';
 
-import ValidationErrors from '~/components/form/ValidationErrors';
+import { ValidationErrors } from '~/components/form/ValidationErrors';
 import { db } from '~/db/client';
 import { ProxyManager } from '~/lib/proxy';
 import { proxyUrlSchema } from '~/types';

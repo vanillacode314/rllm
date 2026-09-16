@@ -1,4 +1,3 @@
-// oxlint-disable no-await-in-loop
 import { AsyncResult } from 'ts-result-option';
 
 import type { LoggerInstance } from './client.types';
@@ -37,9 +36,11 @@ export const setupDb = (logger: LoggerInstance) =>
       }
       await logger.invalidateSchema();
 
-      void Promise.all([logger.getClock(), logger.getVersion()]).then(([clock, version]) => {
+      async function logDetails() {
+        const [clock, version] = await Promise.all([logger.getClock(), logger.getVersion()]);
         console.debug('[DB Metadata]', { clock: clock.toString(), version });
-      });
+      }
+      void logDetails();
     },
     (e) => new Error('Failed to setup database', { cause: e })
   );
