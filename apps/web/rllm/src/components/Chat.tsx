@@ -66,6 +66,7 @@ type Props = Omit<JSX.HTMLAttributes<HTMLDivElement>, 'ref'> & {
   onDelete: (path: number[], chunkIndex?: number) => void;
   onEdit: (path: number[], chunkIndex: number, chunk: TUserMessageChunk) => void;
   onRegenerate: (path: number[]) => void;
+  onRetry: (path: number[]) => void;
   onTraversal: (path: number[], direction: -1 | 1) => void;
   path: number[];
 };
@@ -81,6 +82,7 @@ export function Chat(props: Props): JSXElement {
     'onDelete',
     'onEdit',
     'onRegenerate',
+    'onRetry',
     'onTraversal',
     'path'
   ]);
@@ -246,6 +248,7 @@ export function Chat(props: Props): JSXElement {
                     numberOfSiblings={data.numberOfSiblings}
                     onDelete={local.onDelete.bind(null, currentPath())}
                     onRegenerate={local.onRegenerate.bind(null, currentPath())}
+                    onRetry={local.onRetry.bind(null, currentPath())}
                     onTraversal={local.onTraversal.bind(null, currentPath())}
                   />
                 </Show>
@@ -283,6 +286,7 @@ function LLMChat(props: {
   numberOfSiblings: number;
   onDelete?: () => void;
   onRegenerate: () => void;
+  onRetry: () => void;
   onTraversal: (direction: -1 | 1) => void;
 }) {
   const hasNext = () => props.index < props.numberOfSiblings;
@@ -499,6 +503,16 @@ function LLMChat(props: {
                 <CalloutContent class="wrap-break-word whitespace-pre-wrap">
                   {props.message.error}
                 </CalloutContent>
+                <Button
+                  class="mt-2"
+                  disabled={props.isPending}
+                  onClick={() => props.onRetry()}
+                  type="button"
+                  variant="outline"
+                >
+                  <span>Retry</span>
+                  <span class="icon-[heroicons--arrow-path]" />
+                </Button>
               </Callout>
             </Show>
           </CardContent>

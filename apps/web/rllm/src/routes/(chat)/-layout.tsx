@@ -133,7 +133,7 @@ export function useChatPage(
 
   const snap = useSnapToElement(() => null, { margin: 16 });
   const sendPrompt = useMutation(() => ({
-    mutationFn: async ({ id, path }: { id: string; path: number[] }) => {
+    mutationFn: async ({ id, path, retry }: { id: string; path: number[]; retry?: boolean }) => {
       const { promise } = await BackgroundTaskManager.scheduleTask(
         createTask(
           {
@@ -142,6 +142,7 @@ export function useChatPage(
               chatId: id,
               feedbackEnabled: chatState.feedbackEnabled,
               path: unwrap(path),
+              retry: Boolean(retry),
               scratchpad: Boolean(opts().scratchpad)
             },
             type: 'startLLMGeneration'
@@ -307,6 +308,15 @@ export function useChatPage(
       snap.snap(`#user-chat-${parentPath.length - 1}`, { behavior: 'smooth' })
     );
     sendPrompt.mutate({ id: chat().id, path: parentPath });
+  }
+
+  async function onRetry(path: number[]) {
+    if (sendPrompt.isPending || isPending()) {
+      toast.error('Please wait for the current request to finish');
+      return;
+    }
+    await updateMessages({ path });
+    sendPrompt.mutate({ id: chat().id, path, retry: true });
   }
 
   async function onTraversal(path: number[], direction: -1 | 1) {
@@ -551,6 +561,7 @@ export function useChatPage(
               onDelete={onDelete}
               onEdit={onEdit}
               onRegenerate={onRegenerate}
+              onRetry={onRetry}
               onTraversal={onTraversal}
               path={chatState.path}
               ref={combineRefs(snap.bind, (el) => {
@@ -653,6 +664,7 @@ export function useChatPage(
     onDelete,
     onEdit,
     onRegenerate,
+    onRetry,
     onTraversal,
     sendPrompt
   };

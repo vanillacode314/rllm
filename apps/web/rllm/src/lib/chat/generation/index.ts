@@ -100,7 +100,8 @@ export class ChatGenerationManager {
     id: string,
     path: number[],
     attachments: TAttachment[],
-    feedbackEnabled: boolean = false
+    feedbackEnabled: boolean = false,
+    retry: boolean = false
   ): Promise<{
     chat: TChat;
     controller: AbortController;
@@ -120,16 +121,30 @@ export class ChatGenerationManager {
       mcpTools.length > 0 ? Option.Some(mcpTools) : Option.None()
     );
 
-    const message: TMessage = {
-      chunks: [],
-      finished: false,
-      model: chat.settings.modelId,
-      provider: provider.name,
-      type: 'llm'
-    };
-    node.addChild(new TreeNode(message));
+    let message: TMessage & { type: 'llm' };
+    if (retry) {
+      const erroredMessage = node.value.expect(
+        `should be able to traverse to node at ${JSON.stringify(path)}`
+      );
+      if (erroredMessage.type !== 'llm') throw new Error('can only retry llm messages');
+      message = erroredMessage;
+      message.error = undefined;
+      message.finished = false;
+      message.model = chat.settings.modelId;
+      message.provider = provider.name;
+      message.usage = undefined;
+    } else {
+      message = {
+        chunks: [],
+        finished: false,
+        model: chat.settings.modelId,
+        provider: provider.name,
+        type: 'llm'
+      };
+      node.addChild(new TreeNode(message));
+    }
     chat.finished = false;
-    const newPath = [...path, node.children.length - 1];
+    const newPath = retry ? path : [...path, node.children.length - 1];
     this.emitUpdate(id);
     const messages = getMessagesForPath(newPath, chat.messages).unwrap();
 

@@ -44,6 +44,7 @@ const ValidTask = z.discriminatedUnion('type', [
       chatId: z.string(),
       feedbackEnabled: z.boolean(),
       path: z.array(z.number()),
+      retry: z._default(z.boolean(), false),
       scratchpad: z._default(z.boolean(), false)
     }),
     type: z.literal('startLLMGeneration')
@@ -142,7 +143,8 @@ export function createTask(task: TValidTask, priority: TTaskPriority = 'idle', i
               task.arguments.chatId,
               task.arguments.path,
               task.arguments.attachements,
-              task.arguments.feedbackEnabled
+              task.arguments.feedbackEnabled,
+              task.arguments.retry
             );
           signal.addEventListener('abort', () => controller.abort());
           await promise;

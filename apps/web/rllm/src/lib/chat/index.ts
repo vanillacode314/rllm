@@ -37,7 +37,10 @@ export function handleCompletion(opts: {
       } = opts;
       let messages = structuredClone(opts.messages);
 
-      const producedChunks = [] as TLLMMessageChunk[];
+      const producedChunks = Option.from(messages.at(-1))
+        .filter((message) => message.type === 'llm')
+        .mapOr([], (message) => [...message.chunks]);
+      const prefilledChunkCount = producedChunks.length;
       const executedToolCalls = new Set<string>();
       const usage: TCompletionLastChunkUsage = {};
       function accumulateUsage(usageB: TCompletionLastChunkUsage) {
@@ -49,6 +52,15 @@ export function handleCompletion(opts: {
           usage.prompt_tokens = (usage.prompt_tokens ?? 0) + usageB.prompt_tokens;
         if (usageB.reasoning_tokens)
           usage.reasoning_tokens = (usage.reasoning_tokens ?? 0) + usageB.reasoning_tokens;
+      }
+
+      function findProducedToolCall(id: string) {
+        return Option.from(
+          producedChunks.find(
+            (chunk, index): chunk is TLLMMessageChunk & { type: 'tool_call' } =>
+              index >= prefilledChunkCount && chunk.type === 'tool_call' && chunk.id === id
+          )
+        );
       }
 
       const controller = new AbortController();
@@ -90,9 +102,7 @@ export function handleCompletion(opts: {
             const tools_ = tools.unwrap();
             for (const tool of tools_) {
               const { arguments: args, id, name } = tool;
-              const chunk = Option.from(
-                producedChunks.find((chunk) => chunk.type === 'tool_call' && chunk.id === id)
-              );
+              const chunk = findProducedToolCall(id);
               if (chunk.isNone()) {
                 const newChunk: TLLMMessageChunk = {
                   content: '',
@@ -148,8 +158,10 @@ export function handleCompletion(opts: {
             if (result.value.usage) accumulateUsage(result.value.usage);
             if (!tools) throw new Error('No tools provided but tool calls were requested');
             const tool_calls = producedChunks.filter(
-              (chunk): chunk is TLLMMessageChunk & { type: 'tool_call' } =>
-                chunk.type === 'tool_call' && !executedToolCalls.has(chunk.id)
+              (chunk, index): chunk is TLLMMessageChunk & { type: 'tool_call' } =>
+                index >= prefilledChunkCount &&
+                chunk.type === 'tool_call' &&
+                !executedToolCalls.has(chunk.id)
             );
             yield* executeToolCalls(tool_calls, tools, controller.signal, () =>
               onUpdate?.({ chunks: producedChunks })
