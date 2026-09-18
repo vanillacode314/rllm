@@ -1,4 +1,4 @@
-package handlers
+package rest
 
 import (
 	"crypto/rand"
@@ -39,7 +39,7 @@ var challenges = struct {
 	items: map[string]challengeData{},
 }
 
-func (s EventsHandler) GetRequestChallenge(w http.ResponseWriter, r *http.Request) {
+func (s RESTHandler) GetRequestChallenge(w http.ResponseWriter, r *http.Request) {
 	challenges.mu.Lock()
 	defer challenges.mu.Unlock()
 	accountId := r.URL.Query().Get("accountId")
@@ -73,7 +73,7 @@ func (s EventsHandler) GetRequestChallenge(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (s EventsHandler) PostVerifyChallenge(w http.ResponseWriter, r *http.Request) {
+func (s RESTHandler) PostVerifyChallenge(w http.ResponseWriter, r *http.Request) {
 	challenges.mu.Lock()
 	defer challenges.mu.Unlock()
 	tokens.mu.Lock()

@@ -2,13 +2,13 @@
   "name": "proto",
   "type": "module",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+    "./peers/v1": {
+      "types": "./dist/peers/v1/index.d.ts",
+      "import": "./dist/peers/v1/index.js"
     },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*.js"
+    "./events/v1": {
+      "types": "./dist/events/v1/index.d.ts",
+      "import": "./dist/events/v1/index.js"
     }
   },
   "scripts": {

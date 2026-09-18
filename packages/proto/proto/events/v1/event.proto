@@ -4,7 +4,7 @@ package events.v1;
 
 import "google/protobuf/struct.proto";
 
-option go_package = "proto/rllm/events";
+option go_package = "proto/rllm/eventspb";
 
 message Event {
   string version = 1;

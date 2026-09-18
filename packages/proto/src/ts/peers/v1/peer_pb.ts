@@ -4,267 +4,109 @@
 
 import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { BackupMessage } from "./backup_pb";
+import { file_peers_v1_backup } from "./backup_pb";
+import type { BroadcastMessage } from "./broadcast_pb";
+import { file_peers_v1_broadcast } from "./broadcast_pb";
+import type { EventReconciliationMessage } from "./event_reconciliation_pb";
+import { file_peers_v1_event_reconciliation } from "./event_reconciliation_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file peers/v1/peer.proto.
  */
 export const file_peers_v1_peer: GenFile = /*@__PURE__*/
-  fileDesc("ChNwZWVycy92MS9wZWVyLnByb3RvEghwZWVycy52MSJdCg1TeW5jSGFuZHNoYWtlEg8KB3ZlcnNpb24YASABKAkSGAoLcm9vdF9kaWdlc3QYAiABKAxIAIgBARIRCgljbGllbnRfaWQYAyABKAlCDgoMX3Jvb3RfZGlnZXN0IhsKC0RpZ2VzdFF1ZXJ5EgwKBHBhdGgYASADKA0iTQoNRGlnZXN0UXVlcmllcxIUCgxtZXJrbGVfZGVwdGgYASABKA0SJgoHcXVlcmllcxgCIAMoCzIVLnBlZXJzLnYxLkRpZ2VzdFF1ZXJ5Ij8KDERpZ2VzdFVwZGF0ZRIMCgRwYXRoGAEgAygNEg4KBmRpZ2VzdBgCIAEoDBIRCgl0aW1lc3RhbXAYAyABKAkiTgoNRGlnZXN0VXBkYXRlcxIUCgxtZXJrbGVfZGVwdGgYASABKA0SJwoHdXBkYXRlcxgCIAMoCzIWLnBlZXJzLnYxLkRpZ2VzdFVwZGF0ZSJHChFFdmVudEJhdGNoUGF5bG9hZBIRCgl0aW1lc3RhbXAYASABKAkSEQoJc2lnbmF0dXJlGAIgASgJEgwKBGRhdGEYAyABKAwiLQoYU2VuZEV2ZW50c0FmdGVyVGltZXN0YW1wEhEKCXRpbWVzdGFtcBgBIAEoCSI5CgpFdmVudEJhdGNoEisKBmV2ZW50cxgBIAMoCzIbLnBlZXJzLnYxLkV2ZW50QmF0Y2hQYXlsb2FkIigKDFdlYlJUQ1NpZ25hbBIKCgJ0bxgBIAEoCRIMCgRkYXRhGAIgASgJIiIKDVBlZXJDb25uZWN0ZWQSEQoJY2xpZW50X2lkGAEgASgJIiIKD0Nvbm5lY3RlZFRvUGVlchIPCgdwZWVyX2lkGAEgASgJIicKFERpc2Nvbm5lY3RlZEZyb21QZWVyEg8KB3BlZXJfaWQYASABKAkirQQKD1N5bmNXaXJlTWVzc2FnZRISCgphY2NvdW50X2lkGAEgASgJEhEKCWNsaWVudF9pZBgCIAEoCRIsCgloYW5kc2hha2UYAyABKAsyFy5wZWVycy52MS5TeW5jSGFuZHNoYWtlSAASMQoOZGlnZXN0X3F1ZXJpZXMYBCABKAsyFy5wZWVycy52MS5EaWdlc3RRdWVyaWVzSAASMQoOZGlnZXN0X3VwZGF0ZXMYBSABKAsyFy5wZWVycy52MS5EaWdlc3RVcGRhdGVzSAASKwoLZXZlbnRfYmF0Y2gYBiABKAsyFC5wZWVycy52MS5FdmVudEJhdGNoSAASSQobc2VuZF9ldmVudHNfYWZ0ZXJfdGltZXN0YW1wGAcgASgLMiIucGVlcnMudjEuU2VuZEV2ZW50c0FmdGVyVGltZXN0YW1wSAASLwoNd2VicnRjX3NpZ25hbBgIIAEoCzIWLnBlZXJzLnYxLldlYlJUQ1NpZ25hbEgAEjYKEWNvbm5lY3RlZF90b19wZWVyGAkgASgLMhkucGVlcnMudjEuQ29ubmVjdGVkVG9QZWVySAASMQoOcGVlcl9jb25uZWN0ZWQYCiABKAsyFy5wZWVycy52MS5QZWVyQ29ubmVjdGVkSAASQAoWZGlzY29ubmVjdGVkX2Zyb21fcGVlchgLIAEoCzIeLnBlZXJzLnYxLkRpc2Nvbm5lY3RlZEZyb21QZWVySABCCQoHcGF5bG9hZEINWgtwcm90by9wZWVyc2IGcHJvdG8z");
+  fileDesc("ChNwZWVycy92MS9wZWVyLnByb3RvEghwZWVycy52MSJPCgxDYXBhYmlsaXRpZXMSDgoGYmFja3VwGAEgASgIEhEKCWJyb2FkY2FzdBgCIAEoCBIcChRldmVudF9yZWNvbmNpbGlhdGlvbhgDIAEoCCI5CglIYW5kc2hha2USLAoMY2FwYWJpbGl0aWVzGAMgASgLMhYucGVlcnMudjEuQ2FwYWJpbGl0aWVzIvsBChJQZWVyTWVzc2FnZVBheWxvYWQSKAoJaGFuZHNoYWtlGAMgASgLMhMucGVlcnMudjEuSGFuZHNoYWtlSAASMQoOYmFja3VwX21lc3NhZ2UYBCABKAsyFy5wZWVycy52MS5CYWNrdXBNZXNzYWdlSAASNwoRYnJvYWRjYXN0X21lc3NhZ2UYBSABKAsyGi5wZWVycy52MS5Ccm9hZGNhc3RNZXNzYWdlSAASRAoUZXZlbnRfcmVjb25jaWxpYXRpb24YBiABKAsyJC5wZWVycy52MS5FdmVudFJlY29uY2lsaWF0aW9uTWVzc2FnZUgAQgkKB3BheWxvYWQiYwoLUGVlck1lc3NhZ2USEgoKYWNjb3VudF9pZBgBIAEoCRIRCgljbGllbnRfaWQYAiABKAkSLQoHbWVzc2FnZRgDIAEoCzIcLnBlZXJzLnYxLlBlZXJNZXNzYWdlUGF5bG9hZEIPWg1wcm90by9wZWVyc3BiYgZwcm90bzM", [file_peers_v1_backup, file_peers_v1_broadcast, file_peers_v1_event_reconciliation]);
 
 /**
- * @generated from message peers.v1.SyncHandshake
+ * @generated from message peers.v1.Capabilities
  */
-export type SyncHandshake = Message<"peers.v1.SyncHandshake"> & {
+export type Capabilities = Message<"peers.v1.Capabilities"> & {
   /**
-   * @generated from field: string version = 1;
+   * @generated from field: bool backup = 1;
    */
-  version: string;
+  backup: boolean;
 
   /**
-   * @generated from field: optional bytes root_digest = 2;
+   * @generated from field: bool broadcast = 2;
    */
-  rootDigest?: Uint8Array | undefined;
+  broadcast: boolean;
 
   /**
-   * @generated from field: string client_id = 3;
+   * @generated from field: bool event_reconciliation = 3;
    */
-  clientId: string;
+  eventReconciliation: boolean;
 };
 
 /**
- * Describes the message peers.v1.SyncHandshake.
- * Use `create(SyncHandshakeSchema)` to create a new message.
+ * Describes the message peers.v1.Capabilities.
+ * Use `create(CapabilitiesSchema)` to create a new message.
  */
-export const SyncHandshakeSchema: GenMessage<SyncHandshake> = /*@__PURE__*/
+export const CapabilitiesSchema: GenMessage<Capabilities> = /*@__PURE__*/
   messageDesc(file_peers_v1_peer, 0);
 
 /**
- * @generated from message peers.v1.DigestQuery
+ * @generated from message peers.v1.Handshake
  */
-export type DigestQuery = Message<"peers.v1.DigestQuery"> & {
+export type Handshake = Message<"peers.v1.Handshake"> & {
   /**
-   * @generated from field: repeated uint32 path = 1;
+   * @generated from field: peers.v1.Capabilities capabilities = 3;
    */
-  path: number[];
+  capabilities?: Capabilities | undefined;
 };
 
 /**
- * Describes the message peers.v1.DigestQuery.
- * Use `create(DigestQuerySchema)` to create a new message.
+ * Describes the message peers.v1.Handshake.
+ * Use `create(HandshakeSchema)` to create a new message.
  */
-export const DigestQuerySchema: GenMessage<DigestQuery> = /*@__PURE__*/
+export const HandshakeSchema: GenMessage<Handshake> = /*@__PURE__*/
   messageDesc(file_peers_v1_peer, 1);
 
 /**
- * @generated from message peers.v1.DigestQueries
+ * @generated from message peers.v1.PeerMessagePayload
  */
-export type DigestQueries = Message<"peers.v1.DigestQueries"> & {
+export type PeerMessagePayload = Message<"peers.v1.PeerMessagePayload"> & {
   /**
-   * @generated from field: uint32 merkle_depth = 1;
+   * @generated from oneof peers.v1.PeerMessagePayload.payload
    */
-  merkleDepth: number;
-
-  /**
-   * @generated from field: repeated peers.v1.DigestQuery queries = 2;
-   */
-  queries: DigestQuery[];
+  payload: {
+    /**
+     * @generated from field: peers.v1.Handshake handshake = 3;
+     */
+    value: Handshake;
+    case: "handshake";
+  } | {
+    /**
+     * @generated from field: peers.v1.BackupMessage backup_message = 4;
+     */
+    value: BackupMessage;
+    case: "backupMessage";
+  } | {
+    /**
+     * @generated from field: peers.v1.BroadcastMessage broadcast_message = 5;
+     */
+    value: BroadcastMessage;
+    case: "broadcastMessage";
+  } | {
+    /**
+     * @generated from field: peers.v1.EventReconciliationMessage event_reconciliation = 6;
+     */
+    value: EventReconciliationMessage;
+    case: "eventReconciliation";
+  } | { case: undefined; value?: undefined };
 };
 
 /**
- * Describes the message peers.v1.DigestQueries.
- * Use `create(DigestQueriesSchema)` to create a new message.
+ * Describes the message peers.v1.PeerMessagePayload.
+ * Use `create(PeerMessagePayloadSchema)` to create a new message.
  */
-export const DigestQueriesSchema: GenMessage<DigestQueries> = /*@__PURE__*/
+export const PeerMessagePayloadSchema: GenMessage<PeerMessagePayload> = /*@__PURE__*/
   messageDesc(file_peers_v1_peer, 2);
 
 /**
- * @generated from message peers.v1.DigestUpdate
+ * @generated from message peers.v1.PeerMessage
  */
-export type DigestUpdate = Message<"peers.v1.DigestUpdate"> & {
-  /**
-   * @generated from field: repeated uint32 path = 1;
-   */
-  path: number[];
-
-  /**
-   * @generated from field: bytes digest = 2;
-   */
-  digest: Uint8Array;
-
-  /**
-   * @generated from field: string timestamp = 3;
-   */
-  timestamp: string;
-};
-
-/**
- * Describes the message peers.v1.DigestUpdate.
- * Use `create(DigestUpdateSchema)` to create a new message.
- */
-export const DigestUpdateSchema: GenMessage<DigestUpdate> = /*@__PURE__*/
-  messageDesc(file_peers_v1_peer, 3);
-
-/**
- * @generated from message peers.v1.DigestUpdates
- */
-export type DigestUpdates = Message<"peers.v1.DigestUpdates"> & {
-  /**
-   * @generated from field: uint32 merkle_depth = 1;
-   */
-  merkleDepth: number;
-
-  /**
-   * @generated from field: repeated peers.v1.DigestUpdate updates = 2;
-   */
-  updates: DigestUpdate[];
-};
-
-/**
- * Describes the message peers.v1.DigestUpdates.
- * Use `create(DigestUpdatesSchema)` to create a new message.
- */
-export const DigestUpdatesSchema: GenMessage<DigestUpdates> = /*@__PURE__*/
-  messageDesc(file_peers_v1_peer, 4);
-
-/**
- * @generated from message peers.v1.EventBatchPayload
- */
-export type EventBatchPayload = Message<"peers.v1.EventBatchPayload"> & {
-  /**
-   * @generated from field: string timestamp = 1;
-   */
-  timestamp: string;
-
-  /**
-   * @generated from field: string signature = 2;
-   */
-  signature: string;
-
-  /**
-   * @generated from field: bytes data = 3;
-   */
-  data: Uint8Array;
-};
-
-/**
- * Describes the message peers.v1.EventBatchPayload.
- * Use `create(EventBatchPayloadSchema)` to create a new message.
- */
-export const EventBatchPayloadSchema: GenMessage<EventBatchPayload> = /*@__PURE__*/
-  messageDesc(file_peers_v1_peer, 5);
-
-/**
- * @generated from message peers.v1.SendEventsAfterTimestamp
- */
-export type SendEventsAfterTimestamp = Message<"peers.v1.SendEventsAfterTimestamp"> & {
-  /**
-   * @generated from field: string timestamp = 1;
-   */
-  timestamp: string;
-};
-
-/**
- * Describes the message peers.v1.SendEventsAfterTimestamp.
- * Use `create(SendEventsAfterTimestampSchema)` to create a new message.
- */
-export const SendEventsAfterTimestampSchema: GenMessage<SendEventsAfterTimestamp> = /*@__PURE__*/
-  messageDesc(file_peers_v1_peer, 6);
-
-/**
- * @generated from message peers.v1.EventBatch
- */
-export type EventBatch = Message<"peers.v1.EventBatch"> & {
-  /**
-   * @generated from field: repeated peers.v1.EventBatchPayload events = 1;
-   */
-  events: EventBatchPayload[];
-};
-
-/**
- * Describes the message peers.v1.EventBatch.
- * Use `create(EventBatchSchema)` to create a new message.
- */
-export const EventBatchSchema: GenMessage<EventBatch> = /*@__PURE__*/
-  messageDesc(file_peers_v1_peer, 7);
-
-/**
- * @generated from message peers.v1.WebRTCSignal
- */
-export type WebRTCSignal = Message<"peers.v1.WebRTCSignal"> & {
-  /**
-   * @generated from field: string to = 1;
-   */
-  to: string;
-
-  /**
-   * @generated from field: string data = 2;
-   */
-  data: string;
-};
-
-/**
- * Describes the message peers.v1.WebRTCSignal.
- * Use `create(WebRTCSignalSchema)` to create a new message.
- */
-export const WebRTCSignalSchema: GenMessage<WebRTCSignal> = /*@__PURE__*/
-  messageDesc(file_peers_v1_peer, 8);
-
-/**
- * @generated from message peers.v1.PeerConnected
- */
-export type PeerConnected = Message<"peers.v1.PeerConnected"> & {
-  /**
-   * @generated from field: string client_id = 1;
-   */
-  clientId: string;
-};
-
-/**
- * Describes the message peers.v1.PeerConnected.
- * Use `create(PeerConnectedSchema)` to create a new message.
- */
-export const PeerConnectedSchema: GenMessage<PeerConnected> = /*@__PURE__*/
-  messageDesc(file_peers_v1_peer, 9);
-
-/**
- * @generated from message peers.v1.ConnectedToPeer
- */
-export type ConnectedToPeer = Message<"peers.v1.ConnectedToPeer"> & {
-  /**
-   * @generated from field: string peer_id = 1;
-   */
-  peerId: string;
-};
-
-/**
- * Describes the message peers.v1.ConnectedToPeer.
- * Use `create(ConnectedToPeerSchema)` to create a new message.
- */
-export const ConnectedToPeerSchema: GenMessage<ConnectedToPeer> = /*@__PURE__*/
-  messageDesc(file_peers_v1_peer, 10);
-
-/**
- * @generated from message peers.v1.DisconnectedFromPeer
- */
-export type DisconnectedFromPeer = Message<"peers.v1.DisconnectedFromPeer"> & {
-  /**
-   * @generated from field: string peer_id = 1;
-   */
-  peerId: string;
-};
-
-/**
- * Describes the message peers.v1.DisconnectedFromPeer.
- * Use `create(DisconnectedFromPeerSchema)` to create a new message.
- */
-export const DisconnectedFromPeerSchema: GenMessage<DisconnectedFromPeer> = /*@__PURE__*/
-  messageDesc(file_peers_v1_peer, 11);
-
-/**
- * @generated from message peers.v1.SyncWireMessage
- */
-export type SyncWireMessage = Message<"peers.v1.SyncWireMessage"> & {
+export type PeerMessage = Message<"peers.v1.PeerMessage"> & {
   /**
    * @generated from field: string account_id = 1;
    */
@@ -276,69 +118,15 @@ export type SyncWireMessage = Message<"peers.v1.SyncWireMessage"> & {
   clientId: string;
 
   /**
-   * @generated from oneof peers.v1.SyncWireMessage.payload
+   * @generated from field: peers.v1.PeerMessagePayload message = 3;
    */
-  payload: {
-    /**
-     * @generated from field: peers.v1.SyncHandshake handshake = 3;
-     */
-    value: SyncHandshake;
-    case: "handshake";
-  } | {
-    /**
-     * @generated from field: peers.v1.DigestQueries digest_queries = 4;
-     */
-    value: DigestQueries;
-    case: "digestQueries";
-  } | {
-    /**
-     * @generated from field: peers.v1.DigestUpdates digest_updates = 5;
-     */
-    value: DigestUpdates;
-    case: "digestUpdates";
-  } | {
-    /**
-     * @generated from field: peers.v1.EventBatch event_batch = 6;
-     */
-    value: EventBatch;
-    case: "eventBatch";
-  } | {
-    /**
-     * @generated from field: peers.v1.SendEventsAfterTimestamp send_events_after_timestamp = 7;
-     */
-    value: SendEventsAfterTimestamp;
-    case: "sendEventsAfterTimestamp";
-  } | {
-    /**
-     * @generated from field: peers.v1.WebRTCSignal webrtc_signal = 8;
-     */
-    value: WebRTCSignal;
-    case: "webrtcSignal";
-  } | {
-    /**
-     * @generated from field: peers.v1.ConnectedToPeer connected_to_peer = 9;
-     */
-    value: ConnectedToPeer;
-    case: "connectedToPeer";
-  } | {
-    /**
-     * @generated from field: peers.v1.PeerConnected peer_connected = 10;
-     */
-    value: PeerConnected;
-    case: "peerConnected";
-  } | {
-    /**
-     * @generated from field: peers.v1.DisconnectedFromPeer disconnected_from_peer = 11;
-     */
-    value: DisconnectedFromPeer;
-    case: "disconnectedFromPeer";
-  } | { case: undefined; value?: undefined };
+  message?: PeerMessagePayload | undefined;
 };
 
 /**
- * Describes the message peers.v1.SyncWireMessage.
- * Use `create(SyncWireMessageSchema)` to create a new message.
+ * Describes the message peers.v1.PeerMessage.
+ * Use `create(PeerMessageSchema)` to create a new message.
  */
-export const SyncWireMessageSchema: GenMessage<SyncWireMessage> = /*@__PURE__*/
-  messageDesc(file_peers_v1_peer, 12);
+export const PeerMessageSchema: GenMessage<PeerMessage> = /*@__PURE__*/
+  messageDesc(file_peers_v1_peer, 3);
 

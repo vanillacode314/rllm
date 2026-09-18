@@ -5,8 +5,9 @@
 package digest
 
 import (
+	"log/slog"
 	"merkle-tree"
-	"proto/peers"
+	"proto/peerspb"
 )
 
 func Unique[T comparable](items []T) []T {
@@ -73,12 +74,12 @@ func ResolveDigest(tree *merkletree.MerkleTree[string, string], merkleDepth uint
 }
 
 // HandleDigestQuery builds the digestUpdates response payload for a digestQueries request. Queries are echoed back unchanged.
-func HandleDigestQuery(tree *merkletree.MerkleTree[string, string], merkleDepth uint32, queries []*peers.DigestQuery) []*peers.DigestUpdate {
-	result := make([]*peers.DigestUpdate, 0, len(queries))
+func HandleDigestQuery(tree *merkletree.MerkleTree[string, string], merkleDepth uint32, queries []*peerspb.DigestQuery) []*peerspb.DigestUpdate {
+	result := make([]*peerspb.DigestUpdate, 0, len(queries))
 	for _, query := range queries {
 
 		digest, timestamp := ResolveDigest(tree, merkleDepth, query.Path)
-		result = append(result, &peers.DigestUpdate{
+		result = append(result, &peerspb.DigestUpdate{
 			Path:      query.Path,
 			Digest:    digest,
 			Timestamp: timestamp,
@@ -106,7 +107,7 @@ type Action struct {
 // tree, producing one action per digest. Leaf mismatches with a zero peer digest request the event; other
 // leaf mismatches ask whether the peer has the event; internal mismatches
 // descend into the node's children.
-func HandleDigestUpdate(tree *merkletree.MerkleTree[string, string], merkleDepth uint32, updates []*peers.DigestUpdate) *Action {
+func HandleDigestUpdate(tree *merkletree.MerkleTree[string, string], merkleDepth uint32, updates []*peerspb.DigestUpdate) *Action {
 	maxDepth := int(merkleDepth)
 	if t := tree.MaxDepth(); t > maxDepth {
 		maxDepth = t
@@ -133,13 +134,18 @@ func makeChildPaths(basePath []uint32, arity int) [][]uint32 {
 	return children
 }
 
-func findMismatch(tree *merkletree.MerkleTree[string, string], merkleDepth uint32, updates []*peers.DigestUpdate) (string, *[]uint32) {
+func findMismatch(tree *merkletree.MerkleTree[string, string], merkleDepth uint32, updates []*peerspb.DigestUpdate) (string, *[]uint32) {
 	lastTimestamp := ""
 	for _, update := range updates {
 		path := update.Path
 		theirDigest := update.Digest
 		ourDigest, _ := ResolveDigest(tree, merkleDepth, path)
 		if DigestsDiffer(theirDigest, ourDigest) {
+			if len(path) == 0 {
+				slog.Info("digest mismatch at root")
+			} else {
+				slog.Info("digest mismatch at path", "path", path)
+			}
 			return lastTimestamp, &update.Path
 		}
 		lastTimestamp = update.Timestamp
