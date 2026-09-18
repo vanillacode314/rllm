@@ -51,11 +51,11 @@ export async function initWebsocketTransport() {
 
       const ws = createPeerSocket(clientId, accountId);
 
+      const transport = new WebsocketTransport(ws);
+      connection = new ConnectionManager(accountId, clientId, transport);
       ws.addEventListener('open', async () => {
-        const transport = new WebsocketTransport(ws);
-        connection = new ConnectionManager(accountId, clientId, transport);
-        await connection.init();
         console.debug('[WS] connected');
+        await connection?.init();
       });
       return;
     }

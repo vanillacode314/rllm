@@ -2,14 +2,15 @@ import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
 import { Batcher } from '@tanstack/solid-pacer';
 import { ethers } from 'ethers';
 import type { MerkleTree } from 'event-logger';
-import * as EventPB from 'proto/events/v1/event_pb';
-import * as PeerPB from 'proto/peers/v1/peer_pb';
+import * as EventPB from 'proto/events/v1';
+import * as PeerPB from 'proto/peers/v1';
 import * as z from 'zod/mini';
 
 import { logger } from '~/db/client';
 import { parseDbRowsInPlace } from '~/db/utils';
 import { type TValidEvent, validEventSchema } from '~/queries/mutations';
 import { account } from '~/signals/account';
+import { uniqueBy } from '~/utils/array';
 import { decrypt, encrypt } from '~/workers/encryption';
 
 import type { TTransport } from './transports';
@@ -20,6 +21,7 @@ export class ConnectionManager {
   readonly accountId: string;
   readonly clientId: string;
 
+  #initialized: boolean = false;
   private pendingDigestUpdates = 0;
   private sendEventsBatch: Batcher<EventRow>;
   private sendTimestampBatch: Batcher<string>;
@@ -62,45 +64,92 @@ export class ConnectionManager {
 
   createDigestQuery(merkleDepth: number, paths: number[][]) {
     return toBinary(
-      PeerPB.SyncWireMessageSchema,
-      create(PeerPB.SyncWireMessageSchema, {
+      PeerPB.PeerMessageSchema,
+      create(PeerPB.PeerMessageSchema, {
         accountId: this.accountId,
         clientId: this.clientId,
-        payload: {
-          case: 'digestQueries',
-          value: {
-            merkleDepth,
-            queries: paths.map((path) => create(PeerPB.DigestQuerySchema, { path }))
+        message: {
+          payload: {
+            case: 'eventReconciliation',
+            value: {
+              message: {
+                case: 'digestQueries',
+                value: {
+                  merkleDepth,
+                  queries: paths.map((path) => create(PeerPB.DigestQuerySchema, { path }))
+                }
+              }
+            }
           }
         }
       })
     );
   }
 
-  createEventBatch(events: PeerPB.EventBatchPayload[]) {
+  createDigestUpdate(
+    maxDepth: number,
+    result: { digest: Uint8Array; path: number[]; timestamp: string }[]
+  ) {
     return toBinary(
-      PeerPB.SyncWireMessageSchema,
-      create(PeerPB.SyncWireMessageSchema, {
+      PeerPB.PeerMessageSchema,
+      create(PeerPB.PeerMessageSchema, {
         accountId: this.accountId,
         clientId: this.clientId,
-        payload: { case: 'eventBatch', value: { events } }
+        message: {
+          payload: {
+            case: 'eventReconciliation',
+            value: {
+              message: {
+                case: 'digestUpdates',
+                value: {
+                  merkleDepth: maxDepth,
+                  updates: result.map((update) => create(PeerPB.DigestUpdateSchema, update))
+                }
+              }
+            }
+          }
+        }
       })
     );
   }
 
-  createHandshake(version: string, rootDigest: Uint8Array) {
+  createEventBatch(events: PeerPB.Event[]) {
     return toBinary(
-      PeerPB.SyncWireMessageSchema,
-      create(PeerPB.SyncWireMessageSchema, {
+      PeerPB.PeerMessageSchema,
+      create(PeerPB.PeerMessageSchema, {
         accountId: this.accountId,
         clientId: this.clientId,
-        payload: {
-          case: 'handshake',
-          value: create(PeerPB.SyncHandshakeSchema, {
-            clientId: this.clientId,
-            rootDigest,
-            version
-          })
+        message: {
+          payload: {
+            case: 'eventReconciliation',
+            value: {
+              message: {
+                case: 'events',
+                value: { events }
+              }
+            }
+          }
+        }
+      })
+    );
+  }
+
+  createHandshake() {
+    return toBinary(
+      PeerPB.PeerMessageSchema,
+      create(PeerPB.PeerMessageSchema, {
+        accountId: this.accountId,
+        clientId: this.clientId,
+        message: {
+          payload: {
+            case: 'handshake',
+            value: {
+              capabilities: {
+                broadcast: true,
+                eventReconciliation: true
+              }
+            }
+          }
         }
       })
     );
@@ -108,24 +157,41 @@ export class ConnectionManager {
 
   createSendEventsWithTimestamp(timestamp: string) {
     return toBinary(
-      PeerPB.SyncWireMessageSchema,
-      create(PeerPB.SyncWireMessageSchema, {
+      PeerPB.PeerMessageSchema,
+      create(PeerPB.PeerMessageSchema, {
         accountId: this.accountId,
         clientId: this.clientId,
-        payload: { case: 'sendEventsAfterTimestamp', value: { timestamp } }
+        message: {
+          payload: {
+            case: 'eventReconciliation',
+            value: {
+              message: {
+                case: 'sendEventsAfterTimestamp',
+                value: { timestamp }
+              }
+            }
+          }
+        }
       })
     );
   }
 
-  createWebRTCSignal(to: string, data: object) {
+  createSubscribe(topic: string) {
     return toBinary(
-      PeerPB.SyncWireMessageSchema,
-      create(PeerPB.SyncWireMessageSchema, {
+      PeerPB.PeerMessageSchema,
+      create(PeerPB.PeerMessageSchema, {
         accountId: this.accountId,
         clientId: this.clientId,
-        payload: {
-          case: 'webrtcSignal',
-          value: { data: JSON.stringify(data), to }
+        message: {
+          payload: {
+            case: 'broadcastMessage',
+            value: {
+              message: {
+                case: 'subscribe',
+                value: { topic }
+              }
+            }
+          }
         }
       })
     );
@@ -136,7 +202,7 @@ export class ConnectionManager {
     const aesKey = await getAesKey();
     const wallet = getWallet();
     const processedEvents = await Promise.all(
-      events.map(async ({ data, timestamp, type, version }) => {
+      uniqueBy(events, 'timestamp').map(async ({ data, timestamp, type, version }) => {
         const serializedEvent = toBinary(
           EventPB.EventSchema,
           create(EventPB.EventSchema, {
@@ -152,9 +218,7 @@ export class ConnectionManager {
       })
     );
     this.write(
-      this.createEventBatch(
-        processedEvents.map((event) => create(PeerPB.EventBatchPayloadSchema, event))
-      )
+      this.createEventBatch(processedEvents.map((event) => create(PeerPB.EventSchema, event)))
     );
   }
 
@@ -169,50 +233,26 @@ export class ConnectionManager {
     await this.flushSendEvents(events);
   }
 
-  async handleMessage(data: Uint8Array<ArrayBuffer>) {
-    const SUPPORTED_EVENTS = [
-      'digestQueries',
-      'digestUpdates',
-      'eventBatch',
-      'handshake',
-      'sendEventsAfterTimestamp'
-    ];
-    const body = fromBinary(PeerPB.SyncWireMessageSchema, data);
-    const { payload } = body;
-    if (!SUPPORTED_EVENTS.includes(payload.case ?? '')) return;
-    console.debug(`[Received Message][${this.transport.id}]`, payload.case, payload.value);
+  async handleEventReconciliation(message: PeerPB.EventReconciliationMessage) {
+    const payload = message.message;
     switch (payload.case) {
-      case 'digestQueries': {
-        const { merkleDepth, queries } = payload.value;
-        const tree = await logger.getMerkleTree();
-        const result = new Array<{
-          digest: Uint8Array;
-          path: number[];
-          timestamp: string;
-        }>();
-        for (const { path } of queries) {
-          const [digest, timestamp] = resolveDigest(tree, merkleDepth, path);
-          result.push({ digest, path, timestamp });
+      case 'digestQueries':
+        {
+          const { merkleDepth, queries } = payload.value;
+          const tree = await logger.getMerkleTree();
+          const result = new Array<{
+            digest: Uint8Array;
+            path: number[];
+            timestamp: string;
+          }>();
+          for (const { path } of queries) {
+            const [digest, timestamp] = resolveDigest(tree, merkleDepth, path);
+            result.push({ digest, path, timestamp });
+          }
+          console.debug(`[Sending Message][${this.transport.id}] digestUpdates`, { result });
+          this.write(this.createDigestUpdate(tree.maxDepth, result));
         }
-        console.debug(`[Sending Message][${this.transport.id}] digestUpdates`, { result });
-        this.write(
-          toBinary(
-            PeerPB.SyncWireMessageSchema,
-            create(PeerPB.SyncWireMessageSchema, {
-              accountId: this.accountId,
-              clientId: this.clientId,
-              payload: {
-                case: 'digestUpdates',
-                value: {
-                  merkleDepth: tree.maxDepth,
-                  updates: result.map((update) => create(PeerPB.DigestUpdateSchema, update))
-                }
-              }
-            })
-          )
-        );
         break;
-      }
       case 'digestUpdates': {
         const { merkleDepth, updates } = payload.value;
         const tree = await logger.getMerkleTree();
@@ -243,7 +283,7 @@ export class ConnectionManager {
         }
         break;
       }
-      case 'eventBatch': {
+      case 'events': {
         const aesKey = await getAesKey();
         const decryptedEvents = await Promise.all(
           payload.value.events.map(async ({ data, timestamp }) => {
@@ -282,31 +322,39 @@ export class ConnectionManager {
         await invalidate();
         break;
       }
-      case 'handshake': {
-        if (payload.value.rootDigest === undefined) {
-          console.error('Invalid handshake, root digest missing');
-          return;
-        }
-        if (payload.value.clientId === '') {
-          console.error('Invalid handshake, clientId missing');
-          return;
-        }
-        const tree = await logger.getMerkleTree();
-        const shouldQuery = this.clientId > payload.value.clientId;
-        const ourRootDigest = tree.getRootHash();
-        const mismatch = digestsDiffer(ourRootDigest, payload.value.rootDigest);
-        if (!mismatch) console.debug(`[Handshake][${this.transport.id}] Roots match`);
-        if (!shouldQuery) return;
-
-        if (mismatch) {
-          const paths = Array.from({ length: tree.arity }).map((_, i) => [i]);
-          this.addPendingDigestUpdates(paths.length);
-          this.write(this.createDigestQuery(tree.maxDepth, paths));
-        }
-        break;
-      }
       case 'sendEventsAfterTimestamp': {
         void this.sendAfterTimestamp(payload.value.timestamp);
+        break;
+      }
+      default:
+        console.error('Unknown message type', payload.case);
+    }
+  }
+  async handleMessage(data: Uint8Array<ArrayBuffer>) {
+    const body = fromBinary(PeerPB.PeerMessageSchema, data);
+    const { clientId, message } = body;
+    if (!clientId) return;
+    if (!message) return;
+    const { payload } = message;
+    console.debug(`[Received Message][${this.transport.id}]`, payload.case, payload.value);
+    switch (payload.case) {
+      case 'eventReconciliation':
+        return this.handleEventReconciliation(payload.value);
+      case 'handshake': {
+        const { capabilities } = payload.value;
+
+        if (capabilities?.broadcast) {
+          console.debug(`[Sending Message][${this.transport.id}] subscribe`, { topic: 'events' });
+          this.write(this.createSubscribe('events'));
+        }
+
+        if (capabilities?.eventReconciliation) {
+          const shouldQuery = this.clientId > clientId;
+          if (!shouldQuery) return;
+          const tree = await logger.getMerkleTree();
+          this.addPendingDigestUpdates(1);
+          this.write(this.createDigestQuery(tree.maxDepth, [[]]));
+        }
         break;
       }
       default: {
@@ -316,13 +364,10 @@ export class ConnectionManager {
   }
 
   async init() {
-    const version = await logger.getVersion();
-    const tree = await logger.getMerkleTree();
-    const rootDigest = tree.getHash([]);
-    if (rootDigest === null) {
-      throw new Error('Unreachable: root digest is always defined');
-    }
-    this.write(this.createHandshake(version ?? '0', rootDigest));
+    this.write(this.createHandshake());
+
+    if (this.#initialized) return;
+    this.#initialized = true;
 
     logger.on(
       '*',
@@ -334,17 +379,11 @@ export class ConnectionManager {
 
   async sendAfterTimestamp(timestamp: string) {
     let pageSize = 100;
-    let cursor = '';
+    let cursor = timestamp;
     let hasMore = false;
     do {
       const rows = await logger.db.query<{ timestamp: string }>(
-        logger.sql`
-                          SELECT timestamp from events 
-                            WHERE timestamp > ${cursor} 
-                          AND timestamp > ${timestamp} 
-                            ORDER BY timestamp ASC 
-                          LIMIT ${pageSize + 1}
-                        `
+        logger.sql`SELECT timestamp from events WHERE timestamp > ${cursor} ORDER BY timestamp ASC LIMIT ${pageSize + 1}`
       );
       const timestamps = rows.map((row) => row.timestamp);
       hasMore = timestamps.length > pageSize;

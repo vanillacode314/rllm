@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package peers.v1;
+
+option go_package = "proto/peerspb";
+
+message Manifest {
+  bytes data = 1;
+}
+message SendManifest {}
+
+message Blob {
+  string id = 1;
+  bytes data = 2;
+}
+message Blobs {
+  repeated Blob blobs = 1;
+}
+message SendBlobs {
+  repeated string ids = 1;
+}
+message PruneBlobs {
+  repeated string ids = 1;
+}
+
+message BackupMessage {
+  oneof message {
+    Manifest manifest = 1;
+    SendManifest send_manifest = 2;
+    Blobs blobs = 3;
+    SendBlobs send_blobs = 4;
+    PruneBlobs prune_blobs = 5;
+  }
+}

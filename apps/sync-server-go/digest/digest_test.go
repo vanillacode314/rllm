@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"merkle-tree"
-	"proto/peers"
+	"proto/peerspb"
 )
 
 // buildTree creates a tree with arity 16 and the given leaf timestamps
@@ -89,7 +89,7 @@ func TestHandleDigestQuery(t *testing.T) {
 	tree := buildTree(t, "1", "2", "3", "4")
 
 	t.Run("root at own depth returns digest", func(t *testing.T) {
-		result := HandleDigestQuery(tree, 0, []*peers.DigestQuery{{Path: []uint32{}}})
+		result := HandleDigestQuery(tree, 0, []*peerspb.DigestQuery{{Path: []uint32{}}})
 		if len(result) != 1 || len(result[0].Path) != 0 {
 			t.Fatalf("unexpected result: %+v", result)
 		}
@@ -99,7 +99,7 @@ func TestHandleDigestQuery(t *testing.T) {
 	})
 
 	t.Run("paths echoed with virtual handling", func(t *testing.T) {
-		paths := []*peers.DigestQuery{
+		paths := []*peerspb.DigestQuery{
 			{Path: []uint32{0, 1}},    // real (maps to [1])
 			{Path: []uint32{1, 0, 0}}, // virtual
 		}
@@ -124,14 +124,14 @@ func TestHandleDigestUpdate(t *testing.T) {
 
 	t.Run("matching root yields no actions", func(t *testing.T) {
 		root, _ := ResolveDigest(tree, 0, []uint32{})
-		action := HandleDigestUpdate(tree, 0, []*peers.DigestUpdate{{Path: nil, Digest: root}})
+		action := HandleDigestUpdate(tree, 0, []*peerspb.DigestUpdate{{Path: nil, Digest: root}})
 		if action != nil {
 			t.Fatalf("expected no action, got %+v", action)
 		}
 	})
 
 	t.Run("root mismatch descends into children", func(t *testing.T) {
-		action := HandleDigestUpdate(tree, 0, []*peers.DigestUpdate{{Path: nil, Digest: []byte("wrong")}})
+		action := HandleDigestUpdate(tree, 0, []*peerspb.DigestUpdate{{Path: nil, Digest: []byte("wrong")}})
 		if action == nil {
 			t.Fatalf("expected action, got nil")
 		}
@@ -151,7 +151,7 @@ func TestHandleDigestUpdate(t *testing.T) {
 		t2 := buildTree(t, "ts1", "ts2")
 		d2_0, _ := ResolveDigest(t2, 1, []uint32{0})
 		d2_1, _ := ResolveDigest(t2, 1, []uint32{1})
-		action := HandleDigestUpdate(t1, 1, []*peers.DigestUpdate{{Path: []uint32{0}, Digest: d2_0, Timestamp: "ts1"}, {Path: []uint32{1}, Digest: d2_1, Timestamp: "ts2"}})
+		action := HandleDigestUpdate(t1, 1, []*peerspb.DigestUpdate{{Path: []uint32{0}, Digest: d2_0, Timestamp: "ts1"}, {Path: []uint32{1}, Digest: d2_1, Timestamp: "ts2"}})
 		if action == nil {
 			t.Fatalf("expected action, got nil")
 		}

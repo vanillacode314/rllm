@@ -1,42 +1,54 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
-	client "sync-server/db"
-	handlers "sync-server/server"
+	"pubsub"
+	"sync-server/db"
+	"sync-server/server"
+	"sync-server/server/socket"
 )
 
 func main() {
-	host := os.Getenv("HOST")
-	if host == "" {
-		host = "0.0.0.0"
-	}
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8009"
-	}
-	db, err := client.InitDB()
+	host, port, dbUri, dbAuthToken, err := parseEnv()
 	if err != nil {
-		log.Fatalf("Failed to init DB: %v", err)
+		log.Fatalf("failed to parse env: %v", err)
+	}
+
+	db, err := db.NewClient(dbUri, dbAuthToken)
+	if err != nil {
+		log.Fatalf("failed to init DB: %v", err)
 	}
 	defer db.Close()
 
+	hub := pubsub.NewHub[socket.PublishedMessage]()
 	router := http.NewServeMux()
-	eventsHandler := handlers.EventsHandler{Db: db}
-	socketsHandler := handlers.SocketHandler{Db: db, Hub: handlers.NewHub()}
+	attachRestHandler(router, db)
+	attachSocketHandler(router, db, hub)
 
-	router.Handle("GET /api/v1/ws", socketsHandler)
-	router.HandleFunc("GET /api/v1/messages/stream", eventsHandler.GetMessagesStream)
-	router.HandleFunc("GET /api/v1/auth/requestChallenge", eventsHandler.GetRequestChallenge)
-	router.HandleFunc("POST /api/v1/auth/verifyChallenge", eventsHandler.PostVerifyChallenge)
-	router.HandleFunc("GET /api/v1/id", eventsHandler.GetId)
-	router.HandleFunc("DELETE /api/v1/account", eventsHandler.DeleteAccount)
-
-	s := &http.Server{Addr: host + ":" + port, Handler: corsMiddleware(router)}
+	s := &http.Server{Addr: net.JoinHostPort(host, port), Handler: corsMiddleware(router)}
 	log.Printf("Started server on %s:%s", host, port)
 	log.Fatal(s.ListenAndServe())
+}
+
+func attachRestHandler(router *http.ServeMux, db *db.DbClient) {
+	restHandler := rest.RESTHandler{Db: db}
+	router.HandleFunc("GET /api/v1/messages/stream", restHandler.GetMessagesStream)
+	router.HandleFunc("GET /api/v1/auth/requestChallenge", restHandler.GetRequestChallenge)
+	router.HandleFunc("POST /api/v1/auth/verifyChallenge", restHandler.PostVerifyChallenge)
+	router.HandleFunc("GET /api/v1/id", restHandler.GetId)
+	router.HandleFunc("DELETE /api/v1/account", restHandler.DeleteAccount)
+
+}
+
+func attachSocketHandler(router *http.ServeMux, db *db.DbClient, hub *pubsub.Hub[socket.PublishedMessage]) {
+	router.HandleFunc("GET /api/v1/ws", func(w http.ResponseWriter, r *http.Request) {
+		conn := socket.NewConnection(db, hub, socket.NewEventReconciliationPlugin(db))
+		conn.ServeHTTP(w, r)
+	})
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
@@ -52,4 +64,21 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func parseEnv() (string, string, string, string, error) {
+	host := os.Getenv("HOST")
+	if host == "" {
+		host = "0.0.0.0"
+	}
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8009"
+	}
+	dbUri := os.Getenv("DATABASE_CONNECTION_URL")
+	if dbUri == "" {
+		return "", "", "", "", fmt.Errorf("DATABASE_CONNECTION_URL is required")
+	}
+	dbAuthToken := os.Getenv("DATABASE_AUTH_TOKEN")
+	return host, port, dbUri, dbAuthToken, nil
 }

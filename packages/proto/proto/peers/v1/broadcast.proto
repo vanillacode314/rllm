@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package peers.v1;
+
+option go_package = "proto/peerspb";
+
+message Publish {
+  string topic = 1;
+  string signature = 2;
+  bytes data = 3;
+}
+
+message Subscribe {
+  string topic = 2;
+}
+
+message BroadcastMessage {
+  oneof message {
+    Publish publish = 1;
+    Subscribe subscribe = 2;
+  }
+}

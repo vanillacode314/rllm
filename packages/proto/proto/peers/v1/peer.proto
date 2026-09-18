@@ -2,77 +2,33 @@ syntax = "proto3";
 
 package peers.v1;
 
-option go_package = "proto/peers";
+import "peers/v1/backup.proto";
+import "peers/v1/broadcast.proto";
+import "peers/v1/event_reconciliation.proto";
 
-message SyncHandshake {
-  string version = 1;
-  optional bytes root_digest = 2;
-  string client_id = 3;
+option go_package = "proto/peerspb";
+
+message Capabilities {
+  bool backup = 1;
+  bool broadcast = 2;
+  bool event_reconciliation = 3;
 }
 
-message DigestQuery {
-  repeated uint32 path = 1;
+message Handshake {
+  Capabilities capabilities = 3;
 }
 
-message DigestQueries {
-  uint32 merkle_depth = 1;
-  repeated DigestQuery queries = 2;
+message PeerMessagePayload {
+  oneof payload {
+    Handshake handshake = 3;
+    BackupMessage backup_message = 4;
+    BroadcastMessage broadcast_message = 5;
+    EventReconciliationMessage event_reconciliation = 6;
+  }
 }
 
-message DigestUpdate {
-  repeated uint32 path = 1;
-  bytes digest = 2;
-  string timestamp = 3;
-}
-
-message DigestUpdates {
-  uint32 merkle_depth = 1;
-  repeated DigestUpdate updates = 2;
-}
-
-message EventBatchPayload {
-  string timestamp = 1;
-  string signature = 2;
-  bytes data = 3;
-}
-
-message SendEventsAfterTimestamp {
-  string timestamp = 1;
-}
-
-message EventBatch {
-  repeated EventBatchPayload events = 1;
-}
-
-message WebRTCSignal {
-  string to = 1;
-  string data = 2;
-}
-
-message PeerConnected {
-  string client_id = 1;
-}
-
-message ConnectedToPeer {
-  string peer_id = 1;
-}
-
-message DisconnectedFromPeer {
-  string peer_id = 1;
-}
-
-message SyncWireMessage {
+message PeerMessage {
   string account_id = 1;
   string client_id = 2;
-  oneof payload {
-    SyncHandshake handshake = 3;
-    DigestQueries digest_queries = 4;
-    DigestUpdates digest_updates = 5;
-    EventBatch event_batch = 6;
-    SendEventsAfterTimestamp send_events_after_timestamp = 7;
-    WebRTCSignal webrtc_signal = 8;
-    ConnectedToPeer connected_to_peer = 9;
-    PeerConnected peer_connected = 10;
-    DisconnectedFromPeer disconnected_from_peer = 11;
-  }
+  PeerMessagePayload message = 3;
 }

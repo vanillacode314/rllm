@@ -1,5 +1,5 @@
 import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
-import * as PeerPB from 'proto/peers/v1/peer_pb';
+import * as PeerPB from 'proto/peers/v1';
 import { safeParseJson } from 'ts-result-option/utils';
 import * as z from 'zod/mini';
 
@@ -48,13 +48,10 @@ export class PeerManager {
     this.#ws = createPeerSocket(clientId, accountId, true);
 
     this.#ws.addEventListener('message', async (e) => {
-      const SUPPORTED_EVENTS = ['webrtcSignal', 'peerConnected'];
-      const body = fromBinary(
-        PeerPB.SyncWireMessageSchema,
-        new Uint8Array(await e.data.arrayBuffer())
-      );
+      // const SUPPORTED_EVENTS = ['webrtcSignal', 'peerConnected'];
+      const body = fromBinary(PeerPB.PeerMessageSchema, new Uint8Array(await e.data.arrayBuffer()));
       if (body.accountId !== accountId) return;
-      if (!SUPPORTED_EVENTS.includes(body.payload.case ?? '')) return;
+      // if (!SUPPORTED_EVENTS.includes(body.payload.case ?? '')) return;
       switch (body.payload.case) {
         case 'webrtcSignal': {
           const signal = safeParseJson(body.payload.value.data, {

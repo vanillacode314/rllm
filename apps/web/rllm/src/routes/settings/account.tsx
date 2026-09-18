@@ -2,7 +2,7 @@ import { fromBinary } from '@bufbuild/protobuf';
 import { useQuery } from '@tanstack/solid-query';
 import { createFileRoute, useBlocker } from '@tanstack/solid-router';
 import { ethers } from 'ethers';
-import { SyncServerGetEventsResponseSchema } from 'proto/events/v1/event_pb';
+import { SyncServerGetEventsResponseSchema } from 'proto/events/v1';
 import { Match, Switch } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { toast } from 'solid-sonner';

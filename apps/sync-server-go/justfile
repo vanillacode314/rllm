@@ -4,10 +4,11 @@ run:
 migrate:
   bunx drizzle-kit generate
 build:
-  go build .
-  mkdir bin
-  mv sync-server bin/
+  mkdir -p bin
+  go build -o bin/sync-server .
 fmt:
-  go fmt .
+  go fmt ./...
 lint:
-  go vet .
+  go vet ./...
+test:
+  go test ./...

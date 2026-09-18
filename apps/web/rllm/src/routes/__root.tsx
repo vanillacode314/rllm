@@ -20,7 +20,7 @@ import { retryFailedTitleAndTags } from '~/lib/chat/tasks';
 import { MCPManager } from '~/lib/mcp/manager';
 import { ProxyManager } from '~/lib/proxy';
 import { account } from '~/signals/account';
-import { PeerManager } from '~/sockets/transports';
+// import { PeerManager } from '~/sockets/transports';
 import { syncColorMode } from '~/utils/color-mode';
 import { once } from '~/utils/functions';
 import { queryClient } from '~/utils/query-client';
@@ -60,20 +60,20 @@ export const Route = createRootRouteWithContext()({
     async function initTransports() {
       const accountId = Option.from(account()).map((account) => account.id);
       if (accountId.isSome()) {
-        const clientId = Option.from(await db.clientId())
-          .okOrElse(() => new Error('Missing clientId in local database metadata'))
-          .unwrap();
+        // const clientId = Option.from(await db.clientId())
+        //   .okOrElse(() => new Error('Missing clientId in local database metadata'))
+        //   .unwrap();
         const { initWebsocketTransport } = await import('~/sockets/transports/websocket');
         void initWebsocketTransport().catch((err) =>
           console.error(new Error('Failed to init websocket transport', { cause: err }))
         );
-        const { webRTCTransportFactory } = await import('~/sockets/transports/webrtc');
-        PeerManager.registerTransport(webRTCTransportFactory);
-        const { peerJSTransportFactory } = await import('~/sockets/transports/peerjs');
-        PeerManager.registerTransport(peerJSTransportFactory(clientId));
-        const { irohTransportFactory } = await import('~/sockets/transports/iroh');
-        PeerManager.registerTransport(irohTransportFactory);
-        void PeerManager.init(accountId.unwrap(), clientId);
+        // const { webRTCTransportFactory } = await import('~/sockets/transports/webrtc');
+        // PeerManager.registerTransport(webRTCTransportFactory);
+        // const { peerJSTransportFactory } = await import('~/sockets/transports/peerjs');
+        // PeerManager.registerTransport(peerJSTransportFactory(clientId));
+        // const { irohTransportFactory } = await import('~/sockets/transports/iroh');
+        // PeerManager.registerTransport(irohTransportFactory);
+        // void PeerManager.init(accountId.unwrap(), clientId);
       }
     }
     void initTransports();

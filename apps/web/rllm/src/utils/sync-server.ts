@@ -1,6 +1,6 @@
 import { fromBinary } from '@bufbuild/protobuf';
 import { ethers } from 'ethers';
-import * as EventPB from 'proto/events/v1/event_pb';
+import * as EventPB from 'proto/events/v1';
 import { AsyncResult } from 'ts-result-option';
 import { safeParseJson, tryBlock } from 'ts-result-option/utils';
 import wretch from 'wretch';

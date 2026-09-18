@@ -7,7 +7,7 @@
     "test": "go test ./...",
     "dev": "fd -e go | PORT=$SYNC_SERVER_PORT entr -cnr -- bun run start",
     "migrate": "drizzle-kit generate",
-    "build": "go build .",
+    "build": "mkdir -p bin && go build -o bin/sync-server .",
     "start": "go run .",
     "format": "go fmt ./...",
     "lint": "go vet ./..."

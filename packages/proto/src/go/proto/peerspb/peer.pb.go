@@ -4,7 +4,7 @@
 // 	protoc        (unknown)
 // source: peers/v1/peer.proto
 
-package peers
+package peerspb
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -320,7 +320,7 @@ const file_peers_v1_peer_proto_rawDesc = "" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x12\x1b\n" +
 	"\tclient_id\x18\x02 \x01(\tR\bclientId\x126\n" +
-	"\amessage\x18\x03 \x01(\v2\x1c.peers.v1.PeerMessagePayloadR\amessageB\rZ\vproto/peersb\x06proto3"
+	"\amessage\x18\x03 \x01(\v2\x1c.peers.v1.PeerMessagePayloadR\amessageB\x0fZ\rproto/peerspbb\x06proto3"
 
 var (
 	file_peers_v1_peer_proto_rawDescOnce sync.Once
