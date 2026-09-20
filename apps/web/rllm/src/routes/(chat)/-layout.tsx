@@ -223,15 +223,15 @@ export function useChatPage(
     }
 
     const $chat = chat();
-    const clientId = await db.clientId();
     if (opts().scratchpad) {
+      const id = await db.id();
       await db.userMetadata.setScratchpadChat(
         chatsSchema.parse(
           produce($chat as TDBChat, (draft) => {
             draft.messages = chatState.messages.toJSON();
             draft.settings = chatState.settings.unwrap();
             if (opts().isNewChat) {
-              const hlc = HLC.generate(clientId);
+              const hlc = HLC.generate(id);
               draft.createdAt = hlc.toString();
               draft.accessCount = 0;
               draft.lastAccessedAt = null;
@@ -814,8 +814,7 @@ export function useChatPageLoader(opts: { preload?: boolean; scratchpad?: boolea
         Object.assign(chatSettings, preset.settings);
       }
     }
-    const clientId = await db.clientId();
-    const now = HLC.generate(clientId);
+    const now = HLC.generate(await db.id());
     const chat: TDBChat = {
       accessCount: 0,
       createdAt: now.toString(),

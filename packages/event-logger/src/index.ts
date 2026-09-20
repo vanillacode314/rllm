@@ -3,6 +3,8 @@ import { HLC } from 'hlc';
 import { MerkleTree, stringHasher } from 'merkle-tree';
 import { nanoid } from 'nanoid';
 
+const RESERVED_METADATA_KEYS = new Set(['clock', 'id', 'merkle-tree', 'version']);
+
 export interface Logger<T extends TBaseEvent> {
   clearMetadata: (key: string, tx?: TSqlRunner) => Promise<void>;
   db: TSqlDB;
@@ -11,8 +13,8 @@ export interface Logger<T extends TBaseEvent> {
       Omit<T, 'timestamp' | 'version'> & { dontLog?: boolean; timestamp?: string; version?: string }
     >
   ) => Promise<void>;
-  getClientId: () => Promise<string>;
   getClock: () => Promise<HLC>;
+  getId: () => Promise<string>;
   getMerkleTree: () => Promise<MerkleTree<string, string>>;
   getMetadata: (key: string) => Promise<null | string>;
   getVersion: () => Promise<string | undefined>;
@@ -101,14 +103,12 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
   const newClock = HLC.generate();
   await db.batch([
     sql`CREATE TABLE IF NOT EXISTS \`metadata\` ( \`key\` text PRIMARY KEY NOT NULL, \`value\` text NOT NULL);`,
-    sql`INSERT OR IGNORE INTO \`metadata\` (\`key\`, \`value\`) VALUES ('clock', ${newClock.toString()}), ('clientId', ${newClock.clientId});`,
+    sql`INSERT INTO \`metadata\` (\`key\`, \`value\`) VALUES ('clock', ${newClock.toString()}), ('id', ${newClock.id}) ON CONFLICT(\`key\`) DO NOTHING;`,
     sql`CREATE TABLE IF NOT EXISTS \`events\` (\`timestamp\` text PRIMARY KEY NOT NULL, \`type\` text NOT NULL, \`data\` text NOT NULL, \`version\` text NOT NULL);`,
-    sql`CREATE TABLE IF NOT EXISTS \`pendingEvents\` (\`id\` text NOT NULL, \`table\` text NOT NULL, \`timestamp\` text NOT NULL, \`data\` text NOT NULL, \`operation\` text NOT NULL, PRIMARY KEY (\`id\`, \`table\`, \`timestamp\`));`,
+    sql`CREATE TABLE IF NOT EXISTS \`pendingEvents\` (\`id\` text NOT NULL, \`table\` text NOT NULL, \`timestamp\` text NOT NULL, \`data\` text NOT NULL, \`operation\` text NOT NULL, statements text NOT NULL, PRIMARY KEY (\`id\`, \`table\`, \`timestamp\`));`,
     sql`CREATE TABLE IF NOT EXISTS \`updates\`( \`column\` text NOT NULL, \`id\` text PRIMARY KEY NOT NULL, \`rowId\` text NOT NULL, \`table\` text NOT NULL, \`timestamp\` text NOT NULL);`,
     sql`CREATE UNIQUE INDEX IF NOT EXISTS \`updates_table_rowId_column_unique\` ON \`updates\` (\`table\`,\`rowId\`,\`column\`);`
   ]);
-
-  await migratePendingEventsStatements(db);
 
   async function getSchema(tx: TSqlRunner = db) {
     const tbls = await tx
@@ -173,7 +173,7 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
       }
     },
     clearMetadata: async (key: string, tx: TSqlRunner = db) => {
-      if (['clientId', 'clock', 'merkle-tree', 'version'].includes(key))
+      if (RESERVED_METADATA_KEYS.has(key))
         throw new Error(`not allowed to clear metadata key: ${key}`);
       await tx.query(sql`DELETE FROM metadata WHERE key = ${key}`);
     },
@@ -225,9 +225,11 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
               .flatMap((event) => [event.timestamp, event.type, event.data, event.version])
               .map(toSql)
               .toArray(),
-            sql: `INSERT OR IGNORE INTO events (timestamp, type, data, version) VALUES ${validatedEventsToLog
+            sql: `INSERT INTO events (timestamp, type, data, version) VALUES ${validatedEventsToLog
               .map(() => '(?, ?, ?, ?)')
-              .join(',')} RETURNING timestamp, type, data, version`
+              .join(
+                ','
+              )} ON CONFLICT(timestamp) DO NOTHING RETURNING timestamp, type, data, version`
           });
         }
         await logger.setClock(clock, tx);
@@ -267,11 +269,6 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
         }))
       );
     },
-    getClientId: async (tx: TSqlRunner = db): Promise<string> => {
-      return await tx
-        .query<{ value: string }>(sql`SELECT value FROM metadata WHERE key = 'clientId'`)
-        .then((rows) => rows[0]!.value);
-    },
     getClock: async (tx: TSqlRunner = db): Promise<HLC> => {
       return HLC.fromString(
         await tx
@@ -280,6 +277,13 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
             return rows[0]!.value;
           })
       );
+    },
+    getId: async (tx: TSqlRunner = db): Promise<string> => {
+      const id = await tx
+        .query<{ value: string }>(sql`SELECT value FROM metadata WHERE key = 'id'`)
+        .then((rows) => rows[0]?.value ?? null);
+      if (id !== null) return id;
+      throw new Error('id not set');
     },
     async getMerkleTree(tx: TSqlRunner = db): Promise<MerkleTree<string, string>> {
       const jsonTree = await logger.getMetadata('merkle-tree', tx);
@@ -371,9 +375,9 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
           .flatMap((event) => [event.timestamp, event.type, event.data, event.version])
           .map(toSql)
           .toArray(),
-        sql: `INSERT OR IGNORE INTO events (timestamp, type, data, version) VALUES ${events
+        sql: `INSERT INTO events (timestamp, type, data, version) VALUES ${events
           .map(() => '(?, ?, ?, ?)')
-          .join(',')} RETURNING timestamp, type, data, version`
+          .join(',')} ON CONFLICT(timestamp) DO NOTHING RETURNING timestamp, type, data, version`
       });
       const appliedTimestamps = new Set(loggedEvents.map((event) => event.timestamp));
       const appliedEvents = events.filter((event) => appliedTimestamps.has(event.timestamp));
@@ -440,7 +444,7 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
       await tx.query(sql`UPDATE metadata SET value = ${clock.toString()} WHERE key = 'clock'`);
     },
     setMetadata: async (key: string, value: string, tx: TSqlRunner = db) => {
-      if (['clientId', 'clock', 'merkle-tree', 'version'].includes(key))
+      if (RESERVED_METADATA_KEYS.has(key))
         throw new Error(`not allowed to manually set metadata key: ${key}`);
       await tx.query(
         sql`INSERT INTO metadata (key, value) VALUES (${key}, ${value}) ON CONFLICT(key) DO UPDATE SET value = ${value}`
@@ -458,8 +462,8 @@ export async function createEventLogger<TEvent extends Omit<TBaseEvent, 'timesta
     db,
     // TODO: figure out typescript here
     dispatch: logger.dispatch as never,
-    getClientId: logger.getClientId,
     getClock: logger.getClock,
+    getId: logger.getId,
     getMerkleTree: logger.getMerkleTree,
     getMetadata: logger.getMetadata,
     getVersion: logger.getVersion,
@@ -542,14 +546,14 @@ async function convertUpdateToStatement(
         {
           params: [id, ...values].map((value) => toSql(value)),
           sql: `
-              INSERT OR IGNORE INTO "${tableName}"(
+              INSERT INTO "${tableName}"(
                 "id",
                 ${columns.map((column) => `"${column}"`).join(',')}
               )
               VALUES (
                 ?,
                 ${columns.map(() => '?').join(',')}
-              )`
+              ) ON CONFLICT(id) DO NOTHING`
         },
         ...upsertUpdateStatements(tableName, id, columns, timestamp)
       ];
@@ -636,18 +640,7 @@ async function convertUpdateToStatement(
     }
   }
 }
-async function migratePendingEventsStatements(db: TSqlDB): Promise<void> {
-  const MIGRATION_KEY = '__event_logger_migration_v1_pendingEvents_statements';
-  const existing = await db.query<{ value: string }>({
-    params: [MIGRATION_KEY],
-    sql: 'SELECT value FROM metadata WHERE key = ?'
-  });
-  if (existing.length > 0) return;
-  await db.batch([
-    sql`ALTER TABLE pendingEvents ADD COLUMN statements text NOT NULL DEFAULT '{}'`,
-    sql`INSERT INTO metadata (key, value) VALUES (${MIGRATION_KEY}, 'done') ON CONFLICT(key) DO UPDATE SET value = 'done'`
-  ]);
-}
+
 function partitionArray<T, U extends T>(
   array: T[],
   predicate: (value: T) => value is U
@@ -739,7 +732,7 @@ async function storePendingEvent(
       update.operation,
       statements
     ],
-    sql: `INSERT OR IGNORE INTO pendingEvents (id, "table", timestamp, data, operation, statements) VALUES (?, ?, ?, ?, ?, ?)`
+    sql: `INSERT INTO pendingEvents (id, "table", timestamp, data, operation, statements) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT("id", "table", "timestamp") DO NOTHING`
   });
 }
 

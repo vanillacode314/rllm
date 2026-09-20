@@ -426,8 +426,8 @@ export function createDbApi(logger: LoggerInstance) {
     chatPresets,
     chats,
     // NOTE: we assume clientId never changes once set for a device so we don't need to rerun more than once
-    clientId: once(() => {
-      return logger.getClientId();
+    id: once(() => {
+      return logger.getId();
     }),
     createChatFromScratchpad: (
       data: Omit<TEventData<'createChat'>, 'createdAt'>,

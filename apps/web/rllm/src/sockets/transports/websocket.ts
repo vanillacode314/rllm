@@ -38,7 +38,7 @@ export class WebsocketTransport implements TTransport {
 
 export async function initWebsocketTransport() {
   let connection: ConnectionManager | undefined;
-  const clientId = Option.from(await db.clientId())
+  const clientId = Option.from(await db.id())
     .okOrElse(() => new Error('Missing clientId in local database metadata'))
     .unwrap();
 
