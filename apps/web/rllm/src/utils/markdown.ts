@@ -22,11 +22,18 @@ const grammarLoaders = import.meta.glob<any>(
 const loadedGrammars = new Set(lowlight.listLanguages());
 const pendingImports = new Map<string, Promise<void>>();
 
+const fallbacks = new Map(
+  Object.entries({
+    fish: 'bash'
+  })
+);
 async function loadGrammar(lang: string): Promise<void> {
   if (loadedGrammars.has(lang)) return;
   if (pendingImports.has(lang)) return pendingImports.get(lang);
 
-  const loader = grammarLoaders[getGrammarKey(lang)];
+  const key = getGrammarKey(lang);
+  const fallbackKey = getGrammarKey(fallbacks.get(lang) ?? '');
+  const loader = grammarLoaders[key] ?? grammarLoaders[fallbackKey];
 
   if (!loader) {
     loadedGrammars.add(lang); // Prevent retrying unknown languages
@@ -80,13 +87,17 @@ function rehypeDynamicHighlight() {
       const codeText = toString(node);
       if (!codeText) continue;
 
+      const fallbackLang = fallbacks.get(lang);
       try {
         if (lowlight.registered(lang)) {
           const highlightedAst = lowlight.highlight(lang, codeText);
           node.children = highlightedAst.children;
+        } else if (fallbackLang && lowlight.registered(fallbackLang)) {
+          const highlightedAst = lowlight.highlight(fallbackLang, codeText);
+          node.children = highlightedAst.children;
         }
-      } catch {
-        // Fall back to plain text on error
+      } catch (error) {
+        console.error(new Error(`Failed to highlight code block`, { cause: error }));
       }
     }
   };
