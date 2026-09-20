@@ -14,7 +14,11 @@ import { dedent } from './string';
 
 const lowlight = createLowlight(common);
 
-const grammarLoaders = import.meta.glob<any>('/node_modules/highlight.js/lib/languages/*.js');
+const getGrammarKey = (lang: string) =>
+  `../../../../../node_modules/highlight.js/lib/languages/${lang}.js`;
+const grammarLoaders = import.meta.glob<any>(
+  `../../../../../node_modules/highlight.js/lib/languages/*.js`
+);
 const loadedGrammars = new Set(lowlight.listLanguages());
 const pendingImports = new Map<string, Promise<void>>();
 
@@ -22,8 +26,7 @@ async function loadGrammar(lang: string): Promise<void> {
   if (loadedGrammars.has(lang)) return;
   if (pendingImports.has(lang)) return pendingImports.get(lang);
 
-  const pathKey = `/node_modules/highlight.js/lib/languages/${lang}.js`;
-  const loader = grammarLoaders[pathKey];
+  const loader = grammarLoaders[getGrammarKey(lang)];
 
   if (!loader) {
     loadedGrammars.add(lang); // Prevent retrying unknown languages
