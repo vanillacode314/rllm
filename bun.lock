@@ -22,7 +22,7 @@
     },
     "apps/web/rllm": {
       "name": "rllm",
-      "version": "0.0.79",
+      "version": "0.0.81",
       "dependencies": {
         "@atlaskit/pragmatic-drag-and-drop": "^3.1.0",
         "@bufbuild/protobuf": "catalog:",
@@ -173,6 +173,22 @@
         "oxlint": "catalog:",
         "oxlint-tsgolint": "catalog:",
         "typescript": "catalog:",
+      },
+    },
+    "packages/crdts": {
+      "name": "@rthings/crdts",
+      "dependencies": {
+        "hlc": "workspace:",
+        "nanoid": "^6.0.1",
+      },
+      "devDependencies": {
+        "@rthings/config": "workspace:*",
+        "@types/node": "catalog:",
+        "oxfmt": "catalog:",
+        "oxlint": "catalog:",
+        "tsdown": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:",
       },
     },
     "packages/event-bus": {
@@ -1164,6 +1180,8 @@
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.62.0", "", { "os": "win32", "cpu": "x64" }, "sha512-5L+T1fMX4RIEBoZzT0+sQ0PhTS36NULFmMXtl1TZo44TMAROIMHbZufSOjVWt/Y622BtxgxtaNOokbTDvfsrZA=="],
 
     "@rthings/config": ["@rthings/config@workspace:packages/config"],
+
+    "@rthings/crdts": ["@rthings/crdts@workspace:packages/crdts"],
 
     "@salvatoret/iroh": ["@salvatoret/iroh@0.1.3", "", { "bin": { "iroh": "bin/cli.js" } }, "sha512-e8gh/38ncxklaNgqupFmGtUmN059FDhjrFtGELK00yai+SMTgeVvFWYQpG7KNE+rp8zDSTmv1uVC4T5bG3Tezw=="],
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { HLC } from '~/index.ts';
+import { HLC } from './hlc';
 
 const testTime = 1700000000000;
 
@@ -14,7 +14,7 @@ function restoreDateNow() {
 
 describe('HLC', () => {
   describe('generate', () => {
-    it('should create HLC with random ID', () => {
+    it('should create HLC with random client ID', () => {
       mockDateNow();
       try {
         const hlc = HLC.generate();
@@ -29,12 +29,12 @@ describe('HLC', () => {
       }
     });
 
-    it('should create HLC with provided ID', () => {
+    it('should create HLC with provided client ID', () => {
       mockDateNow();
       try {
-        const id = 'custom-id';
-        const hlc = HLC.generate(id);
-        expect(hlc.id).toBe(id);
+        const clientId = 'custom-id';
+        const hlc = HLC.generate(clientId);
+        expect(hlc.id).toBe(clientId);
       } finally {
         restoreDateNow();
       }
@@ -71,7 +71,7 @@ describe('HLC', () => {
     it('should throw on invalid numbers', () => {
       mockDateNow();
       try {
-        expect(() => HLC.fromString('abc-def-id')).toThrow('Invalid HLC value');
+        expect(() => HLC.fromString('abc-def-clientId')).toThrow('Invalid HLC value');
       } finally {
         restoreDateNow();
       }
@@ -110,7 +110,7 @@ describe('HLC', () => {
       }
     });
 
-    it('should compare ID when physical and logical times equal', () => {
+    it('should compare client ID when physical and logical times equal', () => {
       mockDateNow();
       try {
         const hlc1 = HLC.generate('aaa');
@@ -172,7 +172,7 @@ describe('HLC', () => {
         hlc2.physicalTime = testTime + 100;
         hlc2.logicalTime = 50;
 
-        hlc1.receive(hlc2);
+        hlc1.receive(hlc2.toString());
         expect(hlc1.physicalTime).toBe(testTime + 100);
         expect(hlc1.logicalTime).toBe(51);
       } finally {
@@ -211,7 +211,7 @@ describe('HLC', () => {
         hlc2.physicalTime = 0;
         hlc2.logicalTime = 0;
 
-        hlc1.receive(hlc2);
+        hlc1.receive(hlc2.toString());
         expect(hlc1.physicalTime).toBe(testTime);
         // When physical times differ, logical time resets to 0
         expect(hlc1.logicalTime).toBe(0);
@@ -225,15 +225,15 @@ describe('HLC', () => {
     it('should format HLC correctly', () => {
       mockDateNow();
       try {
-        const hlc = HLC.generate('test');
+        const hlc = HLC.generate('test-client');
         hlc.physicalTime = 1234567890123;
         hlc.logicalTime = 0;
-        hlc.id = 'test';
+        hlc.id = 'test-client';
 
         const str = hlc.toString();
-        expect(str).toMatch(/^\d+-\w+-test$/);
+        expect(str).toMatch(/^\d+-\w+-test-client$/);
         expect(str).toContain('1234567890123');
-        expect(str).toContain('test');
+        expect(str).toContain('test-client');
       } finally {
         restoreDateNow();
       }
