@@ -695,6 +695,12 @@ export function useChatPage(
 export async function useChatPageBeforeLoad() {
   const numberOfProviders = await queryClient.ensureQueryData(queries.providers.count());
   if (numberOfProviders > 0) return;
+  toast.info('Cannot start a new chat', {
+    description:
+      env.VITE_SYNC_SERVER_BASE_URL && untrack(account) === null
+        ? 'Please login or add a provider before trying to chat'
+        : 'Please add a provider before trying to chat'
+  });
   if (env.VITE_SYNC_SERVER_BASE_URL && untrack(account) === null)
     throw redirect({ to: '/settings/account' });
   throw redirect({ to: '/settings/providers' });
