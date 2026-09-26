@@ -9,7 +9,6 @@ import type { JsonTree } from '~/utils/tree';
 const timestamp = () => text().notNull();
 
 const userMetadata = sqliteTable('userMetadata', {
-  createdAt: timestamp(),
   id: text().primaryKey().notNull(),
   value: text().notNull()
 });

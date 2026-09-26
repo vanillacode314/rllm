@@ -522,7 +522,7 @@ async function convertUpdateToStatement(
     update.operation !== 'delete'
       ? Object.keys(update.operation === 'sql' ? update.statements : update.data).filter(
           (column) =>
-            !['createdAt', 'id'].includes(column) &&
+            column !== 'id' &&
             (update.operation === 'sql' ? update.statements : update.data)[column] !== undefined
         )
       : [];
@@ -540,17 +540,15 @@ async function convertUpdateToStatement(
       const values = columns.map((column) => update.data[column]);
       return [
         {
-          params: [id, ...values, timestamp].map((value) => toSql(value)),
+          params: [id, ...values].map((value) => toSql(value)),
           sql: `
               INSERT OR IGNORE INTO "${tableName}"(
                 "id",
-                ${columns.map((column) => `"${column}"`).join(',')},
-                "createdAt"
+                ${columns.map((column) => `"${column}"`).join(',')}
               )
               VALUES (
                 ?,
-                ${columns.map(() => '?').join(',')},
-                ?
+                ${columns.map(() => '?').join(',')}
               )`
         },
         ...upsertUpdateStatements(tableName, id, columns, timestamp)
@@ -611,13 +609,11 @@ async function convertUpdateToStatement(
       const insertSql = `
               INSERT INTO "${tableName}"(
                 "id",
-                ${columnsToUpsert.map((column) => `"${column}"`).join(',')},
-                "createdAt"
+                ${columnsToUpsert.map((column) => `"${column}"`).join(',')}
               )
               VALUES (
                 ?,
-                ${columnsToUpsert.map(() => '?').join(',')},
-                ?
+                ${columnsToUpsert.map(() => '?').join(',')}
               )
             `;
       const updateSql = `
@@ -630,11 +626,7 @@ async function convertUpdateToStatement(
               ON CONFLICT("id") DO UPDATE
               ${updateSql}
             `;
-      const insertParams = [
-        id,
-        ...columnsToUpsert.map((column) => update.data[column]),
-        timestamp
-      ].map(toSql);
+      const insertParams = [id, ...columnsToUpsert.map((column) => update.data[column])].map(toSql);
       const updateParams = [...columnsToUpsert.map((c) => update.data[c]), id].map(toSql);
       const params = [...insertParams, ...updateParams];
       return [

@@ -8,6 +8,7 @@ import { tables } from '~/db/app-schema';
 export const validEventSchema = z.discriminatedUnion('type', [
   z.object({
     data: z.object({
+      createdAt: z.iso.datetime(),
       id: z.string(),
       name: z.string(),
       url: z.string()
@@ -31,6 +32,7 @@ export const validEventSchema = z.discriminatedUnion('type', [
   z.object({
     data: z.object({
       baseUrl: z.string(),
+      createdAt: z.iso.datetime(),
       defaultModelIds: z.array(z.string().check(z.minLength(1)).check(z.minLength(1))),
       id: z.string(),
       name: z.string(),
@@ -58,6 +60,7 @@ export const validEventSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     data: z.object({
+      createdAt: z.iso.datetime(),
       finished: z.optional(z.boolean()),
       id: z.string(),
       messages: z.looseObject({}),
@@ -103,6 +106,7 @@ export const validEventSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     data: z.object({
+      createdAt: z.iso.datetime(),
       id: z.string(),
       name: z.string(),
       settings: z.looseObject({})
@@ -125,6 +129,7 @@ export const validEventSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     data: z.object({
+      createdAt: z.iso.datetime(),
       id: z.string(),
       name: z.string()
     }),

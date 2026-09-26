@@ -59,12 +59,22 @@ export function createDbApi(logger: LoggerInstance) {
           parseDbRowsInPlace(rows, { jsonKeys: ['settings'] });
           return rows;
         }),
-    create: (data: TEventData<'createPreset'>, opts?: TWriteOptions) =>
-      logger.dispatch({ data, type: 'createPreset', ...opts }),
-    createMany: (data: TEventData<'createPreset'>[], opts?: TWriteOptions) =>
-      logger.dispatch(
-        ...data.map((entry) => ({ data: entry, type: 'createPreset' as const, ...opts }))
-      ),
+    create: (data: Omit<TEventData<'createPreset'>, 'createdAt'>, opts?: TWriteOptions) =>
+      logger.dispatch({
+        data: { ...data, createdAt: new Date().toISOString() },
+        type: 'createPreset',
+        ...opts
+      }),
+    createMany: (data: Omit<TEventData<'createPreset'>, 'createdAt'>[], opts?: TWriteOptions) => {
+      const createdAt = new Date().toISOString();
+      return logger.dispatch(
+        ...data.map((entry) => ({
+          data: { ...entry, createdAt },
+          type: 'createPreset' as const,
+          ...opts
+        }))
+      );
+    },
     delete: (id: string, opts?: TWriteOptions) =>
       logger.dispatch({ data: { id }, type: 'deletePreset', ...opts }),
     get: (id: string) =>
@@ -123,12 +133,22 @@ export function createDbApi(logger: LoggerInstance) {
         })
         .then((rows) => rows[0]?.count ?? 0);
     },
-    create: (data: TEventData<'createChat'>, opts?: TWriteOptions) =>
-      logger.dispatch({ data, type: 'createChat', ...opts }),
-    createMany: (data: TEventData<'createChat'>[], opts?: TWriteOptions) =>
-      logger.dispatch(
-        ...data.map((entry) => ({ data: entry, type: 'createChat' as const, ...opts }))
-      ),
+    create: (data: Omit<TEventData<'createChat'>, 'createdAt'>, opts?: TWriteOptions) =>
+      logger.dispatch({
+        data: { ...data, createdAt: new Date().toISOString() },
+        type: 'createChat',
+        ...opts
+      }),
+    createMany: (data: Omit<TEventData<'createChat'>, 'createdAt'>[], opts?: TWriteOptions) => {
+      const createdAt = new Date().toISOString();
+      return logger.dispatch(
+        ...data.map((entry) => ({
+          data: { ...entry, createdAt },
+          type: 'createChat' as const,
+          ...opts
+        }))
+      );
+    },
     delete: (id: string, opts?: TWriteOptions) =>
       logger.dispatch({ data: { id }, type: 'deleteChat', ...opts }),
     get: (id: string) =>
@@ -200,8 +220,12 @@ export function createDbApi(logger: LoggerInstance) {
       logger.db.query<TDocument>(
         logger.sql`SELECT "id", "name" FROM documents ORDER BY "createdAt" DESC`
       ),
-    create: (data: TEventData<'createDocument'>, opts?: TWriteOptions) =>
-      logger.dispatch({ data, type: 'createDocument', ...opts }),
+    create: (data: Omit<TEventData<'createDocument'>, 'createdAt'>, opts?: TWriteOptions) =>
+      logger.dispatch({
+        data: { ...data, createdAt: new Date().toISOString() },
+        type: 'createDocument',
+        ...opts
+      }),
     delete: (id: string, opts?: TWriteOptions) =>
       logger.dispatch({ data: { id }, type: 'deleteDocument', ...opts }),
     get: (id: string) =>
@@ -226,12 +250,22 @@ export function createDbApi(logger: LoggerInstance) {
       logger.db.query<Pick<TMCP, 'createdAt' | 'id' | 'name' | 'url'>>(
         logger.sql`SELECT "createdAt", "id", "name", "url" FROM mcps ORDER BY "name"`
       ),
-    create: (data: TEventData<'createMcp'>, opts?: TWriteOptions) =>
-      logger.dispatch({ data, type: 'createMcp', ...opts }),
-    createMany: (data: TEventData<'createMcp'>[], opts?: TWriteOptions) =>
-      logger.dispatch(
-        ...data.map((entry) => ({ data: entry, type: 'createMcp' as const, ...opts }))
-      ),
+    create: (data: Omit<TEventData<'createMcp'>, 'createdAt'>, opts?: TWriteOptions) =>
+      logger.dispatch({
+        data: { ...data, createdAt: new Date().toISOString() },
+        type: 'createMcp',
+        ...opts
+      }),
+    createMany: (data: Omit<TEventData<'createMcp'>, 'createdAt'>[], opts?: TWriteOptions) => {
+      const createdAt = new Date().toISOString();
+      return logger.dispatch(
+        ...data.map((entry) => ({
+          data: { ...entry, createdAt },
+          type: 'createMcp' as const,
+          ...opts
+        }))
+      );
+    },
     delete: (id: string, opts?: TWriteOptions) =>
       logger.dispatch({ data: { id }, type: 'deleteMcp', ...opts }),
     get: (id: string) =>
@@ -260,12 +294,22 @@ export function createDbApi(logger: LoggerInstance) {
       logger.db
         .query<{ value: number }>(logger.sql`SELECT count(*) as value FROM providers`)
         .then((rows) => rows[0]?.value ?? 0),
-    create: (data: TEventData<'createProvider'>, opts?: TWriteOptions) =>
-      logger.dispatch({ data, type: 'createProvider', ...opts }),
-    createMany: (data: TEventData<'createProvider'>[], opts?: TWriteOptions) =>
-      logger.dispatch(
-        ...data.map((entry) => ({ data: entry, type: 'createProvider' as const, ...opts }))
-      ),
+    create: (data: Omit<TEventData<'createProvider'>, 'createdAt'>, opts?: TWriteOptions) =>
+      logger.dispatch({
+        data: { ...data, createdAt: new Date().toISOString() },
+        type: 'createProvider',
+        ...opts
+      }),
+    createMany: (data: Omit<TEventData<'createProvider'>, 'createdAt'>[], opts?: TWriteOptions) => {
+      const createdAt = new Date().toISOString();
+      return logger.dispatch(
+        ...data.map((entry) => ({
+          data: { ...entry, createdAt },
+          type: 'createProvider' as const,
+          ...opts
+        }))
+      );
+    },
     delete: (id: string, opts?: TWriteOptions) =>
       logger.dispatch({ data: { id }, type: 'deleteProvider', ...opts }),
     first: () =>
@@ -385,9 +429,12 @@ export function createDbApi(logger: LoggerInstance) {
     clientId: once(() => {
       return logger.getClientId();
     }),
-    createChatFromScratchpad: (data: TEventData<'createChat'>, opts?: TWriteOptions) =>
+    createChatFromScratchpad: (
+      data: Omit<TEventData<'createChat'>, 'createdAt'>,
+      opts?: TWriteOptions
+    ) =>
       logger.dispatch(
-        { data, type: 'createChat', ...opts },
+        { data: { ...data, createdAt: new Date().toISOString() }, type: 'createChat', ...opts },
         {
           data: { id: USER_METADATA_KEYS.SCRATCHPAD_CHAT },
           type: 'deleteUserMetadata',
@@ -418,7 +465,7 @@ export function createDbApi(logger: LoggerInstance) {
           { jsonKeys: ['defaultModelIds'] }
         ),
         logger.db.query<TUserMetadata>(
-          logger.sql`SELECT * FROM "userMetadata" ORDER BY "userMetadata"."createdAt"`
+          logger.sql`SELECT * FROM "userMetadata" ORDER BY "userMetadata"."id"`
         ),
         parseDbRowsInPlace(
           logger.db.query<TChatPreset>(
