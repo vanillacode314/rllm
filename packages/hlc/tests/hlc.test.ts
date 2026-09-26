@@ -14,12 +14,12 @@ function restoreDateNow() {
 
 describe('HLC', () => {
   describe('generate', () => {
-    it('should create HLC with random client ID', () => {
+    it('should create HLC with random ID', () => {
       mockDateNow();
       try {
         const hlc = HLC.generate();
         expect(hlc).toBeInstanceOf(HLC);
-        expect(hlc.clientId).toHaveLength(21);
+        expect(hlc.id).toHaveLength(21);
         // Set physical time to test value (constructor sets 0)
         hlc.physicalTime = testTime;
         expect(hlc.physicalTime).toBe(testTime);
@@ -29,12 +29,12 @@ describe('HLC', () => {
       }
     });
 
-    it('should create HLC with provided client ID', () => {
+    it('should create HLC with provided ID', () => {
       mockDateNow();
       try {
-        const clientId = 'custom-id';
-        const hlc = HLC.generate(clientId);
-        expect(hlc.clientId).toBe(clientId);
+        const id = 'custom-id';
+        const hlc = HLC.generate(id);
+        expect(hlc.id).toBe(id);
       } finally {
         restoreDateNow();
       }
@@ -52,7 +52,7 @@ describe('HLC', () => {
         const parsed = HLC.fromString(str);
         expect(parsed.physicalTime).toBe(hlc.physicalTime);
         expect(parsed.logicalTime).toBe(hlc.logicalTime);
-        expect(parsed.clientId).toBe(hlc.clientId);
+        expect(parsed.id).toBe(hlc.id);
       } finally {
         restoreDateNow();
       }
@@ -71,7 +71,7 @@ describe('HLC', () => {
     it('should throw on invalid numbers', () => {
       mockDateNow();
       try {
-        expect(() => HLC.fromString('abc-def-clientId')).toThrow('Invalid HLC value');
+        expect(() => HLC.fromString('abc-def-id')).toThrow('Invalid HLC value');
       } finally {
         restoreDateNow();
       }
@@ -110,7 +110,7 @@ describe('HLC', () => {
       }
     });
 
-    it('should compare client ID when physical and logical times equal', () => {
+    it('should compare ID when physical and logical times equal', () => {
       mockDateNow();
       try {
         const hlc1 = HLC.generate('aaa');
@@ -225,15 +225,15 @@ describe('HLC', () => {
     it('should format HLC correctly', () => {
       mockDateNow();
       try {
-        const hlc = HLC.generate('test-client');
+        const hlc = HLC.generate('test');
         hlc.physicalTime = 1234567890123;
         hlc.logicalTime = 0;
-        hlc.clientId = 'test-client';
+        hlc.id = 'test';
 
         const str = hlc.toString();
-        expect(str).toMatch(/^\d+-\w+-test-client$/);
+        expect(str).toMatch(/^\d+-\w+-test$/);
         expect(str).toContain('1234567890123');
-        expect(str).toContain('test-client');
+        expect(str).toContain('test');
       } finally {
         restoreDateNow();
       }

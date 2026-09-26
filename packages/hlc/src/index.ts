@@ -13,7 +13,7 @@ class HLC {
   /**
    * Unique identifier for the client generating this HLC.
    */
-  clientId: string;
+  id: string;
   /**
    * Logical time component. Increments when physical time does not advance.
    */
@@ -27,17 +27,17 @@ class HLC {
    * Creates an instance of HLC.
    * @param physicalTime The physical time component.
    * @param logicalTime The logical time component.
-   * @param clientId The unique client ID.
+   * @param id The unique ID.
    */
-  constructor(physicalTime: number, logicalTime: number, clientId: string) {
+  constructor(physicalTime: number, logicalTime: number, id: string) {
     this.physicalTime = physicalTime;
     this.logicalTime = logicalTime;
-    this.clientId = clientId;
+    this.id = id;
   }
 
   /**
    * Creates an HLC instance from its string representation.
-   * The format is "physicalTime-logicalTime-clientId", where clientId is the remainder after the first two dashes.
+   * The format is "physicalTime-logicalTime-id", where id is the remainder after the first two dashes.
    * @param value The string representation of an HLC.
    * @returns A new HLC instance.
    * @throws {Error} If the HLC value is invalid.
@@ -55,9 +55,9 @@ class HLC {
 
     const physicalTimeStr = value.substring(0, dashIndices[0]!);
     const logicalTimeStr = value.substring(dashIndices[0]! + 1, dashIndices[1]!);
-    const clientId = value.substring(dashIndices[1]! + 1);
+    const id = value.substring(dashIndices[1]! + 1);
 
-    if (!physicalTimeStr || !logicalTimeStr || !clientId) {
+    if (!physicalTimeStr || !logicalTimeStr || !id) {
       throw new Error(`Invalid HLC value: ${value}`);
     }
 
@@ -68,22 +68,22 @@ class HLC {
       throw new Error(`Invalid HLC value: ${value}`);
     }
 
-    return new HLC(physicalTime, logicalTime, clientId);
+    return new HLC(physicalTime, logicalTime, id);
   }
 
   /**
-   * Generates a new HLC instance with a given client ID, or a new random one.
+   * Generates a new HLC instance with a given id, or a new random one.
    * The initial physical and logical times are set to 0.
-   * @param clientId Optional client ID. If not provided, a new one will be generated.
+   * @param id Optional ID. If not provided, a new one will be generated.
    * @returns A new HLC instance.
    */
-  static generate(clientId?: string) {
-    return new HLC(0, 0, clientId ?? nanoid());
+  static generate(id?: string) {
+    return new HLC(0, 0, id ?? nanoid());
   }
 
   /**
    * Compares this HLC with another HLC.
-   * The comparison is based on physical time, then logical time, then client ID.
+   * The comparison is based on physical time, then logical time, then ID.
    * @param other The HLC to compare with.
    * @returns -1 if this HLC is less than other, 1 if greater, 0 if equal.
    */
@@ -97,7 +97,7 @@ class HLC {
     } else if (this.logicalTime > other.logicalTime) {
       return 1;
     } else {
-      return this.clientId.localeCompare(other.clientId);
+      return this.id.localeCompare(other.id);
     }
   }
 
@@ -147,11 +147,11 @@ class HLC {
 
   /**
    * Returns the string representation of this HLC.
-   * The format is "physicalTime-logicalTime-clientId".
+   * The format is "physicalTime-logicalTime-id".
    * @returns The string representation of the HLC.
    */
   toString() {
-    return `${this.physicalTime.toString().padStart(15, '0')}-${this.logicalTime.toString(36).padStart(5, '0')}-${this.clientId}`;
+    return `${this.physicalTime.toString().padStart(15, '0')}-${this.logicalTime.toString(36).padStart(5, '0')}-${this.id}`;
   }
 }
 
