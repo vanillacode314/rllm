@@ -1,5 +1,5 @@
 # What's New
 
-## v0.0.81 — September 20, 2026
+## v0.0.82 — September 26, 2026
 
 Bug fixes and improvements
