@@ -523,7 +523,7 @@ export function createLoggerProxy(getLogger: () => Promise<LoggerInstance>): Log
       } as LoggerInstance['db'];
     },
     dispatch: async (...events) => (await getLogger()).dispatch(...events),
-    getClientId: async () => (await getLogger()).getClientId(),
+    getId: async () => (await getLogger()).getId(),
     getClock: async () => (await getLogger()).getClock(),
     getMerkleTree: async () => (await getLogger()).getMerkleTree(),
     getMetadata: async (key) => (await getLogger()).getMetadata(key),
