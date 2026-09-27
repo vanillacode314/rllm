@@ -299,10 +299,11 @@ export class ConnectionManager {
               .check(
                 z.refine(
                   (value) => {
-                    return validEventSchema.safeParse({
+                    validEventSchema.parse({
                       data: value.data,
                       type: value.type
-                    }).success;
+                    });
+                    return true;
                   },
                   {
                     error: 'Invalid event'

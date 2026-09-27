@@ -11,7 +11,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file events/v1/event.proto.
  */
 export const file_events_v1_event: GenFile = /*@__PURE__*/
-  fileDesc("ChVldmVudHMvdjEvZXZlbnQucHJvdG8SCWV2ZW50cy52MSI8CgVFdmVudBIPCgd2ZXJzaW9uGAEgASgJEiIKBGRhdGEYAyABKAsyFC5ldmVudHMudjEuRXZlbnREYXRhIu4GCglFdmVudERhdGESOQoPY3JlYXRlX3Byb3ZpZGVyGAEgASgLMh4uZXZlbnRzLnYxLkNyZWF0ZVByb3ZpZGVyRXZlbnRIABI5Cg91cGRhdGVfcHJvdmlkZXIYAiABKAsyHi5ldmVudHMudjEuVXBkYXRlUHJvdmlkZXJFdmVudEgAEi8KCmNyZWF0ZV9tY3AYAyABKAsyGS5ldmVudHMudjEuQ3JlYXRlTUNQRXZlbnRIABIvCgp1cGRhdGVfbWNwGAQgASgLMhkuZXZlbnRzLnYxLlVwZGF0ZU1DUEV2ZW50SAASMQoLY3JlYXRlX2NoYXQYBSABKAsyGi5ldmVudHMudjEuQ3JlYXRlQ2hhdEV2ZW50SAASMQoLdXBkYXRlX2NoYXQYBiABKAsyGi5ldmVudHMudjEuVXBkYXRlQ2hhdEV2ZW50SAASOQoPZGVsZXRlX3Byb3ZpZGVyGAcgASgLMh4uZXZlbnRzLnYxLkRlbGV0ZVByb3ZpZGVyRXZlbnRIABIvCgpkZWxldGVfbWNwGAggASgLMhkuZXZlbnRzLnYxLkRlbGV0ZU1DUEV2ZW50SAASMQoLZGVsZXRlX2NoYXQYCSABKAsyGi5ldmVudHMudjEuRGVsZXRlQ2hhdEV2ZW50SAASPAoRc2V0X3VzZXJfbWV0YWRhdGEYCiABKAsyHy5ldmVudHMudjEuU2V0VXNlck1ldGFkYXRhRXZlbnRIABI1Cg1jcmVhdGVfcHJlc2V0GAsgASgLMhwuZXZlbnRzLnYxLkNyZWF0ZVByZXNldEV2ZW50SAASNQoNdXBkYXRlX3ByZXNldBgMIAEoCzIcLmV2ZW50cy52MS5VcGRhdGVQcmVzZXRFdmVudEgAEjUKDWRlbGV0ZV9wcmVzZXQYDSABKAsyHC5ldmVudHMudjEuRGVsZXRlUHJlc2V0RXZlbnRIABJPChtpbmNyZW1lbnRfY2hhdF9hY2Nlc3NfY291bnQYDiABKAsyKC5ldmVudHMudjEuSW5jcmVtZW50Q2hhdEFjY2Vzc0NvdW50RXZlbnRIABJCChRkZWxldGVfdXNlcl9tZXRhZGF0YRgPIAEoCzIiLmV2ZW50cy52MS5EZWxldGVVc2VyTWV0YWRhdGFFdmVudEgAQgwKCmV2ZW50X3R5cGUiKwodSW5jcmVtZW50Q2hhdEFjY2Vzc0NvdW50RXZlbnQSCgoCaWQYASABKAkieQoTQ3JlYXRlUHJvdmlkZXJFdmVudBIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEgwKBHR5cGUYAyABKAkSEAoIYmFzZV91cmwYBCABKAkSDQoFdG9rZW4YBSABKAkSGQoRZGVmYXVsdF9tb2RlbF9pZHMYBiADKAkitgEKE1VwZGF0ZVByb3ZpZGVyRXZlbnQSCgoCaWQYASABKAkSEQoEbmFtZRgCIAEoCUgAiAEBEhEKBHR5cGUYAyABKAlIAYgBARIVCghiYXNlX3VybBgEIAEoCUgCiAEBEhIKBXRva2VuGAUgASgJSAOIAQESGQoRZGVmYXVsdF9tb2RlbF9pZHMYBiADKAlCBwoFX25hbWVCBwoFX3R5cGVCCwoJX2Jhc2VfdXJsQggKBl90b2tlbiI3Cg5DcmVhdGVNQ1BFdmVudBIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEgsKA3VybBgDIAEoCSJSCg5VcGRhdGVNQ1BFdmVudBIKCgJpZBgBIAEoCRIRCgRuYW1lGAIgASgJSACIAQESEAoDdXJsGAMgASgJSAGIAQFCBwoFX25hbWVCBgoEX3VybCKeAQoPQ3JlYXRlQ2hhdEV2ZW50EgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEgwKBHRhZ3MYAyADKAkSEAoIZmluaXNoZWQYBCABKAgSJQoIbWVzc2FnZXMYBSABKAsyEy5ldmVudHMudjEuRmxhdFRyZWUSKQoIc2V0dGluZ3MYBiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0IkwKDEZsYXRUcmVlTm9kZRIUCgxjaGlsZHJlbl9pZHMYASADKAkSJgoFdmFsdWUYAiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0IpEBCghGbGF0VHJlZRIPCgdyb290X2lkGAEgASgJEi0KBW5vZGVzGAIgAygLMh4uZXZlbnRzLnYxLkZsYXRUcmVlLk5vZGVzRW50cnkaRQoKTm9kZXNFbnRyeRILCgNrZXkYASABKAkSJgoFdmFsdWUYAiABKAsyFy5ldmVudHMudjEuRmxhdFRyZWVOb2RlOgI4ASLjAQoPVXBkYXRlQ2hhdEV2ZW50EgoKAmlkGAEgASgJEhIKBXRpdGxlGAIgASgJSACIAQESDAoEdGFncxgDIAMoCRIVCghmaW5pc2hlZBgEIAEoCEgBiAEBEioKCG1lc3NhZ2VzGAUgASgLMhMuZXZlbnRzLnYxLkZsYXRUcmVlSAKIAQESLgoIc2V0dGluZ3MYBiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0SAOIAQFCCAoGX3RpdGxlQgsKCV9maW5pc2hlZEILCglfbWVzc2FnZXNCCwoJX3NldHRpbmdzIlgKEUNyZWF0ZVByZXNldEV2ZW50EgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSKQoIc2V0dGluZ3MYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0IngKEVVwZGF0ZVByZXNldEV2ZW50EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARIuCghzZXR0aW5ncxgDIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RIAYgBAUIHCgVfbmFtZUILCglfc2V0dGluZ3MiHwoRRGVsZXRlUHJlc2V0RXZlbnQSCgoCaWQYASABKAkiIQoTRGVsZXRlUHJvdmlkZXJFdmVudBIKCgJpZBgBIAEoCSIcCg5EZWxldGVNQ1BFdmVudBIKCgJpZBgBIAEoCSIdCg9EZWxldGVDaGF0RXZlbnQSCgoCaWQYASABKAkiMQoUU2V0VXNlck1ldGFkYXRhRXZlbnQSCgoCaWQYASABKAkSDQoFdmFsdWUYAiABKAkiJQoXRGVsZXRlVXNlck1ldGFkYXRhRXZlbnQSCgoCaWQYASABKAkiWAoiU3luY1NlcnZlckdldEV2ZW50c1Jlc3BvbnNlUGF5bG9hZBIMCgRkYXRhGAEgASgMEhEKCXRpbWVzdGFtcBgCIAEoCRIRCglzaWduYXR1cmUYAyABKAkiqQEKG1N5bmNTZXJ2ZXJHZXRFdmVudHNSZXNwb25zZRIQCghoYXNfbW9yZRgBIAEoCBIXCgpuZXh0X2FmdGVyGAIgASgJSACIAQESEQoJcGFnZV9zaXplGAMgASgNEj0KBmV2ZW50cxgEIAMoCzItLmV2ZW50cy52MS5TeW5jU2VydmVyR2V0RXZlbnRzUmVzcG9uc2VQYXlsb2FkQg0KC19uZXh0X2FmdGVyQhVaE3Byb3RvL3JsbG0vZXZlbnRzcGJiBnByb3RvMw", [file_google_protobuf_struct]);
+  fileDesc("ChVldmVudHMvdjEvZXZlbnQucHJvdG8SCWV2ZW50cy52MSI8CgVFdmVudBIPCgd2ZXJzaW9uGAEgASgJEiIKBGRhdGEYAyABKAsyFC5ldmVudHMudjEuRXZlbnREYXRhIu4GCglFdmVudERhdGESOQoPY3JlYXRlX3Byb3ZpZGVyGAEgASgLMh4uZXZlbnRzLnYxLkNyZWF0ZVByb3ZpZGVyRXZlbnRIABI5Cg91cGRhdGVfcHJvdmlkZXIYAiABKAsyHi5ldmVudHMudjEuVXBkYXRlUHJvdmlkZXJFdmVudEgAEi8KCmNyZWF0ZV9tY3AYAyABKAsyGS5ldmVudHMudjEuQ3JlYXRlTUNQRXZlbnRIABIvCgp1cGRhdGVfbWNwGAQgASgLMhkuZXZlbnRzLnYxLlVwZGF0ZU1DUEV2ZW50SAASMQoLY3JlYXRlX2NoYXQYBSABKAsyGi5ldmVudHMudjEuQ3JlYXRlQ2hhdEV2ZW50SAASMQoLdXBkYXRlX2NoYXQYBiABKAsyGi5ldmVudHMudjEuVXBkYXRlQ2hhdEV2ZW50SAASOQoPZGVsZXRlX3Byb3ZpZGVyGAcgASgLMh4uZXZlbnRzLnYxLkRlbGV0ZVByb3ZpZGVyRXZlbnRIABIvCgpkZWxldGVfbWNwGAggASgLMhkuZXZlbnRzLnYxLkRlbGV0ZU1DUEV2ZW50SAASMQoLZGVsZXRlX2NoYXQYCSABKAsyGi5ldmVudHMudjEuRGVsZXRlQ2hhdEV2ZW50SAASPAoRc2V0X3VzZXJfbWV0YWRhdGEYCiABKAsyHy5ldmVudHMudjEuU2V0VXNlck1ldGFkYXRhRXZlbnRIABI1Cg1jcmVhdGVfcHJlc2V0GAsgASgLMhwuZXZlbnRzLnYxLkNyZWF0ZVByZXNldEV2ZW50SAASNQoNdXBkYXRlX3ByZXNldBgMIAEoCzIcLmV2ZW50cy52MS5VcGRhdGVQcmVzZXRFdmVudEgAEjUKDWRlbGV0ZV9wcmVzZXQYDSABKAsyHC5ldmVudHMudjEuRGVsZXRlUHJlc2V0RXZlbnRIABJPChtpbmNyZW1lbnRfY2hhdF9hY2Nlc3NfY291bnQYDiABKAsyKC5ldmVudHMudjEuSW5jcmVtZW50Q2hhdEFjY2Vzc0NvdW50RXZlbnRIABJCChRkZWxldGVfdXNlcl9tZXRhZGF0YRgPIAEoCzIiLmV2ZW50cy52MS5EZWxldGVVc2VyTWV0YWRhdGFFdmVudEgAQgwKCmV2ZW50X3R5cGUiKwodSW5jcmVtZW50Q2hhdEFjY2Vzc0NvdW50RXZlbnQSCgoCaWQYASABKAkijQEKE0NyZWF0ZVByb3ZpZGVyRXZlbnQSCgoCaWQYASABKAkSEgoKY3JlYXRlZF9hdBgCIAEoCRIMCgRuYW1lGAMgASgJEgwKBHR5cGUYBCABKAkSEAoIYmFzZV91cmwYBSABKAkSDQoFdG9rZW4YBiABKAkSGQoRZGVmYXVsdF9tb2RlbF9pZHMYByADKAkitgEKE1VwZGF0ZVByb3ZpZGVyRXZlbnQSCgoCaWQYASABKAkSEQoEbmFtZRgCIAEoCUgAiAEBEhEKBHR5cGUYAyABKAlIAYgBARIVCghiYXNlX3VybBgEIAEoCUgCiAEBEhIKBXRva2VuGAUgASgJSAOIAQESGQoRZGVmYXVsdF9tb2RlbF9pZHMYBiADKAlCBwoFX25hbWVCBwoFX3R5cGVCCwoJX2Jhc2VfdXJsQggKBl90b2tlbiJLCg5DcmVhdGVNQ1BFdmVudBIKCgJpZBgBIAEoCRISCgpjcmVhdGVkX2F0GAIgASgJEgwKBG5hbWUYAyABKAkSCwoDdXJsGAQgASgJIlIKDlVwZGF0ZU1DUEV2ZW50EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARIQCgN1cmwYAyABKAlIAYgBAUIHCgVfbmFtZUIGCgRfdXJsIrIBCg9DcmVhdGVDaGF0RXZlbnQSCgoCaWQYASABKAkSEgoKY3JlYXRlZF9hdBgCIAEoCRINCgV0aXRsZRgDIAEoCRIMCgR0YWdzGAQgAygJEhAKCGZpbmlzaGVkGAUgASgIEiUKCG1lc3NhZ2VzGAYgASgLMhMuZXZlbnRzLnYxLkZsYXRUcmVlEikKCHNldHRpbmdzGAcgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdCJMCgxGbGF0VHJlZU5vZGUSFAoMY2hpbGRyZW5faWRzGAEgAygJEiYKBXZhbHVlGAIgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdCKRAQoIRmxhdFRyZWUSDwoHcm9vdF9pZBgBIAEoCRItCgVub2RlcxgCIAMoCzIeLmV2ZW50cy52MS5GbGF0VHJlZS5Ob2Rlc0VudHJ5GkUKCk5vZGVzRW50cnkSCwoDa2V5GAEgASgJEiYKBXZhbHVlGAIgASgLMhcuZXZlbnRzLnYxLkZsYXRUcmVlTm9kZToCOAEi4wEKD1VwZGF0ZUNoYXRFdmVudBIKCgJpZBgBIAEoCRISCgV0aXRsZRgCIAEoCUgAiAEBEgwKBHRhZ3MYAyADKAkSFQoIZmluaXNoZWQYBCABKAhIAYgBARIqCghtZXNzYWdlcxgFIAEoCzITLmV2ZW50cy52MS5GbGF0VHJlZUgCiAEBEi4KCHNldHRpbmdzGAYgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdEgDiAEBQggKBl90aXRsZUILCglfZmluaXNoZWRCCwoJX21lc3NhZ2VzQgsKCV9zZXR0aW5ncyJsChFDcmVhdGVQcmVzZXRFdmVudBIKCgJpZBgBIAEoCRISCgpjcmVhdGVkX2F0GAIgASgJEgwKBG5hbWUYAyABKAkSKQoIc2V0dGluZ3MYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0IngKEVVwZGF0ZVByZXNldEV2ZW50EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARIuCghzZXR0aW5ncxgDIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RIAYgBAUIHCgVfbmFtZUILCglfc2V0dGluZ3MiHwoRRGVsZXRlUHJlc2V0RXZlbnQSCgoCaWQYASABKAkiIQoTRGVsZXRlUHJvdmlkZXJFdmVudBIKCgJpZBgBIAEoCSIcCg5EZWxldGVNQ1BFdmVudBIKCgJpZBgBIAEoCSIdCg9EZWxldGVDaGF0RXZlbnQSCgoCaWQYASABKAkiMQoUU2V0VXNlck1ldGFkYXRhRXZlbnQSCgoCaWQYASABKAkSDQoFdmFsdWUYAiABKAkiJQoXRGVsZXRlVXNlck1ldGFkYXRhRXZlbnQSCgoCaWQYASABKAkiWAoiU3luY1NlcnZlckdldEV2ZW50c1Jlc3BvbnNlUGF5bG9hZBIMCgRkYXRhGAEgASgMEhEKCXRpbWVzdGFtcBgCIAEoCRIRCglzaWduYXR1cmUYAyABKAkiqQEKG1N5bmNTZXJ2ZXJHZXRFdmVudHNSZXNwb25zZRIQCghoYXNfbW9yZRgBIAEoCBIXCgpuZXh0X2FmdGVyGAIgASgJSACIAQESEQoJcGFnZV9zaXplGAMgASgNEj0KBmV2ZW50cxgEIAMoCzItLmV2ZW50cy52MS5TeW5jU2VydmVyR2V0RXZlbnRzUmVzcG9uc2VQYXlsb2FkQg0KC19uZXh0X2FmdGVyQhVaE3Byb3RvL3JsbG0vZXZlbnRzcGJiBnByb3RvMw", [file_google_protobuf_struct]);
 
 /**
  * @generated from message events.v1.Event
@@ -169,27 +169,32 @@ export type CreateProviderEvent = Message<"events.v1.CreateProviderEvent"> & {
   id: string;
 
   /**
-   * @generated from field: string name = 2;
+   * @generated from field: string created_at = 2;
+   */
+  createdAt: string;
+
+  /**
+   * @generated from field: string name = 3;
    */
   name: string;
 
   /**
-   * @generated from field: string type = 3;
+   * @generated from field: string type = 4;
    */
   type: string;
 
   /**
-   * @generated from field: string base_url = 4;
+   * @generated from field: string base_url = 5;
    */
   baseUrl: string;
 
   /**
-   * @generated from field: string token = 5;
+   * @generated from field: string token = 6;
    */
   token: string;
 
   /**
-   * @generated from field: repeated string default_model_ids = 6;
+   * @generated from field: repeated string default_model_ids = 7;
    */
   defaultModelIds: string[];
 };
@@ -253,12 +258,17 @@ export type CreateMCPEvent = Message<"events.v1.CreateMCPEvent"> & {
   id: string;
 
   /**
-   * @generated from field: string name = 2;
+   * @generated from field: string created_at = 2;
+   */
+  createdAt: string;
+
+  /**
+   * @generated from field: string name = 3;
    */
   name: string;
 
   /**
-   * @generated from field: string url = 3;
+   * @generated from field: string url = 4;
    */
   url: string;
 };
@@ -307,27 +317,32 @@ export type CreateChatEvent = Message<"events.v1.CreateChatEvent"> & {
   id: string;
 
   /**
-   * @generated from field: string title = 2;
+   * @generated from field: string created_at = 2;
+   */
+  createdAt: string;
+
+  /**
+   * @generated from field: string title = 3;
    */
   title: string;
 
   /**
-   * @generated from field: repeated string tags = 3;
+   * @generated from field: repeated string tags = 4;
    */
   tags: string[];
 
   /**
-   * @generated from field: bool finished = 4;
+   * @generated from field: bool finished = 5;
    */
   finished: boolean;
 
   /**
-   * @generated from field: events.v1.FlatTree messages = 5;
+   * @generated from field: events.v1.FlatTree messages = 6;
    */
   messages?: FlatTree | undefined;
 
   /**
-   * @generated from field: google.protobuf.Struct settings = 6;
+   * @generated from field: google.protobuf.Struct settings = 7;
    */
   settings?: JsonObject | undefined;
 };
@@ -435,12 +450,17 @@ export type CreatePresetEvent = Message<"events.v1.CreatePresetEvent"> & {
   id: string;
 
   /**
-   * @generated from field: string name = 2;
+   * @generated from field: string created_at = 2;
+   */
+  createdAt: string;
+
+  /**
+   * @generated from field: string name = 3;
    */
   name: string;
 
   /**
-   * @generated from field: google.protobuf.Struct settings = 3;
+   * @generated from field: google.protobuf.Struct settings = 4;
    */
   settings?: JsonObject | undefined;
 };

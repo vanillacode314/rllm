@@ -411,11 +411,12 @@ func (x *IncrementChatAccessCountEvent) GetId() string {
 type CreateProviderEvent struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name            string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Type            string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
-	BaseUrl         string                 `protobuf:"bytes,4,opt,name=base_url,json=baseUrl,proto3" json:"base_url,omitempty"`
-	Token           string                 `protobuf:"bytes,5,opt,name=token,proto3" json:"token,omitempty"`
-	DefaultModelIds []string               `protobuf:"bytes,6,rep,name=default_model_ids,json=defaultModelIds,proto3" json:"default_model_ids,omitempty"`
+	CreatedAt       string                 `protobuf:"bytes,2,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Name            string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Type            string                 `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
+	BaseUrl         string                 `protobuf:"bytes,5,opt,name=base_url,json=baseUrl,proto3" json:"base_url,omitempty"`
+	Token           string                 `protobuf:"bytes,6,opt,name=token,proto3" json:"token,omitempty"`
+	DefaultModelIds []string               `protobuf:"bytes,7,rep,name=default_model_ids,json=defaultModelIds,proto3" json:"default_model_ids,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -453,6 +454,13 @@ func (*CreateProviderEvent) Descriptor() ([]byte, []int) {
 func (x *CreateProviderEvent) GetId() string {
 	if x != nil {
 		return x.Id
+	}
+	return ""
+}
+
+func (x *CreateProviderEvent) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
 	}
 	return ""
 }
@@ -579,8 +587,9 @@ func (x *UpdateProviderEvent) GetDefaultModelIds() []string {
 type CreateMCPEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Url           string                 `protobuf:"bytes,3,opt,name=url,proto3" json:"url,omitempty"`
+	CreatedAt     string                 `protobuf:"bytes,2,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Url           string                 `protobuf:"bytes,4,opt,name=url,proto3" json:"url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -618,6 +627,13 @@ func (*CreateMCPEvent) Descriptor() ([]byte, []int) {
 func (x *CreateMCPEvent) GetId() string {
 	if x != nil {
 		return x.Id
+	}
+	return ""
+}
+
+func (x *CreateMCPEvent) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
 	}
 	return ""
 }
@@ -699,11 +715,12 @@ func (x *UpdateMCPEvent) GetUrl() string {
 type CreateChatEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	Tags          []string               `protobuf:"bytes,3,rep,name=tags,proto3" json:"tags,omitempty"`
-	Finished      bool                   `protobuf:"varint,4,opt,name=finished,proto3" json:"finished,omitempty"`
-	Messages      *FlatTree              `protobuf:"bytes,5,opt,name=messages,proto3" json:"messages,omitempty"`
-	Settings      *structpb.Struct       `protobuf:"bytes,6,opt,name=settings,proto3" json:"settings,omitempty"`
+	CreatedAt     string                 `protobuf:"bytes,2,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Title         string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	Tags          []string               `protobuf:"bytes,4,rep,name=tags,proto3" json:"tags,omitempty"`
+	Finished      bool                   `protobuf:"varint,5,opt,name=finished,proto3" json:"finished,omitempty"`
+	Messages      *FlatTree              `protobuf:"bytes,6,opt,name=messages,proto3" json:"messages,omitempty"`
+	Settings      *structpb.Struct       `protobuf:"bytes,7,opt,name=settings,proto3" json:"settings,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -741,6 +758,13 @@ func (*CreateChatEvent) Descriptor() ([]byte, []int) {
 func (x *CreateChatEvent) GetId() string {
 	if x != nil {
 		return x.Id
+	}
+	return ""
+}
+
+func (x *CreateChatEvent) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
 	}
 	return ""
 }
@@ -971,8 +995,9 @@ func (x *UpdateChatEvent) GetSettings() *structpb.Struct {
 type CreatePresetEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Settings      *structpb.Struct       `protobuf:"bytes,3,opt,name=settings,proto3" json:"settings,omitempty"`
+	CreatedAt     string                 `protobuf:"bytes,2,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Settings      *structpb.Struct       `protobuf:"bytes,4,opt,name=settings,proto3" json:"settings,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1010,6 +1035,13 @@ func (*CreatePresetEvent) Descriptor() ([]byte, []int) {
 func (x *CreatePresetEvent) GetId() string {
 	if x != nil {
 		return x.Id
+	}
+	return ""
+}
+
+func (x *CreatePresetEvent) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
 	}
 	return ""
 }
@@ -1522,14 +1554,16 @@ const file_events_v1_event_proto_rawDesc = "" +
 	"\n" +
 	"event_type\"/\n" +
 	"\x1dIncrementChatAccessCountEvent\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xaa\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xc9\x01\n" +
 	"\x13CreateProviderEvent\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
-	"\x04type\x18\x03 \x01(\tR\x04type\x12\x19\n" +
-	"\bbase_url\x18\x04 \x01(\tR\abaseUrl\x12\x14\n" +
-	"\x05token\x18\x05 \x01(\tR\x05token\x12*\n" +
-	"\x11default_model_ids\x18\x06 \x03(\tR\x0fdefaultModelIds\"\xe7\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x02 \x01(\tR\tcreatedAt\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x12\n" +
+	"\x04type\x18\x04 \x01(\tR\x04type\x12\x19\n" +
+	"\bbase_url\x18\x05 \x01(\tR\abaseUrl\x12\x14\n" +
+	"\x05token\x18\x06 \x01(\tR\x05token\x12*\n" +
+	"\x11default_model_ids\x18\a \x03(\tR\x0fdefaultModelIds\"\xe7\x01\n" +
 	"\x13UpdateProviderEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x17\n" +
@@ -1540,24 +1574,28 @@ const file_events_v1_event_proto_rawDesc = "" +
 	"\x05_nameB\a\n" +
 	"\x05_typeB\v\n" +
 	"\t_base_urlB\b\n" +
-	"\x06_token\"F\n" +
+	"\x06_token\"e\n" +
 	"\x0eCreateMCPEvent\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12\x10\n" +
-	"\x03url\x18\x03 \x01(\tR\x03url\"a\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x02 \x01(\tR\tcreatedAt\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x10\n" +
+	"\x03url\x18\x04 \x01(\tR\x03url\"a\n" +
 	"\x0eUpdateMCPEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x15\n" +
 	"\x03url\x18\x03 \x01(\tH\x01R\x03url\x88\x01\x01B\a\n" +
 	"\x05_nameB\x06\n" +
-	"\x04_url\"\xcd\x01\n" +
+	"\x04_url\"\xec\x01\n" +
 	"\x0fCreateChatEvent\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
-	"\x05title\x18\x02 \x01(\tR\x05title\x12\x12\n" +
-	"\x04tags\x18\x03 \x03(\tR\x04tags\x12\x1a\n" +
-	"\bfinished\x18\x04 \x01(\bR\bfinished\x12/\n" +
-	"\bmessages\x18\x05 \x01(\v2\x13.events.v1.FlatTreeR\bmessages\x123\n" +
-	"\bsettings\x18\x06 \x01(\v2\x17.google.protobuf.StructR\bsettings\"`\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x02 \x01(\tR\tcreatedAt\x12\x14\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\x12\x12\n" +
+	"\x04tags\x18\x04 \x03(\tR\x04tags\x12\x1a\n" +
+	"\bfinished\x18\x05 \x01(\bR\bfinished\x12/\n" +
+	"\bmessages\x18\x06 \x01(\v2\x13.events.v1.FlatTreeR\bmessages\x123\n" +
+	"\bsettings\x18\a \x01(\v2\x17.google.protobuf.StructR\bsettings\"`\n" +
 	"\fFlatTreeNode\x12!\n" +
 	"\fchildren_ids\x18\x01 \x03(\tR\vchildrenIds\x12-\n" +
 	"\x05value\x18\x02 \x01(\v2\x17.google.protobuf.StructR\x05value\"\xac\x01\n" +
@@ -1578,11 +1616,13 @@ const file_events_v1_event_proto_rawDesc = "" +
 	"\x06_titleB\v\n" +
 	"\t_finishedB\v\n" +
 	"\t_messagesB\v\n" +
-	"\t_settings\"l\n" +
+	"\t_settings\"\x8b\x01\n" +
 	"\x11CreatePresetEvent\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x123\n" +
-	"\bsettings\x18\x03 \x01(\v2\x17.google.protobuf.StructR\bsettings\"\x8c\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x02 \x01(\tR\tcreatedAt\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x123\n" +
+	"\bsettings\x18\x04 \x01(\v2\x17.google.protobuf.StructR\bsettings\"\x8c\x01\n" +
 	"\x11UpdatePresetEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x128\n" +

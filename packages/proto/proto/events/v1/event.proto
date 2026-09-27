@@ -37,11 +37,12 @@ message IncrementChatAccessCountEvent {
 
 message CreateProviderEvent {
   string id = 1;
-  string name = 2;
-  string type = 3;
-  string base_url = 4;
-  string token = 5;
-  repeated string default_model_ids = 6;
+  string created_at = 2;
+  string name = 3;
+  string type = 4;
+  string base_url = 5;
+  string token = 6;
+  repeated string default_model_ids = 7;
 }
 
 message UpdateProviderEvent {
@@ -55,8 +56,9 @@ message UpdateProviderEvent {
 
 message CreateMCPEvent {
   string id = 1;
-  string name = 2;
-  string url = 3;
+  string created_at = 2;
+  string name = 3;
+  string url = 4;
 }
 
 message UpdateMCPEvent {
@@ -67,11 +69,12 @@ message UpdateMCPEvent {
 
 message CreateChatEvent {
   string id = 1;
-  string title = 2;
-  repeated string tags = 3;
-  bool finished = 4;
-  FlatTree messages = 5;
-  google.protobuf.Struct settings = 6;
+  string created_at = 2;
+  string title = 3;
+  repeated string tags = 4;
+  bool finished = 5;
+  FlatTree messages = 6;
+  google.protobuf.Struct settings = 7;
 }
 
 message FlatTreeNode {
@@ -95,8 +98,9 @@ message UpdateChatEvent {
 
 message CreatePresetEvent {
   string id = 1;
-  string name = 2;
-  google.protobuf.Struct settings = 3;
+  string created_at = 2;
+  string name = 3;
+  google.protobuf.Struct settings = 4;
 }
 
 message UpdatePresetEvent {
