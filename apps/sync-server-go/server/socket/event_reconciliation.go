@@ -110,10 +110,6 @@ func (p *EventReconciliationPlugin) Handle(ctx context.Context, message *peerspb
 			return fmt.Errorf("failed to insert messages: %w", err)
 		}
 		slog.InfoContext(ctx, "inserted messages", "accountId", accountId, "nInserted", nInserted)
-		if err := p.db.RecomputeMerkleTree(ctx, accountId); err != nil {
-			return fmt.Errorf("failed to recompute merkle tree: %w", err)
-		}
-		slog.InfoContext(ctx, "recomputed merkle tree", "accountId", accountId)
 		if err := p.transport.Publish(ctx, events(messages), "events"); err != nil {
 			return fmt.Errorf("failed to send events: %w", err)
 		}

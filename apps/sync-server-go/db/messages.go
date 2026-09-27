@@ -37,6 +37,9 @@ func (client *DbClient) ReceiveMessages(ctx context.Context, accountId string, c
 			return -1, fmt.Errorf("failed to insert message %s: %w", event.Timestamp, err)
 		}
 	}
+	if err := client.RecomputeMerkleTree(ctx, accountId, tx); err != nil {
+		return -1, fmt.Errorf("failed to recompute merkle tree: %w", err)
+	}
 	if err := tx.Commit(); err != nil {
 		return -1, fmt.Errorf("failed to commit transaction: %w", err)
 	}

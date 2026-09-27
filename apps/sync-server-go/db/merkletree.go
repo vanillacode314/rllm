@@ -28,12 +28,15 @@ func (client *DbClient) GetMerkleTreeByAccountId(ctx context.Context, accountId 
 
 const merkleTreePageSize = 1000
 
-func (client *DbClient) RecomputeMerkleTree(ctx context.Context, accountId string) error {
-	tx, err := client.db.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+func (client *DbClient) RecomputeMerkleTree(ctx context.Context, accountId string, tx *sql.Tx) error {
+	var err error
+	if tx == nil {
+		tx, err = client.db.BeginTx(ctx, nil)
+		if err != nil {
+			return fmt.Errorf("failed to begin transaction: %w", err)
+		}
+		defer tx.Rollback()
 	}
-	defer tx.Rollback()
 
 	tree, err := merkletree.NewMerkleTree[string, string](16, merkletree.StringHasher{})
 	if err != nil {
