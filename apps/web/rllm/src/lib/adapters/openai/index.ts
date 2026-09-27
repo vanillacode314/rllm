@@ -390,13 +390,9 @@ export class OpenAIAdapter implements TAdapter {
 
     if (reasoningEffort) {
       requestBody.reasoning_effort = reasoningEffort;
-      // NOTE: google and groq don't allow extra params in json body
-      if (
-        !this.baseUrl.startsWith('https://generativelanguage.googleapis.com/v1beta/openai') &&
-        !this.baseUrl.startsWith('https://api.groq.com/openai/v1')
-      ) {
-        // openrouter api
+      if (this.#isOpenrouter()) {
         requestBody.reasoning = { effort: reasoningEffort };
+      } else if (!this.#isPickyProvider()) {
         // llama server api
         requestBody.chat_template_kwargs = { enable_thinking: reasoningEffort !== 'none' };
       }
@@ -412,5 +408,16 @@ export class OpenAIAdapter implements TAdapter {
         type: 'function'
       }));
     return requestBody;
+  }
+  #isOpenrouter() {
+    return this.baseUrl.startsWith('https://openrouter.ai/api/v1');
+  }
+  #isPickyProvider() {
+    // these providers don't allow extra params in json body
+    return (
+      this.baseUrl.startsWith('https://generativelanguage.googleapis.com/v1beta/openai') ||
+      this.baseUrl.startsWith('https://api.groq.com/openai/v1') ||
+      this.baseUrl.startsWith('https://opencode.ai/zen')
+    );
   }
 }
