@@ -1,0 +1,52 @@
+name: Update Cache
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  update-cache:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build web project
+        env:
+          VITE_SYNC_SERVER_BASE_URL: https://app-production-cc27.up.railway.app
+          VITE_MODE: android
+        run: bun run build --filter rllm
+
+      - name: Sync Capacitor
+        run: |
+          cd apps/web/rllm
+          bun run cap-sync
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Build (debug) to warm caches
+        run: |
+          cd apps/web/rllm/android
+          ./gradlew assembleDebug
