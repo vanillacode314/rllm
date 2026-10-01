@@ -217,6 +217,9 @@ export class ConnectionManager {
         return { data: encryptedEvent, signature, timestamp };
       })
     );
+    console.debug(`[Sending Message][${this.transport.id}] ${processedEvents.length} events`, {
+      events: processedEvents
+    });
     this.write(
       this.createEventBatch(processedEvents.map((event) => create(PeerPB.EventSchema, event)))
     );
