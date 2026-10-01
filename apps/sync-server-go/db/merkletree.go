@@ -29,8 +29,9 @@ func (client *DbClient) GetMerkleTreeByAccountId(ctx context.Context, accountId 
 const merkleTreePageSize = 1000
 
 func (client *DbClient) RecomputeMerkleTree(ctx context.Context, accountId string, tx *sql.Tx) error {
+	upstreamTx := tx != nil
 	var err error
-	if tx == nil {
+	if !upstreamTx {
 		tx, err = client.db.BeginTx(ctx, nil)
 		if err != nil {
 			return fmt.Errorf("failed to begin transaction: %w", err)
@@ -80,8 +81,10 @@ func (client *DbClient) RecomputeMerkleTree(ctx context.Context, accountId strin
 		if err != nil {
 			return fmt.Errorf("failed to delete empty merkle tree: %w", err)
 		}
-		if err := tx.Commit(); err != nil {
-			return fmt.Errorf("failed to commit transaction: %w", err)
+		if !upstreamTx {
+			if err := tx.Commit(); err != nil {
+				return fmt.Errorf("failed to commit transaction: %w", err)
+			}
 		}
 		return nil
 	}
@@ -96,8 +99,10 @@ func (client *DbClient) RecomputeMerkleTree(ctx context.Context, accountId strin
 	if err != nil {
 		return fmt.Errorf("failed to persist merkle tree: %w", err)
 	}
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
+	if !upstreamTx {
+		if err := tx.Commit(); err != nil {
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 	return nil
 }
