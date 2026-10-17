@@ -37,10 +37,10 @@ export class ConnectionManager {
 
     this.sendTimestampBatch = new Batcher(
       (timestamps) => void this.flushSendTimestamp(timestamps),
-      { maxSize: 100, wait: 5000 }
+      { maxSize: 30, wait: 5000 }
     );
     this.sendEventsBatch = new Batcher<EventRow>((events) => void this.flushSendEvents(events), {
-      maxSize: 100,
+      maxSize: 30,
       wait: 2000
     });
   }
