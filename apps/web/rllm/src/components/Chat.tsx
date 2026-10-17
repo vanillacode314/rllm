@@ -44,8 +44,9 @@ import { usePullToLoadMore } from '~/directives/use-pull-to-load-more';
 import { useSnapToElement } from '~/directives/use-snap-to-element';
 import { ChatGenerationManager } from '~/lib/chat/generation';
 import { RetriableToolRegistry } from '~/lib/chat/tools';
+import { textToolResponse } from '~/lib/chat/utils';
 import { queries } from '~/queries';
-import type { TLLMMessageChunk, TMessage, TUserMessageChunk } from '~/types/chat';
+import type { TLLMMessageChunk, TMessage, TToolCallResult, TUserMessageChunk } from '~/types/chat';
 import { formatToPercentage, formatToTokens } from '~/utils/number';
 import { formatAsKeyValuePair } from '~/utils/object';
 import { combineRefs } from '~/utils/ref';
@@ -620,6 +621,11 @@ function LLMToolCallChunk(props: {
   onRetry: () => void;
 }) {
   const [open, setOpen] = createSignal(false);
+  const normalizedContent = createDerivedStore(() =>
+    typeof props.chunk.content === 'string'
+      ? textToolResponse(props.chunk.content)
+      : props.chunk.content
+  );
   const requestHtml = useQuery(() => ({
     enabled: open(),
     queryFn: async () => {
@@ -629,27 +635,6 @@ function LLMToolCallChunk(props: {
         .finally(() => lowlightWorkerPool.release(worker));
     },
     queryKey: ['html', props.chunk.id],
-    staleTime: Infinity
-  }));
-
-  const contentIsJson = createMemo(() => {
-    if (!props.chunk.success) return false;
-    try {
-      return JSON.parse(props.chunk.content) as unknown;
-    } catch {
-      return false;
-    }
-  });
-
-  const responseHtml = useQuery(() => ({
-    enabled: open() && !!contentIsJson(),
-    queryFn: async () => {
-      const worker = await lowlightWorkerPool.get();
-      return worker
-        .codeToHtml(JSON.stringify(contentIsJson(), null, 2), 'json')
-        .finally(() => lowlightWorkerPool.release(worker));
-    },
-    queryKey: ['html', props.chunk.id, 'response'],
     staleTime: Infinity
   }));
 
@@ -713,27 +698,89 @@ function LLMToolCallChunk(props: {
             }
             when={props.chunk.success !== null}
           >
-            <Show
-              fallback={
-                <div
-                  class="rounded border p-3 text-xs max-h-96 overflow-auto whitespace-pre-wrap font-mono"
-                  classList={{ 'text-red-600 dark:text-red-400': !props.chunk.success }}
-                  textContent={props.chunk.content}
-                />
-              }
-              when={contentIsJson()}
-            >
-              <div
-                class="rounded border p-3 text-xs overflow-auto whitespace-pre font-mono"
-                classList={{ 'text-red-600 dark:text-red-400': !props.chunk.success }}
-                // oxlint-disable-next-line solid/no-innerhtml
-                innerHTML={responseHtml.isSuccess ? responseHtml.data : 'Loading...'}
-              />
-            </Show>
+            <div class="max-h-96 overflow-auto rounded border p-3 flex flex-col gap-3">
+              <For each={normalizedContent}>
+                {(content, index) => (
+                  <Switch>
+                    <Match when={content.type === 'text'}>
+                      <TextToolResult
+                        class={props.chunk.success ? '' : 'text-red-600 dark:text-red-400'}
+                        content={(content as TToolCallResult & { type: 'text' }).text}
+                        id={`${props.chunk.id}-${index()}`}
+                      />
+                    </Match>
+                    <Match when={content.type === 'image'}>
+                      <ImageToolResult
+                        class={props.chunk.success ? '' : 'text-red-600 dark:text-red-400'}
+                        content={`data:${(content as TToolCallResult & { type: 'image' }).mimeType};base64,${(content as TToolCallResult & { type: 'image' }).data}`}
+                        id={`${props.chunk.id}-${index()}`}
+                      />
+                    </Match>
+                  </Switch>
+                )}
+              </For>
+            </div>
           </Show>
         </article>
       </CollapsibleContent>
     </Collapsible>
+  );
+}
+
+function TextToolResult(props: { class: string; id: string; content: string }) {
+  const json = createMemo(() => {
+    if (typeof props.content !== 'string') return { yes: false };
+    try {
+      return { yes: true, data: JSON.parse(props.content) as unknown };
+    } catch {
+      return { yes: false };
+    }
+  });
+
+  return (
+    <Show
+      fallback={
+        <div
+          class={cn('text-xs whitespace-pre font-mono', props.class)}
+          textContent={props.content}
+        />
+      }
+      when={json().yes}
+    >
+      <JSONToolResult class={props.class} id={props.id} content={json().data} />
+    </Show>
+  );
+}
+
+function JSONToolResult(props: { class: string; id: string; content: unknown }) {
+  const responseHtml = useQuery(() => ({
+    queryFn: async () => {
+      const worker = await lowlightWorkerPool.get();
+      return worker
+        .codeToHtml(JSON.stringify(props.content, null, 2), 'json')
+        .finally(() => lowlightWorkerPool.release(worker));
+    },
+    queryKey: ['html', props.id, 'response'],
+    staleTime: Infinity
+  }));
+
+  return (
+    <div
+      class={cn('text-xs whitespace-pre font-mono', props.class)}
+      innerHTML={responseHtml.isSuccess ? responseHtml.data : 'Loading...'}
+    />
+  );
+}
+
+function ImageToolResult(props: { class: string; id: string; content: string }) {
+  return (
+    <div class={props.class}>
+      <img
+        class="max-w-56 overflow-hidden object-cover h-auto rounded"
+        alt="Tool result"
+        src={props.content}
+      />
+    </div>
   );
 }
 

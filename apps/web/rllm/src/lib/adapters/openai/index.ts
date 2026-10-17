@@ -275,15 +275,36 @@ export class OpenAIAdapter implements TAdapter {
         retval.push(currentChunk);
         currentChunk = null;
         retval.push(
-          ...toolCallsChunks.map(
-            (chunk) =>
-              ({
+          ...toolCallsChunks.map((chunk) => {
+            if (typeof chunk.content === 'string')
+              return {
                 content: chunk.content,
                 name: chunk.tool.name,
-                role: 'tool',
+                role: 'tool' as const,
                 tool_call_id: chunk.id
-              }) as const
-          )
+              };
+
+            const content = chunk.content
+              .filter((item) => item.type === 'text' || item.type === 'image')
+              .map((item) => {
+                if (item.type === 'text') return { type: 'text' as const, text: item.text };
+
+                if (item.type === 'image')
+                  return {
+                    type: 'image_url' as const,
+                    image_url: { url: `data:${item.mimeType};base64,${item.data}` }
+                  };
+
+                throw new Error('Unreachable');
+              });
+
+            return {
+              content,
+              name: chunk.tool.name,
+              role: 'tool' as const,
+              tool_call_id: chunk.id
+            };
+          })
         );
         toolCallsChunks.length = 0;
         return;
@@ -291,6 +312,7 @@ export class OpenAIAdapter implements TAdapter {
       retval.push(currentChunk);
       currentChunk = null;
     }
+
     function updateUserChunk(
       item: (TOpenAIChatCompletionRequest['messages'] & { role: 'user' })['content'][number]
     ) {
@@ -305,6 +327,7 @@ export class OpenAIAdapter implements TAdapter {
       }
       currentChunk.content.push(item);
     }
+
     function updateAssistantChunk(item: {
       content?: string;
       reasoning_content?: string;
@@ -328,6 +351,7 @@ export class OpenAIAdapter implements TAdapter {
         currentChunk.reasoning_content = reasoning_content;
       if (tool_calls !== undefined) currentChunk.tool_calls = tool_calls;
     }
+
     for (let i = 0; i < messages.length; i++) {
       const message = messages[i];
       if (message.type === 'llm') {

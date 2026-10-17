@@ -48,7 +48,15 @@ const openaiChatCompletionRequestSchema = z.object({
       )
     }),
     z.object({
-      content: z.string(),
+      content: z.union([
+        z.string(),
+        z.array(
+          z.union([
+            z.object({ type: 'text', text: z.string() }),
+            z.object({ type: 'image_url', image_url: z.object({ url: z.string() }) })
+          ])
+        )
+      ]),
       name: z.string(),
       role: z.literal('tool'),
       tool_call_id: z.string()

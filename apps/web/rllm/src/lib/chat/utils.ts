@@ -6,7 +6,7 @@ import * as z from 'zod/mini';
 import { db } from '~/db/client';
 import { OpenAIAdapter } from '~/lib/adapters/openai';
 import { type TTool } from '~/types';
-import type { TMessage } from '~/types/chat';
+import type { TMessage, TToolCallResult } from '~/types/chat';
 import { produce } from '~/utils/immer';
 import { dedent } from '~/utils/string';
 
@@ -90,7 +90,7 @@ export const generateTitleAndTags = (config: {
             description: '',
             handler: ({ tags, title }) => {
               titleAndTags = Option.Some({ tags, title });
-              return 'Success';
+              return textToolResponse('Success');
             },
             inputSchema: z.object({ tags: z.array(z.string()), title: z.string() }),
             name: 'setTitleAndTags'
@@ -161,7 +161,7 @@ export const summarizeChat = (config: {
             description: '',
             handler: ({ summary: summaryText }) => {
               summary = Option.Some(summaryText);
-              return 'Success';
+              return textToolResponse('Success');
             },
             inputSchema: z.object({ summary: z.string() }),
             name: 'setSummary'
@@ -178,9 +178,16 @@ export const summarizeChat = (config: {
 
 export function makeTool<TSchema extends z.core.$ZodType>(
   tool: Omit<TTool, 'handler' | 'jsonSchema'> & {
-    handler: (args: z.infer<NoInfer<TSchema>>, signal?: AbortSignal) => Promise<string> | string;
+    handler: (
+      args: z.infer<NoInfer<TSchema>>,
+      signal?: AbortSignal
+    ) => Promise<TToolCallResult[]> | TToolCallResult[];
     inputSchema: TSchema;
   }
 ): TTool {
   return { ...tool, jsonSchema: z.toJSONSchema(tool.inputSchema) };
+}
+
+export function textToolResponse(text: string) {
+  return [{ text, type: 'text' as const }];
 }

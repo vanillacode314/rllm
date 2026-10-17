@@ -1,5 +1,7 @@
 import * as z from 'zod/mini';
 
+import { toolCallResultSchema } from './chat';
+
 const providerSchema = z.object({
   baseUrl: z.url(),
   defaultModelIds: z.array(z.string()),
@@ -14,7 +16,7 @@ const toolSchema = z.object({
   description: z.string(),
   handler: z.function({
     input: z.tuple([z.any(), z.instanceof(AbortSignal)]),
-    output: z.union([z.promise(z.string()), z.string()])
+    output: z.union([z.promise(z.array(toolCallResultSchema)), z.array(toolCallResultSchema)])
   }),
   // TODO: figure out z.any()
   jsonSchema: z.any(),

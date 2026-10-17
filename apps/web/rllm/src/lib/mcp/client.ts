@@ -3,13 +3,19 @@ import { createSignal, type Signal } from 'solid-js';
 import { Option } from 'ts-result-option';
 
 import type { TTool } from '~/types';
+import type { TToolCallResult } from '~/types/chat';
 import { formatError } from '~/utils/errors';
 
 import { initializeMCPSession, makeMCPCall } from '.';
-import type { TToolContent, TToolsCallResult, TToolsListResult } from './types';
+import { textToolResponse } from '../chat/utils';
+import type { TToolsListResult } from './types';
 
 interface TMCPClient {
-  callTool(name: string, args: Record<string, unknown>, signal: AbortSignal): Promise<string>;
+  callTool(
+    name: string,
+    args: Record<string, unknown>,
+    signal: AbortSignal
+  ): Promise<TToolCallResult[]>;
   disconnect(): void;
   initSession(): Promise<void>;
   listTools(): Promise<TTool[]>;
@@ -57,7 +63,7 @@ class MCPClient implements TMCPClient {
     name: string,
     args: Record<string, unknown>,
     signal: AbortSignal
-  ): Promise<string> {
+  ): Promise<TToolCallResult[]> {
     if (this.#sessionId.isNone()) {
       throw new Error('Unitialized session');
     }
@@ -76,18 +82,8 @@ class MCPClient implements TMCPClient {
     });
 
     return result.match(
-      (value) => {
-        const callResult = value as TToolsCallResult;
-        return callResult.content
-          .map((c: TToolContent) => {
-            if (c.type === 'text') {
-              return c.text;
-            }
-            return JSON.stringify(c);
-          })
-          .join('\n');
-      },
-      (error) => formatError(error)
+      (value) => value.content,
+      (error) => textToolResponse(formatError(error))
     );
   }
 

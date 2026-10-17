@@ -2,6 +2,24 @@ import * as z from 'zod/mini';
 
 import { Tree, type TTree } from '~/utils/tree';
 
+export const toolCallResultSchema = z.discriminatedUnion('type', [
+  z.object({ text: z.string(), type: z.literal('text') }),
+  z.object({
+    data: z.string(),
+    mimeType: z.string(),
+    type: z.union([z.literal('image'), z.literal('audio')])
+  }),
+  z.object({
+    resource: z.object({
+      mimeType: z.string(),
+      text: z.optional(z.string()),
+      uri: z.string()
+    }),
+    type: z.literal('resource')
+  })
+]);
+export type TToolCallResult = z.infer<typeof toolCallResultSchema>;
+
 export const llmMessageChunkSchema = z.discriminatedUnion('type', [
   z.object({
     content: z.string(),
@@ -14,7 +32,7 @@ export const llmMessageChunkSchema = z.discriminatedUnion('type', [
     type: z.literal('reasoning')
   }),
   z.object({
-    content: z.string(),
+    content: z.union([z.string(), z.array(toolCallResultSchema)]),
     id: z.string(),
     success: z.nullable(z.boolean()),
     tool: z.object({

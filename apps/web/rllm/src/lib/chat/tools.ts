@@ -12,7 +12,7 @@ import { transientDb } from '~/lib/vector-db/transient';
 import type { TTool } from '~/types';
 import type { TAttachment } from '~/types/chat';
 
-import { makeTool } from './utils';
+import { makeTool, textToolResponse } from './utils';
 
 class RetriableToolRegistry {
   static #tools = new Map<string, TTool>();
@@ -43,9 +43,9 @@ const askQuestionsTool = makeTool({
     }
     const responses = await useFeedbackModal().open(questions);
     if (responses) {
-      return JSON.stringify({ responses, success: true });
+      return textToolResponse(JSON.stringify({ responses, success: true }));
     }
-    return JSON.stringify({ message: 'Cancelled by user', success: false });
+    return textToolResponse(JSON.stringify({ message: 'Cancelled by user', success: false }));
   },
   inputSchema: z.object({
     questions: z
@@ -125,23 +125,25 @@ function makeAttachmentsTool(attachments: TAttachment[]): TTool {
         .flat()
         .filter((value) => value !== undefined);
       results.sort((a, b) => a.similarity - b.similarity);
-      return JSON.stringify(
-        results
-          .slice(offset, offset + limit)
-          .filter((result) => {
-            if (afterIndex !== undefined && result.index < afterIndex) return false;
-            if (beforeIndex !== undefined && result.index > beforeIndex) return false;
-            return true;
-          })
-          .slice(offset, offset + limit)
-          .map((result) => ({
-            content: result.text,
-            documentId: result.document_id,
-            id: result.id,
-            index: result.index
-          })),
-        null,
-        2
+      return textToolResponse(
+        JSON.stringify(
+          results
+            .slice(offset, offset + limit)
+            .filter((result) => {
+              if (afterIndex !== undefined && result.index < afterIndex) return false;
+              if (beforeIndex !== undefined && result.index > beforeIndex) return false;
+              return true;
+            })
+            .slice(offset, offset + limit)
+            .map((result) => ({
+              content: result.text,
+              documentId: result.document_id,
+              id: result.id,
+              index: result.index
+            })),
+          null,
+          2
+        )
       );
     },
     inputSchema: z.object({
@@ -166,7 +168,7 @@ const handoffTool = makeTool({
   description: HANDOFF_TOOL_INSTRUCTIONS_PROMPT,
   handler: (args) => {
     document.dispatchEvent(new CustomEvent('chat:handoff', { detail: args }));
-    return JSON.stringify({ success: true });
+    return textToolResponse('Success');
   },
   inputSchema: z.object({
     prefilledPrompt: z.string().check(z.minLength(1))
