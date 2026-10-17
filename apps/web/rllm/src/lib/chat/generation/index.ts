@@ -17,6 +17,7 @@ import { Tree, TreeNode } from '~/utils/tree';
 
 import { executeToolCalls, handleCompletion } from '..';
 import {
+  waitTool,
   askQuestionsTool,
   handoffTool,
   makeAttachmentsTool,
@@ -191,6 +192,7 @@ export class ChatGenerationManager {
     }
 
     if (isHandoffMode()) insertTool(handoffTool);
+    if (tools.isSomeAnd((tools) => tools.length > 0)) insertTool(waitTool);
 
     this.addChat(id, chat, controller, newPath);
     if (retryToolCallIds.length > 0) {

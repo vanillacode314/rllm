@@ -176,4 +176,16 @@ const handoffTool = makeTool({
   name: 'handoff_to_new_chat'
 });
 
-export { askQuestionsTool, handoffTool, makeAttachmentsTool, RetriableToolRegistry };
+const waitTool = makeTool({
+  description: 'Wait for a specified amount of milliseconds',
+  handler: async (args) => {
+    await new Promise((resolve) => setTimeout(resolve, args.durationMs));
+    return textToolResponse(`Waited for ${args.durationMs}ms`);
+  },
+  inputSchema: z.object({
+    durationMs: z.number().check(z.maximum(10_000))
+  }),
+  name: 'wait_ms'
+});
+
+export { askQuestionsTool, handoffTool, makeAttachmentsTool, waitTool, RetriableToolRegistry };
