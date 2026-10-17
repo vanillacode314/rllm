@@ -86,8 +86,8 @@ func (client *DbClient) GetMessagesByTimestamps(ctx context.Context, accountId s
 	return events, nil
 }
 
-func (client *DbClient) GetMessagesAfterTimestamp(ctx context.Context, accountId string, timestamp string) ([]Message, error) {
-	rows, err := client.db.QueryContext(ctx, "SELECT data, signature, timestamp FROM messages WHERE accountId = ? AND timestamp > ? ORDER BY timestamp ASC", accountId, timestamp)
+func (client *DbClient) GetMessagesAfterTimestamp(ctx context.Context, accountId string, timestamp string, limit uint) ([]Message, error) {
+	rows, err := client.db.QueryContext(ctx, "SELECT data, signature, timestamp FROM messages WHERE accountId = ? AND timestamp > ? ORDER BY timestamp ASC LIMIT ?", accountId, timestamp, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query messages: %w", err)
 	}

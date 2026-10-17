@@ -73,12 +73,20 @@ func (p *EventReconciliationPlugin) Handle(ctx context.Context, message *peerspb
 			if err := p.transport.Send(ctx, sendEventsAfterTimestamp(action.Timestamp)); err != nil {
 				return fmt.Errorf("failed to send send events after timestamp: %w", err)
 			}
-			evts, err := p.db.GetMessagesAfterTimestamp(ctx, accountId, action.Timestamp)
-			if err != nil {
-				return fmt.Errorf("failed to get messages after timestamp: %w", err)
-			}
-			if err := p.transport.Send(ctx, events(evts)); err != nil {
-				return fmt.Errorf("failed to send events: %w", err)
+			cursor := action.Timestamp
+			pageSize := uint(30)
+			for {
+				evts, err := p.db.GetMessagesAfterTimestamp(ctx, accountId, cursor, pageSize+1)
+				if err != nil {
+					return fmt.Errorf("failed to get messages after timestamp: %w", err)
+				}
+				if err := p.transport.Send(ctx, events(evts)); err != nil {
+					return fmt.Errorf("failed to send events: %w", err)
+				}
+				if len(evts) <= int(pageSize) {
+					break
+				}
+				cursor = evts[len(evts)-1].Timestamp
 			}
 		}
 		return nil
@@ -86,12 +94,20 @@ func (p *EventReconciliationPlugin) Handle(ctx context.Context, message *peerspb
 	case *peerspb.EventReconciliationMessage_SendEventsAfterTimestamp:
 		timestamp := payload.SendEventsAfterTimestamp.GetTimestamp()
 		slog.InfoContext(ctx, "send events after timestamp", "accountId", accountId, "timestamp", timestamp)
-		messages, err := p.db.GetMessagesAfterTimestamp(ctx, accountId, timestamp)
-		if err != nil {
-			return fmt.Errorf("failed to get messages after timestamp: %w", err)
-		}
-		if err := p.transport.Send(ctx, events(messages)); err != nil {
-			return fmt.Errorf("failed to send events: %w", err)
+		cursor := timestamp
+		pageSize := uint(30)
+		for {
+			messages, err := p.db.GetMessagesAfterTimestamp(ctx, accountId, cursor, pageSize+1)
+			if err != nil {
+				return fmt.Errorf("failed to get messages after timestamp: %w", err)
+			}
+			if err := p.transport.Send(ctx, events(messages)); err != nil {
+				return fmt.Errorf("failed to send events: %w", err)
+			}
+			if len(messages) <= int(pageSize) {
+				break
+			}
+			cursor = messages[len(messages)-1].Timestamp
 		}
 		return nil
 
