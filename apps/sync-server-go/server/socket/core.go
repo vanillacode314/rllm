@@ -48,7 +48,7 @@ type Connection struct {
 
 const wsPingInterval = 20 * time.Second
 const wsPingTimeout = 5 * time.Second
-const wsReadLimitBytes = 10 * 1024 * 1024
+const wsReadLimitBytes = 50 * 1024 * 1024
 
 func parseQuery(query url.Values) (string, string, error) {
 	accountId := query.Get("accountId")
